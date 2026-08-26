@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type IssueRow } from "../../api/client";
 
-/** Cross-deal view of open issues across every deal this CDE participates in. */
-export default function CdeIssuesAll() {
+/** Cross-deal view of open/resolved issues across every deal you have access to. Shared between the Impact and CDE portal sidebars. */
+export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
   const [rows, setRows] = useState<(IssueRow & { dealId: string; dealName: string })[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export default function CdeIssuesAll() {
   return (
     <main>
       <h1>Issues</h1>
-      <p>Open and resolved issues across every deal this CDE participates in.</p>
+      <p>Open and resolved issues across every deal in your portfolio.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
@@ -45,7 +45,7 @@ export default function CdeIssuesAll() {
               <td>{i.title}</td>
               <td>{i.issueType}</td>
               <td>{i.status}</td>
-              <td><Link to={`/cde/deals/${i.dealId}/issues`}>View</Link></td>
+              <td><Link to={`/${portal}/deals/${i.dealId}/issues`}>View</Link></td>
             </tr>
           ))}
           {rows && rows.length === 0 && <tr><td colSpan={6}>No issues logged on any deal.</td></tr>}

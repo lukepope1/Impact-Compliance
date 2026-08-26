@@ -349,6 +349,35 @@ and documented at the time:
   3); the Portfolio page's search filter correctly narrowed 3 deals to 1 live in the
   browser; and the next-deadline fix was confirmed by re-checking Riverside's row
   changed from a stale past date to the correct upcoming one after the fix.
+- **Same sidebar redesign extended to Impact and QALICB**: the aggregate pages built for
+  CDE were refactored into shared, portal-parameterized components
+  (`pages/shared/ReviewQueueAll.tsx`, `IssuesAll.tsx`, `DocumentsAll.tsx`, `AmisAll.tsx`,
+  `DealsListAll.tsx`, each taking a `portal: "impact" | "cde"` prop) instead of
+  duplicating near-identical CDE-only files — `CdeLayout.tsx` now uses the same
+  components as Impact, just with `portal="cde"`.
+
+  `ImpactLayout.tsx` gained the same sidebar shell with six sections: Portfolio (the
+  existing Deal Portfolio, which also gained the CDE Portfolio's filter bar — Status +
+  search), Review Queue, AMIS, Issues, Documents, and an Impact-exclusive **Audit Log**
+  aggregate (`ImpactAuditAll.tsx` — concatenates every deal's already-200-capped audit
+  list, re-sorts, caps at 200 again, so it's a real cross-deal snapshot, not a promise of
+  complete history at high volume) in place of CDE's "Deals" (redundant for Impact, since
+  Portfolio already is the deal list with KPIs).
+
+  `QalicbLayout.tsx` gained a much thinner sidebar matching its actual IA: Dashboard and
+  Community Benefits Report. The CBR link had no natural single URL before (the old
+  dashboard link hardcoded `deals[0].id` inline) — new `QalicbCbrRedirect.tsx` resolves
+  the current user's first deal and redirects, preserving that same "first deal wins"
+  behavior for the (currently universal, but not enforced) case of a QALICB user with
+  exactly one deal.
+
+  Verified live for both portals: Impact's sidebar renders all six links and each loads
+  real data (Review Queue correctly empty — nothing currently sitting at "submitted";
+  AMIS showed all three deals' real readiness fractions; Audit Log showed 200
+  cross-deal events with correct deal attribution, including entries from CDE users and
+  QALICB users on different deals); the QALICB sidebar's Community Benefits Report link
+  correctly redirected to Millennium Holdings' real CBR page, matching what the old
+  hardcoded dashboard link used to reach.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

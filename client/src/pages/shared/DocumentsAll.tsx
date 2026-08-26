@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type DocumentSummary } from "../../api/client";
 
-/** Cross-deal document list — server-side share-scope enforcement (canAccessDocument) already limits each deal's list to what this CDE can see, so this is just those lists concatenated. */
-export default function CdeDocumentsAll() {
+/** Cross-deal document list — server-side share-scope enforcement (canAccessDocument) already limits each deal's list to what you can see, so this is just those lists concatenated. Shared between the Impact and CDE portal sidebars. */
+export default function DocumentsAll({ portal }: { portal: "impact" | "cde" }) {
   const [docs, setDocs] = useState<(DocumentSummary & { dealId: string; dealName: string })[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -30,7 +30,7 @@ export default function CdeDocumentsAll() {
   return (
     <main>
       <h1>Documents</h1>
-      <p>Evidence visible to this CDE across every deal it participates in.</p>
+      <p>Evidence visible to you across every deal in your portfolio.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
@@ -53,7 +53,7 @@ export default function CdeDocumentsAll() {
               <td>{d.documentType}</td>
               <td>{d.shareScope}</td>
               <td>v{d.currentVersion}</td>
-              <td><Link to={`/cde/deals/${d.dealId}/documents`}>View</Link></td>
+              <td><Link to={`/${portal}/deals/${d.dealId}/documents`}>View</Link></td>
             </tr>
           ))}
           {filtered && filtered.length === 0 && <tr><td colSpan={6}>No documents match.</td></tr>}

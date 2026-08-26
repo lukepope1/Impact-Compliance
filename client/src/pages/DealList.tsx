@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal } from "../api/client";
 import { dealStatusBadgeClass } from "./shared/StatusBadge";
@@ -9,10 +9,15 @@ interface DealStats {
   total: number;
 }
 
+const STATUS_FILTERS = ["all", "current", "overdue"] as const;
+
 export default function DealList() {
   const [deals, setDeals] = useState<Deal[] | null>(null);
   const [stats, setStats] = useState<Record<string, DealStats>>({});
   const [error, setError] = useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     api
@@ -40,6 +45,18 @@ export default function DealList() {
       })
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
+
+  const filtered = useMemo(() => {
+    if (!deals) return deals;
+    const q = search.trim().toLowerCase();
+    return deals.filter((d) => {
+      const s = stats[d.id];
+      if (statusFilter === "current" && s && s.overdue > 0) return false;
+      if (statusFilter === "overdue" && !(s && s.overdue > 0)) return false;
+      if (q && !d.legalName.toLowerCase().includes(q) && !d.dealCode.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [deals, stats, statusFilter, search]);
 
   const activeCount = deals?.filter((d) => d.status === "active").length ?? 0;
   const dealsWithOverdue = Object.values(stats).filter((s) => s.overdue > 0).length;
@@ -76,6 +93,23 @@ export default function DealList() {
         </div>
       )}
 
+      {deals && (
+        <div className="card filter-bar">
+          <label>
+            Status
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+              <option value="all">All</option>
+              <option value="current">Current</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </label>
+          <label className="filter-search">
+            Search
+            <input placeholder="Deal code or legal name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </label>
+        </div>
+      )}
+
       {!deals && !error && <p>Loading…</p>}
 
       {deals && (
@@ -91,7 +125,7 @@ export default function DealList() {
             </tr>
           </thead>
           <tbody>
-            {deals.map((d) => {
+            {filtered?.map((d) => {
               const s = stats[d.id];
               return (
                 <tr key={d.id}>
@@ -106,6 +140,9 @@ export default function DealList() {
             })}
             {deals.length === 0 && (
               <tr><td colSpan={6}>No deals yet — run the seed script or create one via the API.</td></tr>
+            )}
+            {deals.length > 0 && filtered && filtered.length === 0 && (
+              <tr><td colSpan={6}>No deals match this filter.</td></tr>
             )}
           </tbody>
         </table>

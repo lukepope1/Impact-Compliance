@@ -8,8 +8,8 @@ interface AmisRow {
   total: number;
 }
 
-/** Cross-deal AMIS readiness summary for the current calendar year. */
-export default function CdeAmisAll() {
+/** Cross-deal AMIS readiness summary for the current calendar year. Shared between the Impact and CDE portal sidebars. */
+export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
   const year = new Date().getFullYear();
   const [rows, setRows] = useState<AmisRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export default function CdeAmisAll() {
   return (
     <main>
       <h1>AMIS Readiness</h1>
-      <p>Field readiness for CY {year}, across every deal this CDE participates in.</p>
+      <p>Field readiness for CY {year}, across every deal in your portfolio.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
@@ -49,7 +49,7 @@ export default function CdeAmisAll() {
                   {r.ready}/{r.total} ready
                 </span>
               </td>
-              <td><Link to={`/cde/deals/${r.deal.id}/amis`}>Open</Link></td>
+              <td><Link to={`/${portal}/deals/${r.deal.id}/amis`}>Open</Link></td>
             </tr>
           ))}
           {rows && rows.length === 0 && <tr><td colSpan={3}>No deals assigned.</td></tr>}

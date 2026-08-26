@@ -1,7 +1,12 @@
-import { Link, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import PortalGuard from "../../auth/PortalGuard";
 import { useAuth } from "../../auth/AuthContext";
 import NotificationBell from "../shared/NotificationBell";
+
+const NAV_ITEMS = [
+  { to: "/qalicb", label: "Dashboard", end: true },
+  { to: "/qalicb/cbr", label: "Community Benefits Report" },
+];
 
 export default function QalicbLayout() {
   const { user, logout } = useAuth();
@@ -12,13 +17,21 @@ export default function QalicbLayout() {
         <span>
           <strong>QALICB Portal</strong> — signed in as {user?.email}
           <span className="portal-nav-links">
-            <Link to="/qalicb">Dashboard</Link>
             <button className="btn-logout" onClick={logout}>Log out</button>
           </span>
         </span>
         <NotificationBell />
       </nav>
-      <Outlet />
+      <div className="portal-shell">
+        <aside className="portal-sidebar">
+          {NAV_ITEMS.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end}>
+              {item.label}
+            </NavLink>
+          ))}
+        </aside>
+        <Outlet />
+      </div>
     </PortalGuard>
   );
 }

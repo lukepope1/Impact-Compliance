@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal } from "../../api/client";
-import { dealStatusBadgeClass } from "../shared/StatusBadge";
+import { dealStatusBadgeClass } from "./StatusBadge";
 
-/** A plain deal list, distinct from Portfolio's dashboard — same underlying deals, no KPIs, for when you just want to jump straight to one. */
-export default function CdeDealsList() {
+/** A plain deal list, distinct from Portfolio's KPI dashboard — same underlying deals, no stats, for when you just want to jump straight to one. Shared between the Impact and CDE portal sidebars. */
+export default function DealsListAll({ portal, rowLinkSuffix }: { portal: "impact" | "cde"; rowLinkSuffix: string }) {
   const [deals, setDeals] = useState<Deal[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export default function CdeDealsList() {
   return (
     <main>
       <h1>Deals</h1>
-      <p>Every deal this CDE organization participates in.</p>
+      <p>Every deal in your portfolio.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
@@ -26,7 +26,7 @@ export default function CdeDealsList() {
         <tbody>
           {deals?.map((d) => (
             <tr key={d.id}>
-              <td><Link to={`/cde/deals/${d.id}/review-queue`}>{d.dealCode}</Link></td>
+              <td><Link to={`/${portal}/deals/${d.id}${rowLinkSuffix}`}>{d.dealCode}</Link></td>
               <td>{d.legalName}</td>
               <td><span className={`badge ${dealStatusBadgeClass(d.status)}`}>{d.status.replace("_", " ")}</span></td>
             </tr>
