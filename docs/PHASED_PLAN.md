@@ -318,6 +318,37 @@ and documented at the time:
   Approved` from the review-queue test — none of Harbor's or Millennium's data leaking
   into a QALICB user's own dashboard, confirming the tenancy scoping held under the new
   multi-deal data too.
+- **CDE portal redesign to a wireframe**: given a low-fidelity mock of a persistent
+  left-sidebar layout, redesigned the CDE portal to match it (scope explicitly limited to
+  the CDE portal — asked, not assumed). `CdeLayout.tsx` gained a sticky sidebar
+  (`.portal-shell`/`.portal-sidebar` in index.css, active-link styling via `NavLink`)
+  with six sections: Portfolio, Review Queue, Deals, AMIS, Issues, Documents. The first
+  three sub-pages didn't exist before — `CdeReviewQueueAll.tsx`, `CdeIssuesAll.tsx`,
+  `CdeDocumentsAll.tsx`, `CdeAmisAll.tsx`, and `CdeDealsList.tsx` are new, each fanning
+  out the existing per-deal APIs (`listReviewQueue`, `listIssues`, `listDocuments`,
+  `getAmisReadiness`) across every deal the CDE participates in via `Promise.all`, so
+  every sidebar link is a real, working aggregate view instead of a placeholder.
+
+  `CdePortfolio.tsx` itself was rebuilt to match the mock's stat-card row (Assigned
+  deals/Current/Late-Returned/AMIS ready) and filter bar (Deal/Status/Due-date dropdowns
+  + search, all client-side over the fetched rows) with a redesigned table (Deal /
+  QALICB / Next deadline / Compliance / CBR / AMIS). Every column is real data, not
+  invented to match the mock cosmetically — CBR shows the actual `CbrReportingPeriod`
+  status enum value (e.g. "Not started"), AMIS shows the real `X/Y ready` field count.
+
+  Caught and fixed a real bug while verifying live: "Next deadline" was initially
+  computed as the earliest *non-overdue* instance's due date, which could surface an
+  already-submitted-and-approved instance's (necessarily earlier, and sometimes past)
+  due date instead of the next instance actually still pending. Fixed to filter on
+  status (`not_due`/`upcoming`) rather than just overdue-ness.
+
+  Verified live end to end: the sidebar renders and every one of its six links loads
+  real cross-deal data (Review Queue showed 2 pending items across 2 deals; Issues
+  showed the 1 open issue from earlier CDE-notes testing; Documents showed Millennium's
+  3 documents; AMIS showed each deal's real field-readiness fraction; Deals listed all
+  3); the Portfolio page's search filter correctly narrowed 3 deals to 1 live in the
+  browser; and the next-deadline fix was confirmed by re-checking Riverside's row
+  changed from a stale past date to the correct upcoming one after the fix.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

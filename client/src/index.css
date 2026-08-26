@@ -115,6 +115,52 @@ main {
   margin: 0 auto;
 }
 
+/* A portal that opts into a persistent left sidebar (currently just the CDE portal)
+   wraps its <Outlet/> in .portal-shell; inside that, main no longer self-centers with a
+   max-width, since the sidebar already constrains the layout. */
+.portal-shell {
+  display: flex;
+  align-items: flex-start;
+}
+
+.portal-shell main {
+  max-width: none;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.portal-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  min-height: calc(100vh - 96px);
+  position: sticky;
+  top: 96px;
+}
+
+.portal-sidebar a {
+  display: block;
+  padding: 10px 24px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 14px;
+  border-left: 3px solid transparent;
+}
+.portal-sidebar a:hover {
+  background: var(--bg);
+  color: var(--text);
+  text-decoration: none;
+}
+.portal-sidebar a.active {
+  color: var(--navy);
+  background: var(--teal-light);
+  border-left-color: var(--teal);
+  font-weight: 600;
+}
+
 /* ---------- Cards ---------- */
 
 .card {
@@ -258,7 +304,21 @@ textarea { resize: vertical; min-height: 60px; }
 
 input::placeholder, textarea::placeholder { color: var(--text-faint); }
 
-/* ---------- Dashboards: stat cards & badges ---------- */
+/* ---------- Dashboards: filter bars, stat cards & badges ---------- */
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.filter-bar label {
+  margin-bottom: 0;
+  min-width: 140px;
+}
+.filter-bar .filter-search {
+  flex: 1 1 220px;
+}
 
 .stat-grid {
   display: grid;
