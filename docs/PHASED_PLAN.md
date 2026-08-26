@@ -19,8 +19,8 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 - Impact Marketplace admin screens: deal setup wizard (I-02), requirement builder (I-03)
 
 ## Phase 2 — Evidence & audit ✅
-- Document upload with version lineage, checksum, malware-scan status (local disk backend
-  in dev — see server/src/lib/storage.ts for the S3+KMS swap point)
+- Document upload with version lineage, checksum, malware-scan status (local disk in dev,
+  real S3+KMS available — see the Evidence storage section below)
 - Document access grants (share-scope enforcement server-side, not client-filtered)
 - Audit event log wired into every mutation
 
@@ -56,6 +56,19 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   to verify the IdP's tokens instead of these; the shape of everything downstream (load
   user, attach memberships) doesn't change.
 
+## Evidence storage: real S3 + KMS (built, not yet run against live AWS)
+- `s3Storage.ts` implements the same Storage interface as local disk — switching backends
+  is an env var (`EVIDENCE_S3_BUCKET`), not a code change
+- SSE-KMS on every upload (never SSE-S3), a boot-time reachability check so a bad
+  bucket/region/IAM config fails loudly at startup instead of on a user's first upload
+- `infra/evidence-bucket.yaml`: CloudFormation for the bucket (public access blocked,
+  versioning on, default SSE-KMS) + a dedicated KMS CMK + a bucket policy that denies
+  non-KMS uploads and non-TLS requests + a least-privilege IAM policy scoped to exactly
+  what the app calls
+- Built in an environment with no AWS credentials available, so this has been reviewed for
+  correctness against the documented SDK/AWS behavior but **not exercised against a live
+  bucket** — see docs/AWS_SETUP.md for what to check before trusting it with real evidence
+
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
@@ -67,7 +80,8 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
-- Real S3 + KMS for evidence storage, replacing the local-disk dev backend
+- Run the S3+KMS integration against a real AWS account for the first time (see the
+  Evidence storage section above) before relying on it
 - A real malware-scan pipeline — uploads are currently marked "clean" immediately
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
 - Security review and UAT against the original backlog's acceptance criteria

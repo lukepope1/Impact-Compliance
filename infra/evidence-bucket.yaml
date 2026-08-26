@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Evidence storage for the NMTC Compliance Platform — a private S3 bucket with a
+  dedicated KMS CMK, matching the canonical schema's implementation notes ("private S3
+  with SSE-KMS; bucket public access blocked"). Deploy per environment (dev/staging/prod)
+  with a distinct stack name and BucketNameSuffix.
+  Not yet deployed/tested against a real AWS account as part of this build — review before
+  first use, same as you would any template you didn't write yourself.
+
+Parameters:
+  BucketNameSuffix:
+    Type: String
+    Description: Appended to the bucket name to keep it globally unique, e.g. an account ID or env name.
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  EvidenceKmsKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub "NMTC Compliance evidence encryption key (${Environment})"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowAccountRootFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowS3ServiceUseOfKey
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: "*"
+
+  EvidenceKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/nmtc-compliance-evidence-${Environment}"
+      TargetKeyId: !Ref EvidenceKmsKey
+
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "nmtc-compliance-evidence-${Environment}-${BucketNameSuffix}"
+      # Belt-and-suspenders with the app-level requirement that document_versions rows are
+      # never mutated/overwritten (see the schema's implementation notes) — S3 versioning
+      # means even a bug or a compromised credential can't silently destroy prior evidence.
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref EvidenceKmsKey
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Application
+          Value: nmtc-compliance-platform
+        - Key: Environment
+          Value: !Ref Environment
+
+  EvidenceBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EvidenceBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyUnencryptedObjectUploads
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:PutObject"
+            Resource: !Sub "${EvidenceBucket.Arn}/*"
+            Condition:
+              StringNotEquals:
+                "s3:x-amz-server-side-encryption": "aws:kms"
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt EvidenceBucket.Arn
+              - !Sub "${EvidenceBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+
+  # Least-privilege policy for the application's IAM role/user — scoped to this bucket and
+  # this key only, matching what server/src/lib/s3Storage.ts actually calls (PutObject,
+  # GetObject, HeadBucket) plus the KMS actions S3 needs on its behalf.
+  AppEvidenceAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "nmtc-compliance-evidence-access-${Environment}"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: BucketLevel
+            Effect: Allow
+            Action:
+              - s3:HeadBucket
+              - s3:ListBucket
+            Resource: !GetAtt EvidenceBucket.Arn
+          - Sid: ObjectLevel
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+            Resource: !Sub "${EvidenceBucket.Arn}/*"
+          - Sid: KmsUsage
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: !GetAtt EvidenceKmsKey.Arn
+
+Outputs:
+  BucketName:
+    Value: !Ref EvidenceBucket
+  KmsKeyArn:
+    Value: !GetAtt EvidenceKmsKey.Arn
+  AppPolicyArn:
+    Description: Attach this to the IAM role/user the server runs as (e.g. an ECS task role).
+    Value: !Ref AppEvidenceAccessPolicy

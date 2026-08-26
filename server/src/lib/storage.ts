@@ -1,11 +1,14 @@
 import fs from "fs";
 import path from "path";
+import { S3Storage } from "./s3Storage";
 
 /**
- * Evidence storage abstraction. Production points this at private S3 with SSE-KMS
- * (per the schema's implementation notes) once AWS_REGION/EVIDENCE_S3_BUCKET are set.
- * Local dev falls back to disk under server/.evidence-storage/ so the upload → version
- * → download flow is fully testable without AWS credentials.
+ * Evidence storage abstraction. Local dev falls back to disk under
+ * server/.evidence-storage/ so the upload → version → download flow is fully testable
+ * without AWS credentials. Setting AWS_REGION + EVIDENCE_S3_BUCKET switches this to real
+ * S3 with SSE-KMS (see s3Storage.ts and docs/AWS_SETUP.md for the bucket/KMS/IAM this
+ * expects) — the switch is automatic, not a manual code change, so the same server binary
+ * runs unmodified in both environments.
  *
  * Either way, callers only ever get a bucket+key pair back — nothing above this module
  * knows or cares which backend is in use.
@@ -39,10 +42,34 @@ class LocalDiskStorage implements Storage {
   }
 }
 
-// Swap in a real S3-backed implementation here once EVIDENCE_S3_BUCKET is set in production.
-export const storage: Storage = new LocalDiskStorage();
-
 export const EVIDENCE_BUCKET = process.env.EVIDENCE_S3_BUCKET || "nmtc-compliance-local-dev";
+
+const usingS3 = !!process.env.EVIDENCE_S3_BUCKET;
+
+if (usingS3 && !process.env.AWS_REGION) {
+  throw new Error("EVIDENCE_S3_BUCKET is set but AWS_REGION is not — both are required to use real S3 storage.");
+}
+if (usingS3 && !process.env.EVIDENCE_KMS_KEY_ARN) {
+  // Not fatal: omitting SSEKMSKeyId lets S3 fall back to the bucket's default KMS key,
+  // which is fine if the bucket's default encryption config already points at the right
+  // CMK — but a silently-wrong key on a compliance evidence store is worth a loud warning.
+  console.warn(
+    "EVIDENCE_S3_BUCKET is set but EVIDENCE_KMS_KEY_ARN is not — uploads will use the bucket's default KMS key. " +
+      "Set EVIDENCE_KMS_KEY_ARN explicitly unless that default is intentional."
+  );
+}
+
+const s3Storage = usingS3 ? new S3Storage(process.env.AWS_REGION!, process.env.EVIDENCE_KMS_KEY_ARN) : null;
+export const storage: Storage = s3Storage ?? new LocalDiskStorage();
+
+/**
+ * Call once at boot when using S3, so a missing bucket / wrong region / bad credentials
+ * fails loudly at startup instead of on the first user's upload. No-op for local disk.
+ */
+export async function verifyStorageReachable(): Promise<void> {
+  if (!s3Storage) return;
+  await s3Storage.assertReachable(EVIDENCE_BUCKET);
+}
 
 /**
  * A client-supplied upload filename is untrusted input. Used raw, it can escape the

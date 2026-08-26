@@ -12,9 +12,13 @@ database, no shared code or shared runtime. It reuses none of the CRM's Prisma m
 - **server/** — Node + TypeScript + Express + Prisma (PostgreSQL)
 - **client/** — React + TypeScript + Vite
 
-## Status: Phase 1, Sprint 0-2 foundation
+## Status: all six Phase 1 phases built and verified live
 
-See `docs/PHASED_PLAN.md` for the roadmap and what's built so far.
+Real auth (bcrypt + JWT), real S3+KMS evidence storage (with a CloudFormation template to
+provision it — see [docs/AWS_SETUP.md](docs/AWS_SETUP.md)), and the full deal → requirement
+→ deadline → submission → review → CBR → AMIS-export flow across three portals. See
+[docs/PHASED_PLAN.md](docs/PHASED_PLAN.md) for what's built vs. what's still needed before
+production (a real identity provider, a malware-scan pipeline, security review/UAT).
 
 ## Getting started
 

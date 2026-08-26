@@ -20,6 +20,7 @@ import { issuesRouter } from "./routes/issues";
 import { cbrRouter } from "./routes/cbr";
 import { snapshotsRouter } from "./routes/snapshots";
 import { amisRouter } from "./routes/amis";
+import { verifyStorageReachable } from "./lib/storage";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
 // natively and Node treats the resulting rejection as fatal, so patch it globally
@@ -55,6 +56,17 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 const port = Number(process.env.PORT ?? 4100);
-app.listen(port, () => {
-  console.log(`NMTC Compliance Platform API listening on :${port}`);
-});
+
+verifyStorageReachable()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`NMTC Compliance Platform API listening on :${port}`);
+    });
+  })
+  .catch((err) => {
+    // Fail loudly at boot rather than on some user's first upload — a wrong bucket name,
+    // region, or missing IAM permissions should never surface as "upload failed" three
+    // requests deep into a demo.
+    console.error("Evidence storage is not reachable — refusing to start.", err);
+    process.exit(1);
+  });
