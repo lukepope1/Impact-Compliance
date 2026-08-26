@@ -22,8 +22,18 @@ export async function canAccessDocument(
       return false; // already excluded above
     case "qalicb_and_impact":
       return userOrgIds.some((id) => orgTypesById.get(id) === "qalicb" || orgTypesById.get(id) === "borrower");
-    case "deal_shared":
-      return true; // caller has already established deal access before reaching here
+    case "deal_shared": {
+      // Every current caller already runs requireDealAccess before reaching here, so this
+      // is redundant today — but this function is exported and documents itself as *the*
+      // enforcement point, so it shouldn't rely on every future caller remembering that.
+      // Re-derive it directly: deal_shared means shared with orgs that have been granted
+      // canViewSharedEvidence on this specific document's deal, not merely "some deal."
+      if (!doc.dealId) return false;
+      const access = await prisma.dealOrganizationAccess.findFirst({
+        where: { dealId: doc.dealId, organizationId: { in: userOrgIds }, canViewSharedEvidence: true },
+      });
+      return !!access;
+    }
     case "selected_cdes":
     case "cde_private": {
       const grant = await prisma.documentAccessGrant.findFirst({

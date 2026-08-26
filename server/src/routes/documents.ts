@@ -208,6 +208,16 @@ documentsRouter.post(
     const doc = await prisma.document.findUnique({ where: { id: req.params.documentId } });
     if (!doc || doc.dealId !== req.params.dealId) return res.status(404).json({ error: "Document not found" });
 
+    // Without this, an admin could grant selected_cdes/cde_private access to an org with
+    // no relationship to the deal at all — canAccessDocument's grant check only asks
+    // "does a grant row exist," so a stray grant to an unrelated org would silently work.
+    const targetHasDealTie = await prisma.dealOrganizationAccess.findFirst({
+      where: { dealId: req.params.dealId, organizationId },
+    });
+    if (!targetHasDealTie) {
+      return res.status(422).json({ error: "That organization has no access relationship to this deal" });
+    }
+
     const grant = await prisma.documentAccessGrant.upsert({
       where: { documentId_organizationId: { documentId: doc.id, organizationId } },
       create: { documentId: doc.id, organizationId, accessLevel: accessLevel as never, grantedById: req.user!.id },
