@@ -5,6 +5,7 @@ import "dotenv/config";
 import "express-async-errors";
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
 import { requireAuth } from "./middleware/auth";
 import { authRouter } from "./routes/auth";
@@ -31,6 +32,7 @@ import { verifyStorageReachable } from "./lib/storage";
 };
 
 const app = express();
+app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173" }));
 app.use(express.json());
 

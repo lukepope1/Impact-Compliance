@@ -31,6 +31,11 @@ dealPartiesRouter.post(
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
+    if (parsed.data.organizationId) {
+      const org = await prisma.organization.findUnique({ where: { id: parsed.data.organizationId } });
+      if (!org) return res.status(400).json({ error: "organizationId does not refer to a known organization" });
+    }
+
     const party = await prisma.dealParty.create({
       data: { dealId: req.params.dealId, ...parsed.data, partyRole: parsed.data.partyRole as never },
     });

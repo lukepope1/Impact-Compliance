@@ -110,13 +110,61 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   path genuinely works — production-provider deliverability (SES/SendGrid + real DNS/SPF/
   DKIM) is still unverified, see docs/NOTIFICATIONS.md.
 
+## Security review ✅ (findings fixed and verified live)
+Three parallel audits (auth/access-control, deal-scoped/document routes, dependencies/infra)
+found and I fixed:
+- **Cross-org review forgery (HIGH)**: `reviews.ts` picked a reviewing org from *any* of
+  the user's memberships holding a reviewer role, without confirming that specific org
+  is actually party to the deal — a user with a reviewer role at an unrelated CDE plus
+  any other membership giving deal access could record binding approve/return/waive
+  decisions. Fixed: the org is now confirmed to have `dealOrganizationAccess` (impact
+  stage) or `cdeParticipation` (cde stage) on this exact deal before it's trusted, same
+  pattern `snapshots.ts` already used correctly.
+- **AMIS export cross-CDE leak (MEDIUM)**: any `cde_admin` could generate/download AMIS
+  financial exports for a deal their CDE has no participation in. Fixed with the same
+  participation check.
+- **No login rate limiting (HIGH, confirmed by two independent audits)**: `/api/auth/login`
+  had no throttling — fixed with `express-rate-limit` (10 attempts / 15 min, IP-keyed).
+  Verified live: 4th rapid attempt returns 429 with `RateLimit-*` headers.
+- **JWT algorithm not pinned (MEDIUM)**: `jwt.verify` trusted whatever `alg` a token
+  claimed. Fixed by requiring `algorithms: ["HS256"]` explicitly on verify (and signing
+  with it explicitly too).
+- **Weak-secret guard only enforced in production (HIGH contingent)**: the JWT_SECRET
+  strength check only ran when `NODE_ENV=production`, so a misconfigured non-prod
+  deployment got no protection. Fixed to enforce unconditionally — the local dev secret
+  was regenerated to a real random value since the old placeholder (containing "dev")
+  now correctly fails the check.
+- **Missing security headers (LOW/MEDIUM)**: added `helmet()` — verified live
+  (`X-Content-Type-Options`, `X-Frame-Options` present on responses).
+- **Cross-tenant organization directory (MEDIUM)**: `GET /api/organizations` returned
+  every organization on the platform to any authenticated user, including a QALICB or
+  CDE user with no relationship to most of them. Restricted to the Impact roles that
+  actually use it for deal-setup pickers. Verified live: 200 for an Impact user, 403 for
+  a QALICB user.
+- **Unvalidated `organizationId` on deal parties (LOW)**: `dealParties.ts` accepted any
+  string as `organizationId` with no existence check. Fixed with a lookup before create.
+
+Reviewed and found solid (no changes needed): generic login error messages, `documents.ts`/
+`comments.ts`/`notificationsRouter.ts` user/org scoping, `canAccessDocument` re-derivation,
+`sanitizeFileName`, S3 SSE-KMS enforcement, scanner fail-closed behavior, CORS origin
+scoping, no raw SQL/`exec`, no hardcoded secrets, `.env` never committed to git history,
+`.env.example` contains only placeholders, dependency versions current.
+
+**Structural note for future work**: `requireRole` and `requireDealAccess` are still
+independently checked rather than jointly scoped — a user with a privileged role in one
+org and merely *some* access-granting membership in another can combine them on routes
+that don't do the extra per-route participation check the two HIGH findings above now do.
+The two fixed routes close the exploitable instances found; a systemic fix (a combined
+`requireRoleOnDealOrg` middleware) would remove the need to repeat this check per-route
+as new deal-scoped write routes are added.
+
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
 - No sharing of CDE-private data across CDE organizations
 - AMIS export covers a small hardcoded field set (goldenFields.ts) proving the mechanism,
   not the full field catalog a production build would need
-- No security review / formal UAT pass — see below
+- No formal UAT pass — see below
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
@@ -129,4 +177,7 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 - Replace the request-triggered reminder recompute with a real scheduled sweep (cron / EventBridge)
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability
-- Security review and UAT against the original backlog's acceptance criteria
+- Formal UAT against the original backlog's acceptance criteria (the security review pass
+  is done — see above)
+- The structural `requireRole`/`requireDealAccess` note above — a combined middleware
+  before adding more deal-scoped write routes

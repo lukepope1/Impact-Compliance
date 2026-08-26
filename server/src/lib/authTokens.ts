@@ -19,14 +19,20 @@ if (!JWT_SECRET) {
     "JWT_SECRET is not set. Copy server/.env.example to server/.env and set a real secret before starting the server."
   );
 }
-if (process.env.NODE_ENV === "production" && (JWT_SECRET.length < 32 || JWT_SECRET.includes("dev"))) {
-  throw new Error("JWT_SECRET looks like a dev placeholder — refusing to start in production with a weak secret.");
+// Applies regardless of NODE_ENV — a weak secret is just as exploitable in a staging or
+// misconfigured deployment as it is in one correctly labeled "production", and nothing
+// here should depend on an env var being set exactly right to get real protection.
+if (JWT_SECRET.length < 32 || JWT_SECRET.includes("dev")) {
+  throw new Error("JWT_SECRET looks like a dev placeholder — refusing to start with a weak secret.");
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET!, { expiresIn: TOKEN_TTL });
+  return jwt.sign(payload, JWT_SECRET!, { expiresIn: TOKEN_TTL, algorithm: "HS256" });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, JWT_SECRET!) as AccessTokenPayload;
+  // Pin the algorithm explicitly — without this, jwt.verify trusts whatever alg the
+  // token itself claims, which is how the classic "alg: none" / algorithm-confusion
+  // forgery works. Requiring HS256 means only a token signed with our own secret verifies.
+  return jwt.verify(token, JWT_SECRET!, { algorithms: ["HS256"] }) as AccessTokenPayload;
 }

@@ -1,14 +1,27 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { signAccessToken, verifyAccessToken } from "../lib/authTokens";
 
 export const authRouter = Router();
 
+// Credential-stuffing / brute-force guard. Keyed on IP (express-rate-limit's default) so
+// it can't be used to lock a legitimate user out by hammering their email from elsewhere;
+// the login route already gives a generic error either way, so this only slows down
+// automated guessing, not a single mistyped password.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Try again in a few minutes." },
+});
+
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", loginLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 

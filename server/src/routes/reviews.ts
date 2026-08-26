@@ -42,10 +42,36 @@ reviewsRouter.post("/", requireDealAccess, async (req, res) => {
     return res.status(400).json({ error: `A decision note is required to ${decision === "returned" ? "return" : "waive"} a requirement` });
   }
 
-  const membership = req.user!.memberships.find((m) =>
+  // requireDealAccess only proves the user belongs to *some* org with access to this
+  // deal — it does not prove the specific org backing this review does. A user who is a
+  // cde_admin at an unrelated CDE could otherwise "borrow" deal access from any other
+  // membership and record a binding review decision. Find a candidate membership with
+  // the right role, then confirm that exact org is actually party to this deal in the
+  // relevant capacity before trusting it.
+  const candidates = req.user!.memberships.filter((m) =>
     stage === "impact" ? IMPACT_REVIEWER_ROLES.has(m.roleCode) : CDE_REVIEWER_ROLES.has(m.roleCode)
   );
-  if (!membership) return res.status(403).json({ error: `Not authorized to record a ${stage} review` });
+  if (candidates.length === 0) return res.status(403).json({ error: `Not authorized to record a ${stage} review` });
+
+  let membership: (typeof candidates)[number] | undefined;
+  if (stage === "impact") {
+    for (const m of candidates) {
+      const access = await prisma.dealOrganizationAccess.findFirst({ where: { dealId: req.params.dealId, organizationId: m.organizationId } });
+      if (access) {
+        membership = m;
+        break;
+      }
+    }
+  } else {
+    for (const m of candidates) {
+      const participation = await prisma.cdeParticipation.findFirst({ where: { dealId: req.params.dealId, cdeOrganizationId: m.organizationId } });
+      if (participation) {
+        membership = m;
+        break;
+      }
+    }
+  }
+  if (!membership) return res.status(403).json({ error: `Your organization is not a party to this deal in a ${stage}-reviewer capacity` });
 
   const instance = await prisma.requirementInstance.findUnique({ where: { id: req.params.instanceId } });
   if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });
