@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRole } from "../middleware/auth";
+import { notify, resolveDealMembers } from "../lib/notifications";
+
+const IMPACT_REVIEWER_ROLES = ["impact_super_admin", "impact_compliance_manager", "impact_analyst"] as const;
 
 export const submissionsRouter = Router({ mergeParams: true });
 
@@ -145,6 +148,20 @@ submissionsRouter.post("/:submissionId/submit", requireDealAccess, requireRole(.
     action: "submit",
     beforeData: submission,
     afterData: updated,
+  });
+
+  const instance = await prisma.requirementInstance.findUnique({
+    where: { id: req.params.instanceId },
+    include: { requirementDefinition: { select: { title: true } } },
+  });
+  const targets = await resolveDealMembers(req.params.dealId, [...IMPACT_REVIEWER_ROLES]);
+  await notify({
+    targets,
+    dealId: req.params.dealId,
+    requirementInstanceId: req.params.instanceId,
+    notificationType: "submission_ready_for_review",
+    subject: `Submission ready for review: ${instance?.requirementDefinition.title ?? "a requirement"}`,
+    body: `A submission for "${instance?.requirementDefinition.title ?? "a requirement"}" was just submitted and is awaiting Impact review.`,
   });
 
   res.json(updated);

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess } from "../middleware/auth";
+import { notify, resolveDealMembers } from "../lib/notifications";
 
 export const reviewsRouter = Router({ mergeParams: true });
 
@@ -87,5 +88,52 @@ reviewsRouter.post("/", requireDealAccess, async (req, res) => {
     afterData: { status: nextInstanceStatus, reviewId: review.id },
   });
 
+  await sendReviewDecisionNotifications(req.params.dealId, instance.id, stage, decision, decisionNote, submission?.submittedByUserId);
+
   res.status(201).json(review);
 });
+
+async function sendReviewDecisionNotifications(
+  dealId: string,
+  requirementInstanceId: string,
+  stage: "impact" | "cde",
+  decision: "approved" | "returned" | "acknowledged" | "waived",
+  decisionNote: string | undefined,
+  submitterUserId: string | undefined
+) {
+  const requirementDef = await prisma.requirementInstance.findUnique({
+    where: { id: requirementInstanceId },
+    include: { requirementDefinition: { select: { title: true } } },
+  });
+  const title = requirementDef?.requirementDefinition.title ?? "a requirement";
+
+  if (decision === "returned" && submitterUserId) {
+    const submitter = await prisma.user.findUnique({ where: { id: submitterUserId }, select: { id: true, email: true } });
+    const membership = submitter
+      ? await prisma.organizationMembership.findFirst({ where: { userId: submitter.id, status: "active" } })
+      : null;
+    if (submitter && membership) {
+      await notify({
+        targets: [{ userId: submitter.id, organizationId: membership.organizationId, email: submitter.email }],
+        dealId,
+        requirementInstanceId,
+        notificationType: `${stage}_review_returned`,
+        subject: `Returned for revision: ${title}`,
+        body: decisionNote ? `Your submission for "${title}" was returned: ${decisionNote}` : `Your submission for "${title}" was returned for revision.`,
+      });
+    }
+  }
+
+  if (decision === "approved" && stage === "impact") {
+    // Now visible to CDEs for their own review — let them know it's waiting.
+    const cdeTargets = await resolveDealMembers(dealId, ["cde_admin", "cde_reviewer"]);
+    await notify({
+      targets: cdeTargets,
+      dealId,
+      requirementInstanceId,
+      notificationType: "impact_approved_awaiting_cde",
+      subject: `Ready for CDE review: ${title}`,
+      body: `"${title}" was approved by Impact and is now ready for CDE review.`,
+    });
+  }
+}

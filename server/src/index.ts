@@ -20,6 +20,7 @@ import { issuesRouter } from "./routes/issues";
 import { cbrRouter } from "./routes/cbr";
 import { snapshotsRouter } from "./routes/snapshots";
 import { amisRouter } from "./routes/amis";
+import { notificationsRouter } from "./routes/notificationsRouter";
 import { verifyStorageReachable } from "./lib/storage";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
@@ -48,6 +49,7 @@ app.use("/api/deals/:dealId/issues", requireAuth, issuesRouter);
 app.use("/api/deals/:dealId/cbr", requireAuth, cbrRouter);
 app.use("/api/deals/:dealId/snapshots", requireAuth, snapshotsRouter);
 app.use("/api/deals/:dealId/amis", requireAuth, amisRouter);
+app.use("/api/notifications", requireAuth, notificationsRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

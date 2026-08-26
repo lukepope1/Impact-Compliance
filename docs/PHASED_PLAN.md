@@ -85,6 +85,28 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   prompt this environment couldn't answer. Same "reviewed, not proven live" honesty as the
   S3+KMS integration — see docs/MALWARE_SCANNING.md's verification-status note.
 
+## Document versioning UI ✅
+- The Documents page now has an expandable "Version history" panel per document (full
+  history, not just the latest), an "Upload new version" form wired to the previously-
+  unused `uploadNewVersion` API, and a Rescan button on pending/failed versions
+- Verified live: uploaded a second version of an existing document, confirmed v1 was
+  marked superseded but stayed downloadable, v2 landed "pending" with a Rescan button
+
+## Notifications: real trigger-based pipeline ✅
+- In-app + email notifications on submission-submitted, returned, impact-approved, and
+  due-soon/overdue transitions — see docs/NOTIFICATIONS.md for the full trigger table
+- Fail-visible email: no SMTP configured -> the email row is recorded `"failed"` with a
+  clear reason, never silently dropped; the in-app notification always gets created either way
+- Deadline reminders piggyback on the existing overdue/upcoming recompute (fires once per
+  transition, deduplicated automatically) rather than a real scheduled job — see
+  docs/NOTIFICATIONS.md for why a production deployment needs an actual cron/EventBridge sweep
+- Verified live end to end: returned a submission as Impact, confirmed the QALICB
+  submitter got an in-app notification (visible in the bell, mark-as-read worked) and a
+  corresponding email row recorded as "failed" (SMTP unconfigured, as expected)
+- Actually sending mail through real SMTP was not verified — no SMTP credentials were
+  available in this environment; same "reviewed, not proven live" honesty as S3/KMS and
+  ClamAV
+
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
@@ -101,4 +123,6 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 - Decide and build the production clamd deployment shape (sidecar/service/async Lambda —
   see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
+- Replace the request-triggered reminder recompute with a real scheduled sweep (cron / EventBridge)
+- Point SMTP at a real provider and send an actual test email — verify email delivery, not just its fail-visible fallback
 - Security review and UAT against the original backlog's acceptance criteria

@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRole } from "../middleware/auth";
 import { generatePeriods, computeIsOverdue, computeDisplayStatus, type DueRule } from "../lib/deadlineEngine";
+import { notify, resolveDealMembers } from "../lib/notifications";
 import { submissionsRouter } from "./submissions";
 import { reviewsRouter } from "./reviews";
 
@@ -25,9 +26,20 @@ requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
   });
 
   const updates = [];
+  // Reminder notifications fire exactly once per transition: computed here alongside the
+  // status/overdue recompute, so a later list fetch — once status is already "upcoming" or
+  // isOverdue is already true — sees no transition and sends nothing again. This piggybacks
+  // on a request-triggered recompute rather than a real scheduled job; see the note in
+  // docs/NOTIFICATIONS.md on what a production deployment should use instead (a cron/
+  // EventBridge-triggered sweep, so reminders fire even if nobody happens to load the page).
+  const remindersToSend: { instanceId: string; title: string; kind: "upcoming" | "overdue" }[] = [];
+
   for (const inst of instances) {
     const displayStatus = computeDisplayStatus(inst.status, inst.dueDate, now);
     const overdue = computeIsOverdue(inst.dueDate, inst.status, now);
+    const becameUpcoming = displayStatus === "upcoming" && inst.status === "not_due";
+    const becameOverdue = overdue && !inst.isOverdue;
+
     if (displayStatus !== inst.status || overdue !== inst.isOverdue) {
       updates.push(
         prisma.requirementInstance.update({
@@ -38,8 +50,31 @@ requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
       inst.status = displayStatus as never;
       inst.isOverdue = overdue;
     }
+
+    if (becameOverdue) {
+      remindersToSend.push({ instanceId: inst.id, title: inst.requirementDefinition.title, kind: "overdue" });
+    } else if (becameUpcoming) {
+      remindersToSend.push({ instanceId: inst.id, title: inst.requirementDefinition.title, kind: "upcoming" });
+    }
   }
   if (updates.length) await prisma.$transaction(updates);
+
+  if (remindersToSend.length > 0) {
+    const targets = await resolveDealMembers(req.params.dealId, ["qalicb_admin", "qalicb_contributor"]);
+    for (const reminder of remindersToSend) {
+      await notify({
+        targets,
+        dealId: req.params.dealId,
+        requirementInstanceId: reminder.instanceId,
+        notificationType: `deadline_${reminder.kind}`,
+        subject: reminder.kind === "overdue" ? `Overdue: ${reminder.title}` : `Due soon: ${reminder.title}`,
+        body:
+          reminder.kind === "overdue"
+            ? `"${reminder.title}" is now overdue.`
+            : `"${reminder.title}" is due within 30 days.`,
+      });
+    }
+  }
 
   res.json(instances);
 });

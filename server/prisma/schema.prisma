@@ -1230,8 +1230,12 @@ model Notification {
   sentAt                 DateTime? @map("sent_at")
   status                 NotificationStatus @default(queued)
   providerMessageId      String?  @map("provider_message_id")
+  // In-app "read" tracking — distinct from status/sentAt, which describe delivery
+  // (queued/sent/failed), not whether the recipient has seen it in the notification list.
+  readAt                 DateTime? @map("read_at")
   createdAt              DateTime @default(now()) @map("created_at")
 
+  @@index([userId, readAt, createdAt(sort: Desc)])
   @@map("notifications")
 }
 

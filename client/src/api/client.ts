@@ -282,10 +282,25 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface NotificationRow {
+  id: string;
+  notificationType: string;
+  subject: string | null;
+  body: string | null;
+  readAt: string | null;
+  createdAt: string;
+  deal: { dealCode: string; legalName: string } | null;
+  requirementInstance: { id: string; dealId: string } | null;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<LoginResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   me: () => request<AuthUser>("/auth/me"),
+
+  listNotifications: () => request<NotificationRow[]>("/notifications"),
+  markNotificationRead: (id: string) => request<NotificationRow>(`/notifications/${id}/read`, { method: "POST" }),
+  markAllNotificationsRead: () => request<{ ok: true }>("/notifications/read-all", { method: "POST" }),
 
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
