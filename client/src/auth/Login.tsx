@@ -61,12 +61,13 @@ export default function Login() {
   }
 
   return (
-    <main style={{ maxWidth: 420 }}>
+    <main style={{ maxWidth: 420, marginTop: 40 }}>
       <h1>Sign in</h1>
+      <p style={{ marginTop: 0 }}>NMTC Compliance Platform</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="card" style={{ color: "var(--danger)", background: "var(--danger-bg)", borderColor: "var(--danger)" }}>{error}</div>}
 
-      <form className="card" onSubmit={(e) => submit(e)} style={{ display: "grid", gap: 12 }}>
+      <form className="card" onSubmit={(e) => submit(e)} style={{ display: "grid", gap: 14 }}>
         <label>Email
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
@@ -77,19 +78,23 @@ export default function Login() {
       </form>
 
       <div className="card">
-        <p style={{ marginTop: 0, color: "#666" }}>
+        <p style={{ marginTop: 0, fontSize: 12.5 }}>
           Dev demo accounts (password <code>{DEMO_PASSWORD}</code> for all — real login, not a header switch):
         </p>
-        {DEMO_ACCOUNTS.map((a) => (
-          <button
-            key={a.email}
-            style={{ display: "block", width: "100%", marginBottom: 8, textAlign: "left" }}
-            onClick={(e) => submit(e, a.email, DEMO_PASSWORD)}
-            disabled={busy}
-          >
-            {a.label} — {a.email}
-          </button>
-        ))}
+        <div style={{ display: "grid", gap: 8 }}>
+          {DEMO_ACCOUNTS.map((a) => (
+            <button
+              key={a.email}
+              className="btn-secondary"
+              style={{ display: "block", width: "100%", textAlign: "left" }}
+              onClick={(e) => submit(e, a.email, DEMO_PASSWORD)}
+              disabled={busy}
+            >
+              <strong style={{ color: "inherit" }}>{a.label}</strong>
+              <div style={{ fontSize: 12, fontWeight: 400, opacity: 0.8 }}>{a.email}</div>
+            </button>
+          ))}
+        </div>
       </div>
     </main>
   );

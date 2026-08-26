@@ -8,11 +8,13 @@ export default function CdeLayout() {
 
   return (
     <PortalGuard portal="cde">
-      <nav style={{ padding: "8px 24px", background: "#eef2f6", borderBottom: "1px solid #dbe1e8", fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <nav className="portal-nav">
         <span>
-          CDE Portal — signed in as {user?.email} &nbsp;·&nbsp;
-          <Link to="/cde">Portfolio</Link> &nbsp;·&nbsp;
-          <button onClick={logout} style={{ fontSize: 14 }}>Log out</button>
+          <strong>CDE Portal</strong> — signed in as {user?.email}
+          <span className="portal-nav-links">
+            <Link to="/cde">Portfolio</Link>
+            <button className="btn-logout" onClick={logout}>Log out</button>
+          </span>
         </span>
         <NotificationBell />
       </nav>

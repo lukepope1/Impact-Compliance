@@ -1,9 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 :root {
   --navy: #0f2a4a;
+  --navy-light: #16385f;
   --teal: #1f7a8c;
+  --teal-light: #e5f2f4;
   --bg: #f4f6f8;
+  --surface: #ffffff;
   --border: #dbe1e8;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  --border-strong: #c3ccd6;
+  --text: #1a2027;
+  --text-muted: #5b6675;
+  --text-faint: #8b95a3;
+  --danger: #b3261e;
+  --danger-bg: #fdecec;
+  --success: #1a7a4c;
+  --success-bg: #e9f7ef;
+  --warning: #9a6700;
+  --warning-bg: #fff6df;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(15, 42, 74, 0.06);
+  --shadow-md: 0 4px 16px rgba(15, 42, 74, 0.08);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 * { box-sizing: border-box; }
@@ -11,44 +31,242 @@
 body {
   margin: 0;
   background: var(--bg);
-  color: #1a1a1a;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
 }
+
+h1, h2, h3 {
+  font-weight: 600;
+  color: var(--navy);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: 22px; margin-bottom: 6px; }
+h2 { font-size: 16px; margin-bottom: 10px; }
+h3 { font-size: 14px; margin-bottom: 8px; }
+
+main > h1 { margin-top: 0; }
+main > h1 + p { margin-top: 0; color: var(--text-muted); }
+
+p { color: var(--text-muted); }
+
+a {
+  color: var(--teal);
+  text-decoration: none;
+  font-weight: 500;
+}
+a:hover { text-decoration: underline; }
+
+/* ---------- App shell ---------- */
 
 header.app-header {
-  background: var(--navy);
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
   color: white;
-  padding: 16px 24px;
+  padding: 14px 24px;
   font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-sm);
 }
 
-main {
-  padding: 24px;
-  max-width: 1100px;
+.portal-nav {
+  padding: 10px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
+
+.portal-nav strong { color: var(--text); font-weight: 600; }
+
+.portal-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.portal-nav-links a {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.portal-nav-links a:hover { color: var(--teal); text-decoration: none; }
+
+.portal-nav .btn-logout {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  padding: 5px 12px;
+  font-size: 12px;
+}
+.portal-nav .btn-logout:hover { background: var(--bg); color: var(--text); }
+
+main {
+  padding: 28px 32px 64px;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Tables ---------- */
 
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
 th, td {
   text-align: left;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 th {
-  color: var(--navy);
+  color: var(--text-muted);
   background: #f9fafb;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.card {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 16px;
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: #fafbfc; }
+
+/* ---------- Buttons ---------- */
+
+button {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--teal);
+  background: var(--teal);
+  color: white;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.05s ease;
 }
+
+button:hover:not(:disabled) {
+  background: #196a7a;
+  border-color: #196a7a;
+}
+
+button:active:not(:disabled) { transform: translateY(1px); }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* A plain/secondary look for buttons meant to look de-emphasized next to a primary
+   action — most pages here only have one button per context, so this mainly targets
+   nav-style buttons (log out, mark-all-read) that shouldn't compete visually. */
+.portal-nav button:not(.btn-logout),
+table button {
+  background: var(--surface);
+  color: var(--teal);
+  border: 1px solid var(--border-strong);
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+.portal-nav button:not(.btn-logout):hover:not(:disabled),
+table button:hover:not(:disabled) {
+  background: var(--teal-light);
+  border-color: var(--teal);
+}
+
+/* A quieter alternative to the default primary button — used where several options sit
+   side by side (e.g. the login page's list of demo accounts) and none should read as
+   "the" primary action. */
+.btn-secondary {
+  background: var(--surface);
+  color: var(--navy);
+  border: 1px solid var(--border-strong);
+  padding: 10px 14px;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--teal-light);
+  border-color: var(--teal);
+}
+
+/* ---------- Forms ---------- */
+
+label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input:not([type]),
+select,
+textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  margin-top: 2px;
+}
+
+textarea { resize: vertical; min-height: 60px; }
+
+input::placeholder, textarea::placeholder { color: var(--text-faint); }
+
+/* ---------- Misc ---------- */
+
+code {
+  background: #eef2f6;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+}
+
+strong { color: var(--text); }
+
+::selection { background: var(--teal-light); }
