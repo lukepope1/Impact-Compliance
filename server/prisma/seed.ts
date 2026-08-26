@@ -1,8 +1,14 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// One shared dev password across all seeded demo users — fine for local dev only, never
+// reuse this pattern anywhere real credentials matter.
+const DEV_PASSWORD = "password123";
+
 async function main() {
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
   const impact = await prisma.organization.create({
     data: { organizationType: "impact_marketplace", legalName: "Impact Marketplace LLC" },
   });
@@ -20,6 +26,7 @@ async function main() {
     data: {
       externalAuthSubject: "seed|compliance-manager",
       email: "compliance@impactmarketplace.com",
+      passwordHash,
       firstName: "Impact",
       lastName: "Manager",
       memberships: { create: { organizationId: impact.id, roleCode: "impact_compliance_manager" } },
@@ -30,6 +37,7 @@ async function main() {
     data: {
       externalAuthSubject: "seed|qalicb-admin",
       email: "jane.doe@millenniumholdings.example",
+      passwordHash,
       firstName: "Jane",
       lastName: "Doe",
       memberships: { create: { organizationId: qalicb.id, roleCode: "qalicb_admin" } },
@@ -40,6 +48,7 @@ async function main() {
     data: {
       externalAuthSubject: "seed|cde-reviewer",
       email: "reviewer@enterprisecde.example",
+      passwordHash,
       firstName: "Enterprise",
       lastName: "Reviewer",
       memberships: { create: { organizationId: enterpriseCde.id, roleCode: "cde_reviewer" } },
@@ -115,6 +124,10 @@ async function main() {
   });
 
   console.log("Seeded:", { deal: deal.dealCode, organizations: 4, users: 3 });
+  console.log(`Demo login password for all seeded users: ${DEV_PASSWORD}`);
+  console.log("  compliance@impactmarketplace.com  (Impact compliance manager)");
+  console.log("  jane.doe@millenniumholdings.example  (QALICB admin)");
+  console.log("  reviewer@enterprisecde.example  (CDE reviewer)");
 }
 
 main()

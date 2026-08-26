@@ -1,22 +1,18 @@
-import { useEffect } from "react";
 import { Link, Outlet } from "react-router-dom";
-import { setActingUser } from "../../api/client";
-
-// Dev-only stand-in for real auth — see the note on setActingUser in api/client.ts.
-const CDE_USER_EMAIL = "reviewer@enterprisecde.example";
+import PortalGuard from "../../auth/PortalGuard";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function CdeLayout() {
-  useEffect(() => {
-    setActingUser(CDE_USER_EMAIL);
-  }, []);
+  const { user, logout } = useAuth();
 
   return (
-    <div>
+    <PortalGuard portal="cde">
       <nav style={{ padding: "8px 24px", background: "#eef2f6", borderBottom: "1px solid #dbe1e8", fontSize: 14 }}>
-        CDE Portal — acting as {CDE_USER_EMAIL} &nbsp;·&nbsp;
-        <Link to="/cde">Portfolio</Link>
+        CDE Portal — signed in as {user?.email} &nbsp;·&nbsp;
+        <Link to="/cde">Portfolio</Link> &nbsp;·&nbsp;
+        <button onClick={logout} style={{ fontSize: 14 }}>Log out</button>
       </nav>
       <Outlet />
-    </div>
+    </PortalGuard>
   );
 }

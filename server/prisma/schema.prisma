@@ -392,6 +392,11 @@ model User {
   id                 String     @id @default(uuid())
   externalAuthSubject String    @unique @map("external_auth_subject")
   email              String     @unique
+  // bcrypt hash for the interim local-credential login (see server/src/routes/auth.ts).
+  // Null for users provisioned only through a future real IdP (AWS Cognito or
+  // equivalent per the schema's original implementation notes) once that's wired up —
+  // this column is the swap-out point, not a permanent design choice.
+  passwordHash       String?    @map("password_hash")
   firstName          String?    @map("first_name")
   lastName           String?    @map("last_name")
   status             UserStatus @default(active)

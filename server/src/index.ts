@@ -7,6 +7,7 @@ import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { requireAuth } from "./middleware/auth";
+import { authRouter } from "./routes/auth";
 import { dealsRouter } from "./routes/deals";
 import { dealPartiesRouter } from "./routes/dealParties";
 import { cdeParticipationsRouter } from "./routes/cdeParticipations";
@@ -33,6 +34,7 @@ app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
+app.use("/api/auth", authRouter);
 app.use("/api/organizations", requireAuth, organizationsRouter);
 app.use("/api/deals", requireAuth, dealsRouter);
 app.use("/api/deals/:dealId/parties", requireAuth, dealPartiesRouter);

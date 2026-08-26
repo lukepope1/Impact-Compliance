@@ -1,22 +1,30 @@
 import type { NextFunction, Request, Response } from "express";
 import type { RoleCode } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { verifyAccessToken } from "../lib/authTokens";
 
 /**
- * Phase 1 auth: trusts an `x-user-email` header set by the (not-yet-built)
- * identity-provider integration. This is a placeholder for local dev and
- * automated tests only — replace with real JWT verification (AWS Cognito or
- * equivalent, per the schema's implementation notes) before any deployment
- * that isn't fully local.
+ * Verifies a signed JWT from the Authorization header (see routes/auth.ts for how it's
+ * issued) and loads the user's active memberships onto req.user. This is the local-
+ * credential interim — the swap-out point for a real IdP (AWS Cognito or equivalent, per
+ * the schema's implementation notes) is authTokens.ts, not here; this function's shape
+ * (verify a token, load the user, attach memberships) stays the same either way.
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const email = req.header("x-user-email");
-  if (!email) {
-    return res.status(401).json({ error: "Missing authentication" });
+  const authHeader = req.header("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or malformed Authorization header" });
+  }
+
+  let payload;
+  try {
+    payload = verifyAccessToken(authHeader.slice("Bearer ".length));
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
   }
 
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { id: payload.sub },
     include: { memberships: { where: { status: "active" }, select: { organizationId: true, roleCode: true } } },
   });
 

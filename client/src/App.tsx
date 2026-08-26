@@ -19,6 +19,7 @@ import Issues from "./pages/shared/Issues";
 import CommunityBenefits from "./pages/shared/CommunityBenefits";
 import MultiCdeSnapshot from "./pages/shared/MultiCdeSnapshot";
 import AmisCenter from "./pages/shared/AmisCenter";
+import Login from "./auth/Login";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
       <header className="app-header">Impact Marketplace | NMTC Compliance</header>
       <Routes>
         <Route path="/" element={<Navigate to="/impact/deals" replace />} />
+        <Route path="/login" element={<Login />} />
 
         <Route path="/impact" element={<ImpactLayout />}>
           <Route path="deals" element={<DealList />} />

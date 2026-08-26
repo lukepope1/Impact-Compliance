@@ -45,19 +45,28 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 - AMIS field readiness + CSV export generation, blocked while fields are missing, every
   output value traced to its source (manual filing only — no auto-submission to AMIS)
 
+## Auth ✅ (real, not a stub)
+- Bcrypt-hashed passwords, JWT-signed sessions (`POST /api/auth/login`), verified on every
+  request via the Authorization header — replacing the earlier `x-user-email` dev stub
+- Login page + role-gated portal guards (a QALICB user can't open `/impact`, etc.),
+  verified live across all three seeded demo accounts including the redirect-after-login path
+- Still an interim local-credential system standing in for a real identity provider (AWS
+  Cognito or equivalent, per the schema's original implementation notes) — see the swap-out
+  point noted in `server/src/lib/authTokens.ts`. Swapping it means changing `requireAuth`
+  to verify the IdP's tokens instead of these; the shape of everything downstream (load
+  user, attach memberships) doesn't change.
+
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
 - No sharing of CDE-private data across CDE organizations
-- No real identity provider — auth is a header-based dev stub (see the note on
-  `requireAuth` in server/src/middleware/auth.ts); this is the single biggest gap before
-  any real deployment
 - AMIS export covers a small hardcoded field set (goldenFields.ts) proving the mechanism,
   not the full field catalog a production build would need
 - No security review / formal UAT pass — see below
 
 ## Before this could go anywhere near production
-- Real auth (AWS Cognito or equivalent) replacing the `x-user-email` header stub
+- A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
+  system — see the Auth section above for what's already real vs. what's still interim
 - Real S3 + KMS for evidence storage, replacing the local-disk dev backend
 - A real malware-scan pipeline — uploads are currently marked "clean" immediately
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields

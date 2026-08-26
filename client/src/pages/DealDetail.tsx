@@ -42,9 +42,8 @@ export default function DealDetail() {
         <Link to={`/impact/deals/${dealId}/amis`}>AMIS readiness & export</Link>
       </div>
       <p style={{ color: "#666" }}>
-        <Link to="/qalicb">Open the QALICB portal</Link> to submit against this deal's requirements, or{" "}
-        <Link to="/cde">open the CDE portal</Link> to review Impact-approved submissions
-        (dev-only: each acts as a different seeded user — see the notes in api/client.ts).
+        The QALICB and CDE portals require signing in as a user with that portal's role —
+        log out and sign in as one of the seeded demo accounts to try them.
       </p>
     </main>
   );

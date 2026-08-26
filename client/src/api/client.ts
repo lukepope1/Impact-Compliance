@@ -1,10 +1,30 @@
-// Phase 1 placeholder: identity comes from a header until real auth lands (see
-// server/src/middleware/auth.ts). Real auth will derive the acting user from a session/
-// JWT, not a client-selectable value — this switcher exists only so the Impact and
-// QALICB portals in this same dev build can demo as different logged-in users.
-let ACTING_USER_EMAIL = "compliance@impactmarketplace.com";
-export function setActingUser(email: string) {
-  ACTING_USER_EMAIL = email;
+// Real auth: a JWT issued by POST /api/auth/login (see server/src/routes/auth.ts),
+// carried as a Bearer token. Persisted to localStorage so a refresh doesn't log the user
+// out; cleared on 401 so a stale/expired token doesn't loop forever. AuthContext.tsx owns
+// the higher-level login/logout flow and current-user state — this module only owns the
+// token string and attaching it to every request.
+const TOKEN_STORAGE_KEY = "nmtc_auth_token";
+let AUTH_TOKEN: string | null = typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
+
+export function setAuthToken(token: string | null) {
+  AUTH_TOKEN = token;
+  if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  else localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export function getAuthToken() {
+  return AUTH_TOKEN;
+}
+
+/** Fired when a request comes back 401 so the app can redirect to /login. AuthContext subscribes to this. */
+type UnauthorizedListener = () => void;
+let onUnauthorized: UnauthorizedListener | null = null;
+export function setUnauthorizedHandler(handler: UnauthorizedListener | null) {
+  onUnauthorized = handler;
+}
+
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  return AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}`, ...extra } : { ...extra };
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -12,10 +32,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "x-user-email": ACTING_USER_EMAIL,
+      ...authHeaders(),
       ...init?.headers,
     },
   });
+  if (res.status === 401) {
+    setAuthToken(null);
+    onUnauthorized?.();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
@@ -118,9 +142,13 @@ export interface AuditEventRow {
 async function requestForm<T>(path: string, form: FormData): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: "POST",
-    headers: { "x-user-email": ACTING_USER_EMAIL },
+    headers: authHeaders(),
     body: form,
   });
+  if (res.status === 401) {
+    setAuthToken(null);
+    onUnauthorized?.();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
@@ -234,7 +262,31 @@ export interface ExportBatchRow {
   generatedAt: string;
 }
 
+export interface Membership {
+  organizationId: string;
+  organizationName: string;
+  organizationType: string;
+  roleCode: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  memberships: Membership[];
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+}
+
 export const api = {
+  login: (email: string, password: string) =>
+    request<LoginResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  me: () => request<AuthUser>("/auth/me"),
+
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
   createDeal: (data: { dealCode: string; legalName: string; projectName?: string; isMultiCde: boolean }) =>
@@ -297,7 +349,7 @@ export const api = {
   },
   async downloadDocument(dealId: string, documentId: string, versionId: string, fileName: string) {
     const res = await fetch(`/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`, {
-      headers: { "x-user-email": ACTING_USER_EMAIL },
+      headers: authHeaders(),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -376,7 +428,7 @@ export const api = {
   generateAmisExport: (dealId: string, year: number) =>
     request<ExportBatchRow>(`/deals/${dealId}/amis/exports/${year}`, { method: "POST" }),
   async downloadAmisExport(dealId: string, exportId: string, fileName: string) {
-    const res = await fetch(`/api/deals/${dealId}/amis/exports/${exportId}/download`, { headers: { "x-user-email": ACTING_USER_EMAIL } });
+    const res = await fetch(`/api/deals/${dealId}/amis/exports/${exportId}/download`, { headers: authHeaders() });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
