@@ -43,11 +43,20 @@ string, not silently dropped. This was verified live: a returned-submission noti
 correctly produced one `in_app` row (visible in the bell, mark-as-read worked) and one
 `email` row with `status: "failed"` when SMTP wasn't configured.
 
-**Not verified**: actually sending an email through real SMTP — no SMTP credentials were
-available in the environment this was built in. The `nodemailer` call itself follows its
-documented API; treat it as reviewed, not proven, same as the S3/KMS and ClamAV
-integrations. Point `SMTP_HOST` at a real provider (SES, SendGrid, etc.) and send a test
-notification as your team's first real check.
+**Verified live** (updated after initially shipping unverified): pointed `SMTP_HOST` at a
+free, disposable [Ethereal Email](https://ethereal.email) test account (created on the fly
+via `nodemailer.createTestAccount()` — no pre-existing credentials needed) and submitted a
+real requirement. The resulting `email` notification row came back `status: "sent"` with a
+real `providerMessageId` from Ethereal's SMTP server, and the actual rendered message
+(correct From/To/Subject headers, correct body) was visually confirmed at Ethereal's
+message-preview URL. This proves the `nodemailer` transport and the send path genuinely
+work end to end — not just the fail-visible fallback described above.
+
+What's still not verified: delivery through a **production-grade provider** (SES,
+SendGrid, etc.) with real DNS/SPF/DKIM configuration, and delivery to an actual human
+inbox rather than a test-only SMTP sink. Ethereal never delivers anywhere real — it proves
+the code path, not deliverability at a real domain. Point `SMTP_HOST` at your production
+provider and send a real test notification before relying on this for actual users.
 
 ## API
 

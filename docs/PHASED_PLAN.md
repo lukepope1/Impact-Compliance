@@ -103,9 +103,12 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
 - Verified live end to end: returned a submission as Impact, confirmed the QALICB
   submitter got an in-app notification (visible in the bell, mark-as-read worked) and a
   corresponding email row recorded as "failed" (SMTP unconfigured, as expected)
-- Actually sending mail through real SMTP was not verified — no SMTP credentials were
-  available in this environment; same "reviewed, not proven live" honesty as S3/KMS and
-  ClamAV
+- **Real SMTP delivery now verified too**: pointed SMTP at a free Ethereal test account
+  (no pre-existing credentials needed), submitted a requirement, confirmed the resulting
+  email notification came back `status: "sent"` with a real provider message ID, and
+  visually confirmed the actual rendered email at Ethereal's preview URL. Proves the send
+  path genuinely works — production-provider deliverability (SES/SendGrid + real DNS/SPF/
+  DKIM) is still unverified, see docs/NOTIFICATIONS.md.
 
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
@@ -124,5 +127,6 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
 - Replace the request-triggered reminder recompute with a real scheduled sweep (cron / EventBridge)
-- Point SMTP at a real provider and send an actual test email — verify email delivery, not just its fail-visible fallback
+- Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
+  itself is verified (Ethereal), but not production deliverability
 - Security review and UAT against the original backlog's acceptance criteria
