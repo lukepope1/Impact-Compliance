@@ -408,6 +408,36 @@ and documented at the time:
   every `IssueNote` created during earlier feature testing on this deal's one issue, and
   the compliance/exceptions/AMIS stat cards matching the same real counts already
   verified on the Portfolio dashboard for this deal.
+- **Review Queue redesign to a third wireframe**: `ReviewQueueAll.tsx` (shared between
+  Impact and CDE) rebuilt to match — a filter bar (Deal / Priority / Due date / Search,
+  all real and functional) and a table with `Received` / `Deal` / `Requirement` /
+  `Period` / `Impact review` (CDE stage only — meaningless for the Impact queue, since
+  Impact reviewers *are* the impact review, so the column is hidden there rather than
+  shown empty) columns, plus a `Queue Summary` side panel.
+
+  Two columns are derived from real fields rather than invented to match the mock
+  cosmetically: `Received` approximates "when this item arrived in the queue" from
+  `updatedAt` (the last status transition — accurate for a queue that only ever shows
+  one specific status) via a `relativeDay()` helper ("Today"/"Yesterday"/"N days
+  ago"/short date); `Period` derives a compact `Q2 2026` / `H1 2026` / `CY 2026` label
+  from the real `reportingPeriodStart`/`reportingPeriodEnd` span instead of a raw date
+  range, matching how periods are actually generated (calendar-aligned quarter/half/year
+  spans in `deadlineEngine.ts`).
+
+  The mock's "Queue filters" side panel (Assigned reviewer / Age / Deal / Priority) had
+  no real backing fields for "assigned reviewer" or "age" as filters (no assignment
+  concept exists on `Review`), so rather than build dead controls, it became a real
+  `Queue Summary`: who's signed in, the oldest item's age, how many deals are
+  represented, and a priority breakdown — all computed from the same `severity` field
+  the requirement definitions already carry, not fabricated.
+
+  Verified live for both portals: the CDE queue showed 2 real pending items across 2
+  deals with correct relative dates, period labels, and a `Queue Summary` matching (2
+  deals represented, both Normal priority); the Deal filter correctly narrowed the table
+  to 1 row while the summary panel stayed computed from the unfiltered set (its own
+  distinct data, not re-filtered); the Impact queue correctly showed 4 columns (no
+  `Impact review`) and an honest empty state with real `—` placeholders when nothing was
+  pending, rather than "0"/blank cells that would look like a loading bug.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
