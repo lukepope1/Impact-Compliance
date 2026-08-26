@@ -1,6 +1,7 @@
 import type { RoleCode } from "@prisma/client";
 import { prisma } from "./prisma";
 import { sendEmail } from "./email";
+import { isChannelEnabled } from "./notificationPreferences";
 
 interface NotifyTarget {
   userId: string;
@@ -25,10 +26,13 @@ export async function resolveDealMembers(dealId: string, roleCodes: RoleCode[]):
 }
 
 /**
- * Records one notification per target: an in-app row (always — visible in the
- * notification list immediately, no delivery step needed) and an email row (attempted via
- * sendEmail; its status reflects whether SMTP is configured and the send actually
- * succeeded — see email.ts for the fail-visible-not-silent rationale).
+ * Records one notification per target per enabled channel: an in-app row (visible in the
+ * notification list immediately, no delivery step needed) and/or an email row (attempted
+ * via sendEmail; its status reflects whether SMTP is configured and the send actually
+ * succeeded — see email.ts for the fail-visible-not-silent rationale). A target who has
+ * disabled a channel for this event (see notificationPreferences.ts) simply gets no row
+ * on that channel — there's nothing useful about persisting a notification the recipient
+ * asked not to receive.
  */
 export async function notify(params: {
   targets: NotifyTarget[];
@@ -41,36 +45,45 @@ export async function notify(params: {
   const { targets, dealId, requirementInstanceId, notificationType, subject, body } = params;
 
   for (const target of targets) {
-    await prisma.notification.create({
-      data: {
-        userId: target.userId,
-        organizationId: target.organizationId,
-        dealId,
-        requirementInstanceId,
-        notificationType,
-        channel: "in_app",
-        subject,
-        body,
-        status: "sent",
-        sentAt: new Date(),
-      },
-    });
+    const [inAppEnabled, emailEnabled] = await Promise.all([
+      isChannelEnabled(target.userId, notificationType, "in_app"),
+      isChannelEnabled(target.userId, notificationType, "email"),
+    ]);
 
-    const emailResult = await sendEmail({ to: target.email, subject, body });
-    await prisma.notification.create({
-      data: {
-        userId: target.userId,
-        organizationId: target.organizationId,
-        dealId,
-        requirementInstanceId,
-        notificationType,
-        channel: "email",
-        subject,
-        body,
-        status: emailResult.status,
-        sentAt: emailResult.status === "sent" ? new Date() : undefined,
-        providerMessageId: emailResult.providerMessageId,
-      },
-    });
+    if (inAppEnabled) {
+      await prisma.notification.create({
+        data: {
+          userId: target.userId,
+          organizationId: target.organizationId,
+          dealId,
+          requirementInstanceId,
+          notificationType,
+          channel: "in_app",
+          subject,
+          body,
+          status: "sent",
+          sentAt: new Date(),
+        },
+      });
+    }
+
+    if (emailEnabled) {
+      const emailResult = await sendEmail({ to: target.email, subject, body });
+      await prisma.notification.create({
+        data: {
+          userId: target.userId,
+          organizationId: target.organizationId,
+          dealId,
+          requirementInstanceId,
+          notificationType,
+          channel: "email",
+          subject,
+          body,
+          status: emailResult.status,
+          sentAt: emailResult.status === "sent" ? new Date() : undefined,
+          providerMessageId: emailResult.providerMessageId,
+        },
+      });
+    }
   }
 }

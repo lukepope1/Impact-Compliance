@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, type NotificationRow } from "../../api/client";
 
 function fmt(d: string) {
@@ -70,7 +71,12 @@ export default function NotificationBell() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <strong>Notifications</strong>
-            {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12 }}>Mark all read</button>}
+            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12 }}>Mark all read</button>}
+              <Link to="/notifications/preferences" onClick={() => setOpen(false)} style={{ fontSize: 12 }}>
+                Settings
+              </Link>
+            </span>
           </div>
           {notifications && notifications.length === 0 && <p style={{ color: "#666" }}>Nothing yet.</p>}
           {notifications?.map((n) => (

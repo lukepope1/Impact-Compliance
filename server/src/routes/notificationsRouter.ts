@@ -1,7 +1,35 @@
 import { Router } from "express";
+import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { getPreferenceGrid, setPreference } from "../lib/notificationPreferences";
 
 export const notificationsRouter = Router();
+
+/** The current user's preference grid — every catalog event x in-app/email, defaulting to enabled. */
+notificationsRouter.get("/preferences", async (req, res) => {
+  const grid = await getPreferenceGrid(req.user!.id);
+  res.json(grid);
+});
+
+const preferenceSchema = z.object({
+  eventKey: z.string().min(1),
+  channel: z.enum(["in_app", "email"]),
+  enabled: z.boolean(),
+});
+
+notificationsRouter.put("/preferences", async (req, res) => {
+  const parsed = preferenceSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  try {
+    await setPreference(req.user!.id, parsed.data.eventKey, parsed.data.channel, parsed.data.enabled);
+  } catch (e) {
+    return res.status(400).json({ error: (e as Error).message });
+  }
+
+  const grid = await getPreferenceGrid(req.user!.id);
+  res.json(grid);
+});
 
 /** The current user's own in-app notifications — not deal-scoped, since a user can have notifications across deals. */
 notificationsRouter.get("/", async (req, res) => {

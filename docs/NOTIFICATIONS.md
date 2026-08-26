@@ -14,9 +14,39 @@ points listed below.
 | A requirement instance becomes due within 30 days | QALICB admins/contributors on the deal |
 | A requirement instance becomes overdue | QALICB admins/contributors on the deal |
 
-Every event creates **two** `Notification` rows per recipient: one `in_app` (always
-recorded, visible immediately in the bell) and one `email` (attempted via SMTP; its
-`status` reflects whether it actually sent — see below).
+Every event creates up to **two** `Notification` rows per recipient: one `in_app`
+(visible immediately in the bell) and one `email` (attempted via SMTP; its `status`
+reflects whether it actually sent — see below). "Up to" because a recipient can turn
+either channel off per event — see Preferences below; a disabled channel gets no row at
+all, not a suppressed one.
+
+## Preferences
+
+Each user can opt out of a channel for a specific event at `/notifications/preferences`
+(linked from the notification bell's dropdown) — a fixed catalog of 5 events
+(`server/src/lib/notificationPreferences.ts`: `NOTIFICATION_EVENTS`) × 2 channels
+(in-app/email), independently toggled. This is an **opt-out model**: no preference row
+means enabled, so a user who never visits the settings page keeps getting everything,
+matching this build's original behavior.
+
+The catalog groups raw, sometimes stage-prefixed `notificationType` values (e.g.
+`impact_review_returned` / `cde_review_returned`) onto one user-facing toggle
+(`submission_returned`) via `toPreferenceEventKey()` — a QALICB submitter doesn't need
+to know or care whether Impact or a CDE returned their submission, it's the same event
+from their side. `notify()` checks `isChannelEnabled()` per target per channel before
+creating that channel's row; a disabled channel is skipped entirely, not created and
+then suppressed.
+
+Verified live: disabled email for "my submission was returned," ran a real
+submit-then-return cycle, and confirmed directly against the database that the resulting
+event created only an `in_app` row — no `email` row at all — while an earlier event
+(before the preference existed) still had both. The preferences page itself was verified
+live too: loaded the current grid, toggled a checkbox, confirmed the `PUT` succeeded and
+the new value persisted across a re-fetch.
+
+API: `GET /api/notifications/preferences` returns the current user's full grid; `PUT
+/api/notifications/preferences` (body: `{eventKey, channel, enabled}`) updates one cell
+and returns the refreshed grid.
 
 ## Deadline reminders: how they actually fire
 
@@ -100,7 +130,7 @@ of which portal they're in. Polls every 60 seconds (no websocket/SSE push in thi
 
 ## What this doesn't do yet
 
-- No real scheduled reminder sweep — see above
-- No per-user notification preferences (which events, which channel)
 - No digest/batching — every triggering event sends immediately, one at a time
 - No push/SMS channels — only in-app and email, matching the schema's `NotificationChannel` enum
+- Preferences are opt-out only, no per-deal overrides (a preference applies to a user
+  across every deal, not "mute this one deal's deadline reminders")

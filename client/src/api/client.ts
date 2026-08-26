@@ -324,6 +324,14 @@ export interface NotificationRow {
   requirementInstance: { id: string; dealId: string } | null;
 }
 
+export interface NotificationPreferenceRow {
+  eventKey: string;
+  label: string;
+  description: string;
+  inApp: boolean;
+  email: boolean;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<LoginResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
@@ -332,6 +340,13 @@ export const api = {
   listNotifications: () => request<NotificationRow[]>("/notifications"),
   markNotificationRead: (id: string) => request<NotificationRow>(`/notifications/${id}/read`, { method: "POST" }),
   markAllNotificationsRead: () => request<{ ok: true }>("/notifications/read-all", { method: "POST" }),
+
+  getNotificationPreferences: () => request<NotificationPreferenceRow[]>("/notifications/preferences"),
+  setNotificationPreference: (eventKey: string, channel: "in_app" | "email", enabled: boolean) =>
+    request<NotificationPreferenceRow[]>("/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify({ eventKey, channel, enabled }),
+    }),
 
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),

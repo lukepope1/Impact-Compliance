@@ -127,6 +127,15 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   visually confirmed the actual rendered email at Ethereal's preview URL. Proves the send
   path genuinely works — production-provider deliverability (SES/SendGrid + real DNS/SPF/
   DKIM) is still unverified, see docs/NOTIFICATIONS.md.
+- **Per-user notification preferences** (`lib/notificationPreferences.ts`, a new
+  `NotificationPreference` table, `/notifications/preferences` screen linked from the
+  bell): opt-out per event × channel, defaulting to enabled so nobody's notifications
+  change unless they visit the settings page. `notify()` checks the preference before
+  creating each channel's row — a disabled channel gets no row at all. Verified live: a
+  real submit-then-return cycle with email disabled for that event produced only an
+  `in_app` row (confirmed directly against the database, since the earlier event before
+  the preference existed still had both rows); the settings page itself round-tripped a
+  live toggle through a page reload.
 
 ## Security review ✅ (findings fixed and verified live)
 Three parallel audits (auth/access-control, deal-scoped/document routes, dependencies/infra)

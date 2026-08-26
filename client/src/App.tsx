@@ -19,6 +19,7 @@ import Issues from "./pages/shared/Issues";
 import CommunityBenefits from "./pages/shared/CommunityBenefits";
 import MultiCdeSnapshot from "./pages/shared/MultiCdeSnapshot";
 import AmisCenter from "./pages/shared/AmisCenter";
+import NotificationPreferences from "./pages/shared/NotificationPreferences";
 import Login from "./auth/Login";
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/impact/deals" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/notifications/preferences" element={<NotificationPreferences />} />
 
         <Route path="/impact" element={<ImpactLayout />}>
           <Route path="deals" element={<DealList />} />

@@ -423,6 +423,7 @@ model User {
   decidedSnapshotApprovals CdeSnapshotApproval[]
   generatedExports         ExportBatch[]
   notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
   auditEvents              AuditEvent[]
 
   @@map("users")
@@ -1237,6 +1238,25 @@ model Notification {
 
   @@index([userId, readAt, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+// Per-user opt-out of a notification event type on a specific channel. Absence of a row
+// means "enabled" (opt-out model, not opt-in) — preserves today's behavior of "everyone
+// eligible gets everything" for anyone who never visits the preferences screen, while
+// letting a user quiet a specific event/channel combination. eventType values are the
+// fixed catalog in server/src/lib/notificationPreferences.ts, not the raw (sometimes
+// stage-prefixed) notificationType strings notify() writes to Notification.notificationType.
+model NotificationPreference {
+  id         String              @id @default(uuid())
+  userId     String              @map("user_id")
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType  String              @map("event_type")
+  channel    NotificationChannel
+  enabled    Boolean             @default(true)
+  updatedAt  DateTime            @updatedAt @map("updated_at")
+
+  @@unique([userId, eventType, channel])
+  @@map("notification_preferences")
 }
 
 model AuditEvent {
