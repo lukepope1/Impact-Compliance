@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type DocumentSummary } from "../api/client";
 
@@ -13,6 +13,12 @@ function formatBytes(n: string | number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function scanStatusColor(status: string) {
+  if (status === "clean") return "#1f7a8c";
+  if (status === "infected") return "#b00";
+  return "#a67c00"; // pending / failed
+}
+
 export default function Documents() {
   const { dealId } = useParams();
   const [docs, setDocs] = useState<DocumentSummary[] | null>(null);
@@ -21,12 +27,38 @@ export default function Documents() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedDoc, setExpandedDoc] = useState<DocumentSummary | null>(null);
+  const newVersionInput = useRef<HTMLInputElement>(null);
+  const [busyAction, setBusyAction] = useState(false);
+
   function refresh() {
     if (!dealId) return;
     api.listDocuments(dealId).then(setDocs).catch((e) => setError(String(e.message ?? e)));
   }
 
   useEffect(refresh, [dealId]);
+
+  async function loadVersions(documentId: string) {
+    if (!dealId) return;
+    try {
+      const doc = await api.getDocument(dealId, documentId);
+      setExpandedDoc(doc);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    }
+  }
+
+  function toggleExpand(documentId: string) {
+    if (expandedId === documentId) {
+      setExpandedId(null);
+      setExpandedDoc(null);
+      return;
+    }
+    setExpandedId(documentId);
+    setExpandedDoc(null);
+    loadVersions(documentId);
+  }
 
   async function upload(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +75,38 @@ export default function Documents() {
       setError(String((e as Error).message ?? e));
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function uploadNewVersion(e: React.FormEvent, documentId: string) {
+    e.preventDefault();
+    const file = newVersionInput.current?.files?.[0];
+    if (!dealId || !file) return;
+    setBusyAction(true);
+    setError(null);
+    try {
+      await api.uploadNewVersion(dealId, documentId, file);
+      if (newVersionInput.current) newVersionInput.current.value = "";
+      refresh();
+      loadVersions(documentId);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setBusyAction(false);
+    }
+  }
+
+  async function rescan(documentId: string, versionId: string) {
+    if (!dealId) return;
+    setBusyAction(true);
+    setError(null);
+    try {
+      await api.rescanVersion(dealId, documentId, versionId);
+      loadVersions(documentId);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setBusyAction(false);
     }
   }
 
@@ -86,19 +150,69 @@ export default function Documents() {
         <tbody>
           {docs?.map((d) => {
             const latest = d.versions[0];
+            const isExpanded = expandedId === d.id;
             return (
-              <tr key={d.id}>
-                <td>{d.title}</td>
-                <td>{d.documentType}</td>
-                <td>{d.shareScope}</td>
-                <td>v{d.currentVersion}</td>
-                <td>{latest ? `${formatBytes(latest.fileSizeBytes)} · ${latest.malwareScanStatus}` : "—"}</td>
-                <td>
-                  {latest && (
-                    <button onClick={() => download(d.id, latest.id, latest.fileName)}>Download</button>
-                  )}
-                </td>
-              </tr>
+              <Fragment key={d.id}>
+                <tr>
+                  <td>{d.title}</td>
+                  <td>{d.documentType}</td>
+                  <td>{d.shareScope}</td>
+                  <td>v{d.currentVersion}</td>
+                  <td style={latest ? { color: scanStatusColor(latest.malwareScanStatus) } : undefined}>
+                    {latest ? `${formatBytes(latest.fileSizeBytes)} · ${latest.malwareScanStatus}` : "—"}
+                  </td>
+                  <td>
+                    {latest && latest.malwareScanStatus === "clean" && (
+                      <button onClick={() => download(d.id, latest.id, latest.fileName)}>Download</button>
+                    )}
+                    {" "}
+                    <button onClick={() => toggleExpand(d.id)}>{isExpanded ? "Hide history" : "Version history"}</button>
+                  </td>
+                </tr>
+                {isExpanded && (
+                  <tr key={`${d.id}-detail`}>
+                    <td colSpan={6}>
+                      <div className="card" style={{ margin: "8px 0" }}>
+                        <h3 style={{ marginTop: 0 }}>Version history — {d.title}</h3>
+                        {!expandedDoc && <p>Loading…</p>}
+                        {expandedDoc && (
+                          <table>
+                            <thead>
+                              <tr><th>Version</th><th>File</th><th>Size</th><th>Scan status</th><th>Uploaded</th><th>Superseded</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                              {expandedDoc.versions.map((v) => (
+                                <tr key={v.id}>
+                                  <td>v{v.versionNumber}</td>
+                                  <td>{v.fileName}</td>
+                                  <td>{formatBytes(v.fileSizeBytes)}</td>
+                                  <td style={{ color: scanStatusColor(v.malwareScanStatus) }}>{v.malwareScanStatus}</td>
+                                  <td>{new Date(v.uploadedAt).toLocaleString()}</td>
+                                  <td>{v.supersededAt ? new Date(v.supersededAt).toLocaleString() : "—"}</td>
+                                  <td>
+                                    {v.malwareScanStatus === "clean" && (
+                                      <button onClick={() => download(d.id, v.id, v.fileName)}>Download</button>
+                                    )}
+                                    {(v.malwareScanStatus === "pending" || v.malwareScanStatus === "failed") && (
+                                      <button disabled={busyAction} onClick={() => rescan(d.id, v.id)}>Rescan</button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+
+                        <form onSubmit={(e) => uploadNewVersion(e, d.id)} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                          <input type="file" ref={newVersionInput} required />
+                          <button type="submit" disabled={busyAction}>Upload new version</button>
+                          <span style={{ color: "#666", fontSize: 13 }}>Never overwrites — the prior version is kept and marked superseded.</span>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
           {docs && docs.length === 0 && <tr><td colSpan={6}>No documents visible to you on this deal yet.</td></tr>}

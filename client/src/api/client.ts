@@ -330,6 +330,7 @@ export const api = {
     }),
 
   listDocuments: (dealId: string) => request<DocumentSummary[]>(`/deals/${dealId}/documents`),
+  getDocument: (dealId: string, documentId: string) => request<DocumentSummary>(`/deals/${dealId}/documents/${documentId}`),
   uploadDocument: (
     dealId: string,
     file: File,
@@ -347,6 +348,8 @@ export const api = {
     form.append("file", file);
     return requestForm<DocumentVersionSummary>(`/deals/${dealId}/documents/${documentId}/versions`, form);
   },
+  rescanVersion: (dealId: string, documentId: string, versionId: string) =>
+    request<DocumentVersionSummary>(`/deals/${dealId}/documents/${documentId}/versions/${versionId}/rescan`, { method: "POST" }),
   async downloadDocument(dealId: string, documentId: string, versionId: string, fileName: string) {
     const res = await fetch(`/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`, {
       headers: authHeaders(),

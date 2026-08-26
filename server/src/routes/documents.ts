@@ -60,6 +60,23 @@ documentsRouter.get("/", requireDealAccess, async (req, res) => {
   res.json(visible);
 });
 
+/** Full version history for one document — the list endpoint above only returns the latest version to stay light. */
+documentsRouter.get("/:documentId", requireDealAccess, async (req, res) => {
+  const orgIds = req.user!.memberships.map((m) => m.organizationId);
+  const doc = await prisma.document.findUnique({
+    where: { id: req.params.documentId },
+    include: { versions: { orderBy: { versionNumber: "desc" } } },
+  });
+  if (!doc || doc.dealId !== req.params.dealId) return res.status(404).json({ error: "Document not found" });
+
+  const types = await orgTypeMap(orgIds);
+  if (!(await canAccessDocument(doc, orgIds, types))) {
+    return res.status(403).json({ error: "Not authorized to view this document" });
+  }
+
+  res.json(doc);
+});
+
 /**
  * Uploads the first version of a new document. The file is scanned before the DB row is
  * ever created (see scanUpload) — status is "clean"/"infected"/"failed" if a scanner is
