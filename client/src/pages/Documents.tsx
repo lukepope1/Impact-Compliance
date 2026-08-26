@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type DocumentSummary } from "../api/client";
 
@@ -31,6 +31,25 @@ export default function Documents() {
   const [expandedDoc, setExpandedDoc] = useState<DocumentSummary | null>(null);
   const newVersionInput = useRef<HTMLInputElement>(null);
   const [busyAction, setBusyAction] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
+
+  // Filtering is client-side, not a server query — the list is already scoped to what
+  // this user can see (canAccessDocument on the server), and per-deal document counts in
+  // this app are small enough that shipping the whole list once and filtering in the
+  // browser is simpler than a paginated/filtered API, with no real cost at this scale.
+  const filteredDocs = useMemo(() => {
+    if (!docs) return docs;
+    const q = search.trim().toLowerCase();
+    return docs.filter((d) => {
+      if (q && !d.title.toLowerCase().includes(q)) return false;
+      if (typeFilter !== "all" && d.documentType !== typeFilter) return false;
+      if (scopeFilter !== "all" && d.shareScope !== scopeFilter) return false;
+      return true;
+    });
+  }, [docs, search, typeFilter, scopeFilter]);
 
   function refresh() {
     if (!dealId) return;
@@ -143,12 +162,38 @@ export default function Documents() {
         <button type="submit" disabled={uploading}>{uploading ? "Uploading…" : "Upload"}</button>
       </form>
 
+      <div className="card" style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <label style={{ flex: "1 1 220px", marginBottom: 0 }}>
+          Search title
+          <input placeholder="e.g. Balance Sheet" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </label>
+        <label style={{ marginBottom: 0 }}>
+          Type
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="all">All types</option>
+            {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label style={{ marginBottom: 0 }}>
+          Sharing
+          <select value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)}>
+            <option value="all">All sharing levels</option>
+            {SHARE_SCOPES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        {docs && (
+          <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+            {filteredDocs?.length ?? 0} of {docs.length} shown
+          </span>
+        )}
+      </div>
+
       <table>
         <thead>
           <tr><th>Document</th><th>Type</th><th>Sharing</th><th>Versions</th><th>Latest</th><th></th></tr>
         </thead>
         <tbody>
-          {docs?.map((d) => {
+          {filteredDocs?.map((d) => {
             const latest = d.versions[0];
             const isExpanded = expandedId === d.id;
             return (
@@ -216,6 +261,9 @@ export default function Documents() {
             );
           })}
           {docs && docs.length === 0 && <tr><td colSpan={6}>No documents visible to you on this deal yet.</td></tr>}
+          {docs && docs.length > 0 && filteredDocs && filteredDocs.length === 0 && (
+            <tr><td colSpan={6}>No documents match this search/filter.</td></tr>
+          )}
         </tbody>
       </table>
     </main>
