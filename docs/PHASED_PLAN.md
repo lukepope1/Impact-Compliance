@@ -378,6 +378,36 @@ and documented at the time:
   QALICB users on different deals); the QALICB sidebar's Community Benefits Report link
   correctly redirected to Millennium Holdings' real CBR page, matching what the old
   hardcoded dashboard link used to reach.
+- **CDE per-deal "Deal Overview" page**, matching a second low-fidelity wireframe (a deal
+  detail screen the CDE portal never had — clicking a deal used to jump straight to its
+  review queue with no landing page). New `CdeDealOverview.tsx` at `/cde/deals/:dealId`
+  with the mock's four stat cards (Compliance status, Open exceptions, CBR progress,
+  AMIS readiness), a requirements table (Requirement / Entity-period / Due / Impact /
+  CDE columns), and a "CDE-specific deal data" side panel — scoped to *this* CDE's own
+  participation specifically, not another CDE's, on a multi-CDE deal.
+
+  Two real gaps had to be filled to make the panel work with real data instead of
+  placeholders: the `Qlici` model existed in the schema but had **no API route at all**
+  (new `qlicis.ts`, `GET /api/deals/:dealId/qlicis`, same `requireDealAccess` level as
+  the existing `cdeParticipations` endpoint, which already exposes QEI/allocation
+  amounts at that same access level — this doesn't introduce a new visibility boundary),
+  and no deal had any QLICI records — seeded two real ones (`prisma/seed.ts`, so a fresh
+  install gets them too; also run once against this session's live database) for
+  Millennium Holdings' Enterprise Financial CDE participation.
+
+  CBR progress is a plain, honestly-labeled completeness proxy — "how many of the three
+  sections this app actually collects (profile revenue, jobs, tenants) have any data" —
+  not a fabricated official percentage, since no such canonical score exists in the
+  schema. Private notes count sums `IssueNote` rows visible to the viewing CDE across
+  every issue on the deal (reusing the existing per-issue notes endpoint).
+
+  Verified live: loaded Millennium Holdings as Enterprise Financial CDE and confirmed
+  every panel value against known-real data — QLICI-A ($5,524,000) and QLICI-B
+  ($2,396,000) matching exactly what was just seeded, allocation control number
+  `22NMA003551` matching the seeded `CdeParticipation`, "3 notes" matching the sum of
+  every `IssueNote` created during earlier feature testing on this deal's one issue, and
+  the compliance/exceptions/AMIS stat cards matching the same real counts already
+  verified on the Portfolio dashboard for this deal.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

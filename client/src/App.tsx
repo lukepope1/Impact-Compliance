@@ -13,6 +13,7 @@ import QalicbDashboard from "./pages/qalicb/QalicbDashboard";
 import RequirementWorkspace from "./pages/qalicb/RequirementWorkspace";
 import CdeLayout from "./pages/cde/CdeLayout";
 import CdePortfolio from "./pages/cde/CdePortfolio";
+import CdeDealOverview from "./pages/cde/CdeDealOverview";
 import ImpactAuditAll from "./pages/impact/ImpactAuditAll";
 import QalicbCbrRedirect from "./pages/qalicb/QalicbCbrRedirect";
 import ReviewQueueAll from "./pages/shared/ReviewQueueAll";
@@ -75,11 +76,12 @@ export default function App() {
 
         <Route path="/cde" element={<CdeLayout />}>
           <Route index element={<CdePortfolio />} />
-          <Route path="deals" element={<DealsListAll portal="cde" rowLinkSuffix="/review-queue" />} />
+          <Route path="deals" element={<DealsListAll portal="cde" rowLinkSuffix="" />} />
           <Route path="review-queue" element={<ReviewQueueAll portal="cde" stage="cde" />} />
           <Route path="issues" element={<IssuesAll portal="cde" />} />
           <Route path="documents" element={<DocumentsAll portal="cde" />} />
           <Route path="amis" element={<AmisAll portal="cde" />} />
+          <Route path="deals/:dealId" element={<CdeDealOverview />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
           <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="cde" />} />

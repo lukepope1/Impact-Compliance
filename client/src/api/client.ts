@@ -78,8 +78,22 @@ export interface CdeParticipation {
   id: string;
   subCdeName: string | null;
   allocationControlNumber: string | null;
+  qeiAmount: string | null;
+  allocationAmount: string | null;
   isLeadCde: boolean;
   cdeOrganization: Organization;
+}
+
+export interface QliciRow {
+  id: string;
+  qliciCode: string;
+  qliciType: string;
+  noteClass: string | null;
+  originalPrincipal: string | null;
+  currentPrincipal: string | null;
+  interestRate: string | null;
+  status: string;
+  cdeParticipation: { cdeOrganizationId: string; subCdeName: string | null };
 }
 
 export interface RequirementSource {
@@ -385,6 +399,8 @@ export const api = {
     dealId: string,
     data: { cdeOrganizationId: string; subCdeName?: string; allocationControlNumber?: string; isLeadCde?: boolean }
   ) => request<CdeParticipation>(`/deals/${dealId}/cde-participations`, { method: "POST", body: JSON.stringify(data) }),
+
+  listQlicis: (dealId: string) => request<QliciRow[]>(`/deals/${dealId}/qlicis`),
 
   listRequirementDefinitions: (dealId: string) =>
     request<RequirementDefinition[]>(`/deals/${dealId}/requirement-definitions`),

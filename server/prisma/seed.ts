@@ -81,6 +81,39 @@ async function main() {
         ],
       },
     },
+    include: { cdeParticipations: true },
+  });
+
+  const enterpriseParticipation = deal.cdeParticipations.find((p) => p.cdeOrganizationId === enterpriseCde.id)!;
+  await prisma.qlici.createMany({
+    data: [
+      {
+        dealId: deal.id,
+        cdeParticipationId: enterpriseParticipation.id,
+        qliciCode: "QLICI-A",
+        qliciType: "loan",
+        noteClass: "A",
+        originalPrincipal: 5524000,
+        currentPrincipal: 5524000,
+        interestRate: 0.0125,
+        qliciDate: new Date("2025-10-06"),
+        maturityDate: new Date("2032-10-06"),
+        status: "active",
+      },
+      {
+        dealId: deal.id,
+        cdeParticipationId: enterpriseParticipation.id,
+        qliciCode: "QLICI-B",
+        qliciType: "loan",
+        noteClass: "B",
+        originalPrincipal: 2396000,
+        currentPrincipal: 2396000,
+        interestRate: 0.01,
+        qliciDate: new Date("2025-10-06"),
+        maturityDate: new Date("2032-10-06"),
+        status: "active",
+      },
+    ],
   });
 
   await prisma.dealParty.createMany({

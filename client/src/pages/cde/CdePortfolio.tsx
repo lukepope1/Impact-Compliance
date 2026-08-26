@@ -187,7 +187,7 @@ export default function CdePortfolio() {
             const complianceBadge = r.overdueCount > 0 || r.returnedCount > 0 ? "badge-danger" : r.upcomingCount > 0 ? "badge-warning" : "badge-success";
             return (
               <tr key={r.deal.id}>
-                <td><Link to={`/cde/deals/${r.deal.id}/review-queue`}>{r.deal.legalName}</Link></td>
+                <td><Link to={`/cde/deals/${r.deal.id}`}>{r.deal.legalName}</Link></td>
                 <td>{r.qalicbName}</td>
                 <td>{fmt(r.nextDeadline)}</td>
                 <td><span className={`badge ${complianceBadge}`}>{complianceLabel}</span></td>
