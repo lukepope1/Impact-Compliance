@@ -15,6 +15,18 @@ const CURRENCY_LABELS = new Set([
 const COUNT_LABELS = new Set(["Actual Jobs Created", "Actual Jobs Retained", "Actual Construction Jobs", "Tenants / Occupants Reported"]);
 const DATE_LABELS = new Set(["Closing Date"]);
 
+// The snapshot's own `status` only distinguishes "locked" (every CDE decided) from
+// everything before that — it doesn't track "nobody's looked at it yet" vs. "some CDEs
+// have decided." That finer-grained label is derived here from the approvals themselves
+// rather than added as a new status value, since it's just a view over data that already
+// exists.
+function goldenRecordStatusLabel(status: string, approvals: { decision: string }[]): string {
+  if (status === "locked") return "Locked";
+  const decided = approvals.filter((a) => a.decision !== "pending").length;
+  if (decided === 0) return "Awaiting CDE Review";
+  return "CDE Review";
+}
+
 function formatSnapshotValue(label: string, valueText: string | null, valueNumber: string | null) {
   const raw = valueText ?? valueNumber;
   if (CURRENCY_LABELS.has(label)) return formatCurrency(raw);
@@ -71,6 +83,16 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
 
       {snapshot && (
         <>
+          <div className="card" style={{ background: "var(--surface-muted, #f6f8fb)" }}>
+            <strong>Lead CDE: {snapshot.controlledByCdeParticipation?.cdeOrganization.legalName ?? "—"}</strong>
+            {"  ·  "}
+            <strong>Golden record status: {goldenRecordStatusLabel(snapshot.status, snapshot.approvals)}</strong>
+            {"  ·  "}
+            <strong>
+              Participant approvals: {snapshot.approvals.filter((a) => a.decision !== "pending").length} of {snapshot.approvals.length}
+            </strong>
+          </div>
+
           <div className="card">
             <h2>Shared fields</h2>
             <table>

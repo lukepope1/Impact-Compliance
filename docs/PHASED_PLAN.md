@@ -532,6 +532,32 @@ and documented at the time:
   just entered) — same shared component, same real data, just reachable from a portal
   that couldn't get to it before.
 
+- **Multi-CDE Snapshot header summary**, matching a "C-07" wireframe: added a "Lead CDE /
+  Golden record status / Participant approvals" summary line above the shared-fields
+  table in `MultiCdeSnapshot.tsx`. Lead CDE and the approval count come straight from
+  already-fetched data; "Golden record status" is a small derived label
+  (`goldenRecordStatusLabel`) — "Awaiting CDE Review" / "CDE Review" / "Locked" — computed
+  from the approvals rather than a new stored field, since the snapshot's own `status`
+  column only distinguishes locked-or-not and this is just a finer view over the same
+  data.
+
+  Deliberately did *not* add the wireframe's per-row "Lead status" column (e.g. "Approved"
+  / "Locked pending approvals" against each individual shared field) — approval in this
+  schema is per-CDE, not per-field, so a per-row status would have to fabricate
+  granularity that doesn't exist. The real per-CDE approval table below it already carries
+  that information honestly.
+
+  Also regenerated Millennium Holdings' snapshot while verifying — the existing one
+  (version 1) predated this session's AMIS field catalog expansion and only carried 3
+  fields; version 2 now carries all 13, including the NOI/QEI/address data entered
+  earlier this session.
+
+  Verified live: generated snapshot v2 (13 fields, both CDE approvals reset to
+  `pending`), confirmed the header read "Lead CDE: HRV Sub-CDE 62 · Golden record status:
+  Awaiting CDE Review · Participant approvals: 0 of 2", then approved as Enterprise
+  Financial CDE and confirmed it live-updated to "CDE Review" / "1 of 2" — matching the
+  wireframe's displayed state exactly.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
