@@ -23,6 +23,7 @@ import { snapshotsRouter } from "./routes/snapshots";
 import { amisRouter } from "./routes/amis";
 import { notificationsRouter } from "./routes/notificationsRouter";
 import { verifyStorageReachable } from "./lib/storage";
+import { runDeadlineSweep } from "./lib/deadlineSweep";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
 // natively and Node treats the resulting rejection as fatal, so patch it globally
@@ -61,10 +62,33 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 const port = Number(process.env.PORT ?? 4100);
 
+// Real scheduled sweep for deadline reminders — replaces relying solely on a page load
+// to trigger the recompute (see lib/deadlineSweep.ts). Runs once shortly after boot, then
+// on a fixed interval; a fresh embedded Postgres/seed can take a moment to settle, so the
+// first run is delayed rather than firing before the DB is actually ready.
+const SWEEP_INTERVAL_MS = Number(process.env.DEADLINE_SWEEP_INTERVAL_MINUTES ?? 60) * 60 * 1000;
+
+function startDeadlineSweeper() {
+  const sweep = () =>
+    runDeadlineSweep()
+      .then((result) => {
+        if (result.totalUpdated > 0 || result.totalReminders > 0) {
+          console.log(
+            `Deadline sweep: ${result.dealsSwept} deal(s) checked, ${result.totalUpdated} instance(s) updated, ${result.totalReminders} reminder(s) sent.`
+          );
+        }
+      })
+      .catch((err) => console.error("Deadline sweep failed:", err));
+
+  setTimeout(sweep, 10_000);
+  setInterval(sweep, SWEEP_INTERVAL_MS);
+}
+
 verifyStorageReachable()
   .then(() => {
     app.listen(port, () => {
       console.log(`NMTC Compliance Platform API listening on :${port}`);
+      startDeadlineSweeper();
     });
   })
   .catch((err) => {

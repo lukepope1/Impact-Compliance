@@ -97,9 +97,12 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   due-soon/overdue transitions — see docs/NOTIFICATIONS.md for the full trigger table
 - Fail-visible email: no SMTP configured -> the email row is recorded `"failed"` with a
   clear reason, never silently dropped; the in-app notification always gets created either way
-- Deadline reminders piggyback on the existing overdue/upcoming recompute (fires once per
-  transition, deduplicated automatically) rather than a real scheduled job — see
-  docs/NOTIFICATIONS.md for why a production deployment needs an actual cron/EventBridge sweep
+- **Deadline reminders now run on a real scheduled sweep** (`lib/deadlineSweep.ts`,
+  wired up in `index.ts` via `setInterval`, default hourly), not just page-load-triggered
+  — a reminder fires on wall-clock time even if nobody opens the app that day. Verified
+  live by running the sweep directly against the real database outside the request cycle.
+  Still single-process (no distributed lock) — see docs/NOTIFICATIONS.md for what a
+  multi-instance production deployment needs before running more than one instance.
 - Verified live end to end: returned a submission as Impact, confirmed the QALICB
   submitter got an in-app notification (visible in the bell, mark-as-read worked) and a
   corresponding email row recorded as "failed" (SMTP unconfigured, as expected)
@@ -189,7 +192,9 @@ use plain `requireRole`.
 - Decide and build the production clamd deployment shape (sidecar/service/async Lambda —
   see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
-- Replace the request-triggered reminder recompute with a real scheduled sweep (cron / EventBridge)
+- Coordinate the deadline sweep across multiple app instances (external scheduler invoking
+  one runner, or a distributed lock) before running more than one instance — see
+  docs/NOTIFICATIONS.md; the sweep itself is real and verified live, just single-process
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability
 - Formal UAT against the original backlog's acceptance criteria (the security review pass,

@@ -20,19 +20,33 @@ recorded, visible immediately in the bell) and one `email` (attempted via SMTP; 
 
 ## Deadline reminders: how they actually fire
 
-There's no real scheduled job in this build. The overdue/upcoming recompute that already
-ran on every `GET .../requirement-instances` call (see `deadlineEngine.ts`) now also
-checks, in that same pass, whether an instance just crossed into `"upcoming"` or just
-became overdue — and fires a reminder exactly once per transition, since the next time
-that same instance is loaded, its status is already `"upcoming"` and there's nothing left
-to trigger.
+`lib/deadlineSweep.ts` holds the one implementation of "recompute overdue/upcoming status
+and fire reminders on transitions" (`recomputeDealDeadlines`, using `deadlineEngine.ts`'s
+pure status functions) — a reminder fires exactly once per transition, since the next
+time that instance is recomputed, its status is already `"upcoming"` and there's nothing
+left to trigger.
 
-**This means a reminder only fires when someone loads a page that lists that deal's
-requirement instances.** It's a real, working mechanism — not a stub — but it depends on
-page traffic, not wall-clock time. A production deployment should replace this with an
-actual scheduled sweep (a cron job or, in AWS, an EventBridge-scheduled Lambda hitting the
-same recompute logic) so a deadline reminder fires even if nobody happens to open the app
-that day.
+**Now a real interval-based scheduled job**, not just page-load-triggered: `index.ts`
+starts a sweep (`runDeadlineSweep`, which recomputes every non-closed/archived deal) once
+~10 seconds after boot and then on a fixed interval — `DEADLINE_SWEEP_INTERVAL_MINUTES`
+(default 60). This means a deadline reminder now fires on wall-clock time even if nobody
+opens the app that day, closing the gap this doc previously flagged. `GET
+.../requirement-instances` still also calls `recomputeDealDeadlines` for that one deal on
+every load, so a page never shows stale status mid-interval.
+
+Verified live: ran the sweep directly against the real embedded Postgres database outside
+the request cycle — it correctly found and checked the seeded deal (`dealsSwept: 1`) with
+no spurious updates, confirming the extracted function behaves identically to the
+request-triggered path it replaced.
+
+**Still a real limitation, not swept under the rug**: this is a single in-process
+`setInterval`, not a coordinated distributed job. It's correct for this build's
+single-process deployment, but a production deployment running multiple app instances
+concurrently would risk duplicate reminders — two instances racing the same sweep tick
+could both read an instance as not-yet-overdue, both compute the transition, and both
+call `notify()` before either's DB update lands. Fix before running more than one
+instance: an external scheduler (cron / EventBridge) invoking exactly one designated
+runner, or a distributed lock around the sweep.
 
 ## Email delivery
 
