@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type SharedOutcomeSnapshotDetail } from "../../api/client";
+import { formatCurrency, formatNumber } from "../../utils/format";
+
+// Snapshot values don't carry a field-type flag, only a human label — mirrors the
+// fieldCode-keyed sets in AmisCenter.tsx, keyed by label instead since that's what this
+// endpoint returns.
+const CURRENCY_LABELS = new Set(["Annual Gross Revenue"]);
+const COUNT_LABELS = new Set(["Actual Jobs Created"]);
+
+function formatSnapshotValue(label: string, valueText: string | null, valueNumber: string | null) {
+  const raw = valueText ?? valueNumber;
+  if (CURRENCY_LABELS.has(label)) return formatCurrency(raw);
+  if (COUNT_LABELS.has(label)) return formatNumber(raw);
+  return raw ?? "—";
+}
 
 export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
@@ -56,7 +70,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
               <thead><tr><th>Field</th><th>Value</th></tr></thead>
               <tbody>
                 {snapshot.values.map((v, i) => (
-                  <tr key={i}><td>{v.fieldDefinition.label}</td><td>{v.valueText ?? v.valueNumber ?? "—"}</td></tr>
+                  <tr key={i}><td>{v.fieldDefinition.label}</td><td>{formatSnapshotValue(v.fieldDefinition.label, v.valueText, v.valueNumber)}</td></tr>
                 ))}
               </tbody>
             </table>

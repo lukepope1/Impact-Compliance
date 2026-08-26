@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, type RequirementInstanceDetail } from "../../api/client";
+import CommentThread from "./CommentThread";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
@@ -22,10 +23,10 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
     if (dealId && instanceId) api.getRequirementInstance(dealId, instanceId).then(setInstance).catch((e) => setError(String(e.message ?? e)));
   }, [dealId, instanceId]);
 
-  async function decide(decision: "approved" | "returned") {
+  async function decide(decision: "approved" | "returned" | "acknowledged" | "waived") {
     if (!dealId || !instanceId) return;
-    if (decision === "returned" && !note.trim()) {
-      setError("A note is required when returning a submission.");
+    if ((decision === "returned" || decision === "waived") && !note.trim()) {
+      setError(`A note is required to ${decision === "returned" ? "return" : "waive"} this requirement.`);
       return;
     }
     setBusy(true);
@@ -67,17 +68,27 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
       <div className="card">
         <h2>Decision</h2>
         <textarea
-          placeholder="Note (required if returning)"
+          placeholder="Note (required if returning or waiving)"
           rows={3}
           style={{ width: "100%", marginBottom: 8 }}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => decide("returned")} disabled={busy}>Request Clarification</button>
+          <button onClick={() => decide("acknowledged")} disabled={busy}>Acknowledge (no substantive review needed)</button>
+          <button onClick={() => decide("waived")} disabled={busy}>Waive requirement</button>
           <button onClick={() => decide("approved")} disabled={busy}>Approve</button>
         </div>
       </div>
+
+      {dealId && instanceId && (
+        <CommentThread
+          dealId={dealId}
+          instanceId={instanceId}
+          availableVisibilities={stage === "impact" ? ["deal_shared", "qalicb_shared", "impact_private"] : ["deal_shared", "qalicb_shared", "cde_private"]}
+        />
+      )}
     </main>
   );
 }

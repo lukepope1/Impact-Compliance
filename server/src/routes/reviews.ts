@@ -19,20 +19,27 @@ const reviewSchema = z.object({
 /**
  * Records an impact or CDE review decision on a requirement instance's current
  * submission and advances the instance's status accordingly:
- *   impact approve  -> impact_approved (now visible to CDEs for their own review)
- *   impact/cde return -> returned (QALICB gets a fresh draft slot — see submissions.ts,
- *                         which always creates a new version when no "draft" submission exists)
- *   cde approve      -> cde_approved
- * A returned decision requires a note — an empty "fix this" isn't useful to the QALICB
- * side and the schema's audit trail should always explain why something bounced.
+ *   approved/acknowledged -> impact_approved / cde_approved (acknowledged advances the
+ *                            pipeline the same way approved does — it's for items that
+ *                            don't need substantive evidence review, e.g. an event notice
+ *                            someone just needs to confirm they've seen, but still needs
+ *                            to move the instance forward and is recorded distinctly from
+ *                            "approved" for reporting)
+ *   returned              -> returned (QALICB gets a fresh draft slot — see submissions.ts,
+ *                            which always creates a new version when no "draft" submission exists)
+ *   waived                -> waived (terminal; the only decision that doesn't require the
+ *                            instance to already be in mid-review — Impact can waive a
+ *                            requirement that was never submitted at all)
+ * A returned or waived decision requires a note — an empty "fix this" or "never mind"
+ * isn't useful, and the schema's audit trail should always explain why.
  */
 reviewsRouter.post("/", requireDealAccess, async (req, res) => {
   const parsed = reviewSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
   const { stage, decision, decisionNote } = parsed.data;
 
-  if (decision === "returned" && !decisionNote?.trim()) {
-    return res.status(400).json({ error: "A decision note is required when returning a submission" });
+  if ((decision === "returned" || decision === "waived") && !decisionNote?.trim()) {
+    return res.status(400).json({ error: `A decision note is required to ${decision === "returned" ? "return" : "waive"} a requirement` });
   }
 
   const membership = req.user!.memberships.find((m) =>
@@ -44,7 +51,11 @@ reviewsRouter.post("/", requireDealAccess, async (req, res) => {
   if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });
 
   const expectedStatus = stage === "impact" ? "submitted" : "impact_approved";
-  if (instance.status !== expectedStatus) {
+  if (decision === "waived") {
+    if (instance.status === "closed" || instance.status === "waived") {
+      return res.status(409).json({ error: `Instance is already "${instance.status}" — nothing to waive` });
+    }
+  } else if (instance.status !== expectedStatus) {
     return res.status(409).json({ error: `Instance is "${instance.status}" — ${stage} review requires "${expectedStatus}"` });
   }
 
@@ -53,8 +64,15 @@ reviewsRouter.post("/", requireDealAccess, async (req, res) => {
   });
 
   const nextInstanceStatus =
-    decision === "approved" ? (stage === "impact" ? "impact_approved" : "cde_approved") : decision === "returned" ? "returned" : instance.status;
-  const nextSubmissionStatus = decision === "approved" ? "approved" : decision === "returned" ? "returned" : undefined;
+    decision === "waived"
+      ? "waived"
+      : decision === "approved" || decision === "acknowledged"
+        ? (stage === "impact" ? "impact_approved" : "cde_approved")
+        : decision === "returned"
+          ? "returned"
+          : instance.status;
+  const nextSubmissionStatus =
+    decision === "approved" || decision === "acknowledged" ? "approved" : decision === "returned" ? "returned" : undefined;
 
   const [review] = await prisma.$transaction([
     prisma.review.create({

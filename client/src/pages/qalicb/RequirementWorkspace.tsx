@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type RequirementInstanceDetail, type Submission } from "../../api/client";
+import CommentThread from "../shared/CommentThread";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
@@ -170,6 +171,10 @@ export default function RequirementWorkspace() {
         </button>
       )}
       {isLocked && <p style={{ color: "#1f7a8c" }}>Submitted {fmt(draft!.submittedAt)}. This submission is now locked.</p>}
+
+      {dealId && instanceId && (
+        <CommentThread dealId={dealId} instanceId={instanceId} availableVisibilities={["deal_shared", "qalicb_shared"]} />
+      )}
     </main>
   );
 }

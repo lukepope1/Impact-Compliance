@@ -7,11 +7,13 @@ import { generatePeriods, computeIsOverdue, computeDisplayStatus, type DueRule }
 import { notify, resolveDealMembers } from "../lib/notifications";
 import { submissionsRouter } from "./submissions";
 import { reviewsRouter } from "./reviews";
+import { commentsRouter } from "./comments";
 
 export const requirementInstancesRouter = Router({ mergeParams: true });
 
 requirementInstancesRouter.use("/:instanceId/submissions", submissionsRouter);
 requirementInstancesRouter.use("/:instanceId/review", reviewsRouter);
+requirementInstancesRouter.use("/:instanceId/comments", commentsRouter);
 
 /** Applies the overdue/upcoming recompute (normally a scheduled job) and returns the fresh rows. */
 requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {

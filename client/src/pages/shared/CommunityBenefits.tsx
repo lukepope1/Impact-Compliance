@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type CbrPeriod } from "../../api/client";
+import { formatCurrency, formatNumber } from "../../utils/format";
 
 const BENEFIT_CODES = [
   { code: "paid_holidays", label: "Paid holidays" },
@@ -141,14 +142,17 @@ export default function CommunityBenefits() {
           <input type="number" value={revenue} onChange={(e) => setRevenue(e.target.value)} />
         </label>
         <button type="submit">Save</button>
+        {period.projectProfile?.annualGrossRevenue && (
+          <span style={{ color: "#666" }}>Saved: {formatCurrency(period.projectProfile.annualGrossRevenue)}</span>
+        )}
       </form>
 
       <div className="card">
-        <h2>Jobs & Workforce — {totalJobsCreated} FTE created</h2>
+        <h2>Jobs & Workforce — {formatNumber(totalJobsCreated)} FTE created</h2>
         <table>
           <thead><tr><th>Title</th><th>FTE</th><th>Status</th></tr></thead>
           <tbody>
-            {period.jobRecords.map((j) => <tr key={j.id}><td>{j.jobTitle}</td><td>{j.fteCount}</td><td>{j.jobStatus}</td></tr>)}
+            {period.jobRecords.map((j) => <tr key={j.id}><td>{j.jobTitle}</td><td>{formatNumber(j.fteCount)}</td><td>{j.jobStatus}</td></tr>)}
             {period.jobRecords.length === 0 && <tr><td colSpan={3}>No jobs recorded yet.</td></tr>}
           </tbody>
         </table>
@@ -235,7 +239,7 @@ export default function CommunityBenefits() {
               <tr key={s.id}>
                 <td>{s.serviceName}</td>
                 <td>{s.serviceType ?? "—"}</td>
-                <td>{s.peopleServedCurrent ?? "—"}</td>
+                <td>{formatNumber(s.peopleServedCurrent)}</td>
                 <td>{s.outcomeNarrative ?? "—"}</td>
               </tr>
             ))}

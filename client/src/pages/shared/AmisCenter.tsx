@@ -1,6 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
+import { formatCurrency, formatNumber } from "../../utils/format";
+
+// goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
+// plain counts vs. text — mirrored here since the readiness API returns raw values, not a
+// display type.
+const CURRENCY_FIELDS = new Set(["annual_gross_revenue"]);
+const COUNT_FIELDS = new Set(["jobs_created_actual"]);
+
+function formatFieldValue(fieldCode: string, value: string | number | null) {
+  if (CURRENCY_FIELDS.has(fieldCode)) return formatCurrency(value);
+  if (COUNT_FIELDS.has(fieldCode)) return formatNumber(value);
+  return value ?? "—";
+}
 
 export default function AmisCenter() {
   const { dealId } = useParams();
@@ -61,7 +74,7 @@ export default function AmisCenter() {
           {readiness?.map((r) => (
             <tr key={r.fieldCode}>
               <td>{r.label}</td>
-              <td>{r.value ?? "—"}</td>
+              <td>{formatFieldValue(r.fieldCode, r.value)}</td>
               <td>{r.source}</td>
               <td style={r.status === "missing" ? { color: "#b00" } : { color: "#1f7a8c" }}>{r.status.toUpperCase()}</td>
             </tr>

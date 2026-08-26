@@ -197,6 +197,15 @@ export interface Review {
   decidedAt: string;
 }
 
+export interface CommentRow {
+  id: string;
+  body: string;
+  visibility: string;
+  createdAt: string;
+  authorUser: { email: string; firstName: string | null; lastName: string | null };
+  authorOrganization: { legalName: string };
+}
+
 export interface IssueRow {
   id: string;
   issueType: string;
@@ -439,6 +448,14 @@ export const api = {
     request<Review>(`/deals/${dealId}/requirement-instances/${instanceId}/review`, {
       method: "POST",
       body: JSON.stringify({ stage, decision, decisionNote }),
+    }),
+
+  listComments: (dealId: string, instanceId: string) =>
+    request<CommentRow[]>(`/deals/${dealId}/requirement-instances/${instanceId}/comments`),
+  postComment: (dealId: string, instanceId: string, body: string, visibility: string) =>
+    request<CommentRow>(`/deals/${dealId}/requirement-instances/${instanceId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body, visibility }),
     }),
 
   listIssues: (dealId: string) => request<IssueRow[]>(`/deals/${dealId}/issues`),
