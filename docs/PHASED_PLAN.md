@@ -101,8 +101,12 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   wired up in `index.ts` via `setInterval`, default hourly), not just page-load-triggered
   — a reminder fires on wall-clock time even if nobody opens the app that day. Verified
   live by running the sweep directly against the real database outside the request cycle.
-  Still single-process (no distributed lock) — see docs/NOTIFICATIONS.md for what a
-  multi-instance production deployment needs before running more than one instance.
+  **Coordinated across multiple instances too**, via a Postgres transaction-scoped
+  advisory lock (`pg_try_advisory_xact_lock`) — every instance shares the same database,
+  so whichever instance's tick acquires the lock sweeps, every other concurrent tick
+  skips cleanly rather than racing into duplicate reminders. Verified live: two
+  transactions run concurrently against the real database, the second correctly blocked
+  for the whole window the first held the lock open. See docs/NOTIFICATIONS.md.
 - Verified live end to end: returned a submission as Impact, confirmed the QALICB
   submitter got an in-app notification (visible in the bell, mark-as-read worked) and a
   corresponding email row recorded as "failed" (SMTP unconfigured, as expected)
@@ -203,8 +207,5 @@ just in isolation.
 - Decide and build the production clamd deployment shape (sidecar/service/async Lambda —
   see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
-- Coordinate the deadline sweep across multiple app instances (external scheduler invoking
-  one runner, or a distributed lock) before running more than one instance — see
-  docs/NOTIFICATIONS.md; the sweep itself is real and verified live, just single-process
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability

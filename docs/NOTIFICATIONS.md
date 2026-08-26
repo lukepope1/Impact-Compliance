@@ -39,14 +39,27 @@ the request cycle — it correctly found and checked the seeded deal (`dealsSwep
 no spurious updates, confirming the extracted function behaves identically to the
 request-triggered path it replaced.
 
-**Still a real limitation, not swept under the rug**: this is a single in-process
-`setInterval`, not a coordinated distributed job. It's correct for this build's
-single-process deployment, but a production deployment running multiple app instances
-concurrently would risk duplicate reminders — two instances racing the same sweep tick
-could both read an instance as not-yet-overdue, both compute the transition, and both
-call `notify()` before either's DB update lands. Fix before running more than one
-instance: an external scheduler (cron / EventBridge) invoking exactly one designated
-runner, or a distributed lock around the sweep.
+**Now coordinated across multiple instances too**: `runDeadlineSweep` wraps the
+recompute-and-persist step in a Postgres transaction-scoped advisory lock
+(`pg_try_advisory_xact_lock`) before touching any deal. Every app instance shares the
+same database, so the database — not any one process — is the thing they can all agree
+on: whichever instance's tick acquires the lock does the sweep; every other instance's
+concurrent tick sees `locked: false` and skips that round entirely, `ran: false` in the
+return value. Nothing is lost, only delayed to the next tick, since the next sweep
+recomputes from current state regardless of who ran last.
+
+Verified live: ran two transactions concurrently against the real database, one holding
+the lock open for 1.5s — the second correctly saw `locked: false` for the whole window
+and only proceeded once the first committed and released it.
+
+The lock is scoped to the DB read/update transaction only, not the email/in-app send
+step — `notify()` runs after that transaction commits (and the lock releases), so a slow
+SMTP send never holds a lock other instances are waiting on. This leaves a narrow window
+where an instance could win the lock, crash before sending notifications, and the
+recomputed status update stays committed without its reminder ever going out — that
+instance's crash is the same risk any interval-based job has and isn't specific to the
+locking scheme; a production deployment wanting delivery guarantees on top of this would
+want an outbox/retry pattern, which is out of scope here.
 
 ## Email delivery
 
