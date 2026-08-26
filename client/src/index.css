@@ -1,0 +1,54 @@
+:root {
+  --navy: #0f2a4a;
+  --teal: #1f7a8c;
+  --bg: #f4f6f8;
+  --border: #dbe1e8;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #1a1a1a;
+}
+
+header.app-header {
+  background: var(--navy);
+  color: white;
+  padding: 16px 24px;
+  font-weight: 700;
+}
+
+main {
+  padding: 24px;
+  max-width: 1100px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid var(--border);
+}
+
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+th {
+  color: var(--navy);
+  background: #f9fafb;
+}
+
+.card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}

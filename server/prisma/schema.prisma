@@ -1,0 +1,1255 @@
+// NMTC Compliance Platform — Phase 1 canonical data model
+// 1:1 translation of NMTC_Phase_1_Database_Schema.sql into Prisma.
+// This schema is standalone: no relation to the Impact Marketplace CRM's Prisma schema.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums (mirror the SQL CHECK constraints) ----------
+
+enum OrganizationType {
+  impact_marketplace
+  qalicb
+  borrower
+  guarantor
+  tenant
+  cde
+  allocatee
+  investor
+  other
+}
+
+enum OrgStatus {
+  active
+  inactive
+  archived
+}
+
+enum UserStatus {
+  invited
+  active
+  disabled
+}
+
+enum RoleCode {
+  impact_super_admin
+  impact_compliance_manager
+  impact_analyst
+  qalicb_admin
+  qalicb_contributor
+  cde_admin
+  cde_reviewer
+  cde_viewer
+}
+
+enum MembershipStatus {
+  active
+  inactive
+}
+
+enum DealStatus {
+  onboarding
+  active
+  exception
+  winding_down
+  closed
+  archived
+}
+
+enum DealRole {
+  impact_manager
+  qalicb
+  borrower
+  guarantor
+  tenant
+  cde
+  allocatee
+  investor
+  other
+}
+
+enum PartyRole {
+  borrower
+  qalicb
+  project_business
+  guarantor
+  tenant
+  cde_lender
+  allocatee
+  investment_fund
+  investor
+  leverage_lender
+  property_owner
+  operating_company
+  other
+}
+
+enum QliciType {
+  loan
+  equity
+  purchase_loan
+  financial_counseling
+  cde_investment
+}
+
+enum QliciStatus {
+  pending
+  active
+  paid
+  closed
+}
+
+enum ShareScope {
+  impact_only
+  qalicb_and_impact
+  deal_shared
+  selected_cdes
+  cde_private
+}
+
+enum DocumentStatus {
+  active
+  superseded
+  quarantined
+  deleted
+}
+
+enum MalwareScanStatus {
+  pending
+  clean
+  infected
+  failed
+}
+
+enum DocumentAccessLevel {
+  view
+  download
+  review
+}
+
+enum RequirementCategory {
+  document_collection
+  structured_reporting
+  calculation_test
+  certification_attestation
+  event_notice
+  consent_approval
+  restriction_covenant
+  payment_fee
+  regulatory_filing
+  retention
+}
+
+enum RequirementCadence {
+  one_time
+  monthly
+  quarterly
+  semiannual
+  annual
+  fixed_dates
+  on_request
+  event_driven
+}
+
+enum Severity {
+  low
+  normal
+  high
+  critical
+}
+
+enum RequirementDefStatus {
+  draft
+  published
+  retired
+}
+
+enum ConflictStatus {
+  none
+  suspected
+  confirmed
+  resolved
+}
+
+enum RequirementInstanceStatus {
+  not_due
+  upcoming
+  awaiting_qalicb
+  draft_submitted
+  submitted
+  impact_review
+  returned
+  impact_approved
+  cde_review
+  cde_approved
+  amis_ready
+  exported_filed
+  closed
+  waived
+}
+
+enum SubmissionStatus {
+  draft
+  submitted
+  returned
+  superseded
+  approved
+}
+
+enum FieldModule {
+  project
+  financial
+  qalicb_test
+  community_benefits
+  amis
+  other
+}
+
+enum FieldDataType {
+  text
+  integer
+  decimal
+  currency
+  percent
+  boolean
+  date
+  datetime
+  json
+}
+
+enum EntryMethod {
+  manual
+  import
+  extracted
+  calculated
+}
+
+enum ValidationStatus {
+  unreviewed
+  valid
+  warning
+  invalid
+}
+
+enum ReviewStage {
+  impact
+  cde
+}
+
+enum ReviewDecision {
+  approved
+  returned
+  acknowledged
+  waived
+}
+
+enum CommentVisibility {
+  qalicb_shared
+  deal_shared
+  impact_private
+  cde_private
+}
+
+enum IssueType {
+  missing_item
+  late_item
+  data_variance
+  covenant_exception
+  source_conflict
+  material_event_candidate
+  amis_validation
+  security
+  other
+}
+
+enum IssueStatus {
+  open
+  in_review
+  waiting_external
+  resolved
+  closed
+}
+
+enum CbrPeriodStatus {
+  not_started
+  draft
+  submitted
+  impact_review
+  cde_review
+  approved
+  closed
+}
+
+enum JobStatus {
+  retained
+  created
+  construction
+}
+
+enum EmploymentType {
+  full_time
+  part_time
+  temporary
+  other
+}
+
+enum EmployeeClass {
+  permanent
+  temporary
+  construction
+  other
+}
+
+enum SnapshotStatus {
+  draft
+  impact_approved
+  cde_review
+  locked
+}
+
+enum SnapshotApprovalDecision {
+  pending
+  approved
+  changes_requested
+  not_reporting
+}
+
+enum AmisTransport {
+  csv
+  xml
+  manual_review_xlsx
+}
+
+enum AmisMappingStatus {
+  draft
+  active
+  retired
+}
+
+enum ExportType {
+  review_xlsx
+  amis_csv
+  amis_xml
+}
+
+enum ExportStatus {
+  building
+  validation_failed
+  ready
+  downloaded
+  filed_manual
+  certified_manual
+  superseded
+}
+
+enum NotificationChannel {
+  in_app
+  email
+}
+
+enum NotificationStatus {
+  queued
+  sent
+  failed
+  cancelled
+}
+
+// ---------- Identity & Tenancy ----------
+
+model Organization {
+  id               String           @id @default(uuid())
+  organizationType OrganizationType @map("organization_type")
+  legalName        String           @map("legal_name")
+  displayName      String?          @map("display_name")
+  einLast4         String?          @map("ein_last4")
+  status           OrgStatus        @default(active)
+  settings         Json             @default("{}")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  memberships           OrganizationMembership[]
+  dealAccess             DealOrganizationAccess[]
+  dealParties            DealParty[]
+  cdeParticipations      CdeParticipation[]                @relation("CdeOrg")
+  allocateeParticipations CdeParticipation[]               @relation("AllocateeOrg")
+  ownedDocuments         Document[]
+  documentAccessGrants   DocumentAccessGrant[]
+  comments               Comment[]
+  assignedIssues         Issue[]
+  notifications          Notification[]
+  auditEvents            AuditEvent[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                 String     @id @default(uuid())
+  externalAuthSubject String    @unique @map("external_auth_subject")
+  email              String     @unique
+  firstName          String?    @map("first_name")
+  lastName           String?    @map("last_name")
+  status             UserStatus @default(active)
+  mfaRequired        Boolean    @default(true) @map("mfa_required")
+  lastLoginAt        DateTime?  @map("last_login_at")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  memberships           OrganizationMembership[]
+  createdDeals          Deal[]                    @relation("DealCreatedBy")
+  createdDocuments       Document[]                @relation("DocumentCreatedBy")
+  uploadedVersions       DocumentVersion[]
+  grantedAccess          DocumentAccessGrant[]
+  createdRequirementDefs RequirementDefinition[]   @relation("ReqDefCreatedBy")
+  publishedRequirementDefs RequirementDefinition[] @relation("ReqDefPublishedBy")
+  submissions            Submission[]              @relation("SubmittedByUser")
+  attestedSubmissions    Submission[]              @relation("AttestedByUser")
+  reviews                Review[]
+  comments               Comment[]
+  assignedIssues         Issue[]
+  resolvedStructuredValues StructuredValue[]       @relation("StructuredValueEnteredBy")
+  approvedStructuredValues StructuredValue[]       @relation("StructuredValueApprovedBy")
+  createdSnapshots        SharedOutcomeSnapshot[]
+  decidedSnapshotApprovals CdeSnapshotApproval[]
+  generatedExports         ExportBatch[]
+  notifications            Notification[]
+  auditEvents              AuditEvent[]
+
+  @@map("users")
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String           @map("user_id")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleCode       RoleCode         @map("role_code")
+  status         MembershipStatus @default(active)
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  @@unique([organizationId, userId, roleCode])
+  @@map("organization_memberships")
+}
+
+model Deal {
+  id                     String     @id @default(uuid())
+  dealCode               String     @unique @map("deal_code")
+  legalName              String     @map("legal_name")
+  projectName            String?    @map("project_name")
+  projectDescription     String?    @map("project_description")
+  closingDate            DateTime?  @map("closing_date") @db.Date
+  complianceStartDate    DateTime?  @map("compliance_start_date") @db.Date
+  complianceEndDate      DateTime?  @map("compliance_end_date") @db.Date
+  fiscalYearEndMonth     Int        @default(12) @map("fiscal_year_end_month")
+  fiscalYearEndDay       Int        @default(31) @map("fiscal_year_end_day")
+  status                 DealStatus @default(onboarding)
+  isMultiCde             Boolean    @default(false) @map("is_multi_cde")
+  multiCdeProjectNumber  String?    @map("multi_cde_project_number")
+  multiCdeAddressId      String?    @map("multi_cde_address_id")
+  createdById            String?    @map("created_by")
+  createdBy              User?      @relation("DealCreatedBy", fields: [createdById], references: [id])
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
+
+  organizationAccess    DealOrganizationAccess[]
+  parties               DealParty[]
+  cdeParticipations     CdeParticipation[]
+  projectAddresses      ProjectAddress[]
+  qlicis                Qlici[]
+  documents              Document[]
+  requirementDefinitions RequirementDefinition[]
+  requirementInstances   RequirementInstance[]
+  comments               Comment[]
+  issues                 Issue[]
+  cbrReportingPeriods    CbrReportingPeriod[]
+  sharedOutcomeSnapshots SharedOutcomeSnapshot[]
+  structuredValues       StructuredValue[]
+  exportBatches          ExportBatch[]
+  notifications          Notification[]
+  auditEvents            AuditEvent[]
+
+  @@map("deals")
+}
+
+model DealOrganizationAccess {
+  id                    String       @id @default(uuid())
+  dealId                String       @map("deal_id")
+  deal                  Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  organizationId        String       @map("organization_id")
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dealRole              DealRole     @map("deal_role")
+  canViewSharedEvidence Boolean      @default(false) @map("can_view_shared_evidence")
+  canSubmit             Boolean      @default(false) @map("can_submit")
+  canReview             Boolean      @default(false) @map("can_review")
+  canApprove            Boolean      @default(false) @map("can_approve")
+  canExport             Boolean      @default(false) @map("can_export")
+  createdAt             DateTime     @default(now()) @map("created_at")
+
+  @@unique([dealId, organizationId, dealRole])
+  @@index([organizationId, dealId])
+  @@map("deal_organization_access")
+}
+
+model DealParty {
+  id                 String       @id @default(uuid())
+  dealId             String       @map("deal_id")
+  deal               Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  organizationId     String?      @map("organization_id")
+  organization       Organization? @relation(fields: [organizationId], references: [id])
+  legalName          String       @map("legal_name")
+  partyRole          PartyRole    @map("party_role")
+  isReportingParty   Boolean      @default(false) @map("is_reporting_party")
+  fiscalYearEndMonth Int?         @map("fiscal_year_end_month")
+  fiscalYearEndDay   Int?         @map("fiscal_year_end_day")
+  naicsCode          String?      @map("naics_code")
+  entityType         String?      @map("entity_type")
+  activeFrom         DateTime?    @map("active_from") @db.Date
+  activeTo           DateTime?    @map("active_to") @db.Date
+  metadata           Json         @default("{}")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  documents             Document[]
+  requirementInstances   RequirementInstance[]
+  structuredValues       StructuredValue[]
+  employerJobRecords      JobRecord[]
+  employerBenefitRecords  BenefitRecord[]
+  tenantOccupancies       TenantOccupant[]
+
+  @@index([dealId, partyRole])
+  @@map("deal_parties")
+}
+
+model CdeParticipation {
+  id                       String       @id @default(uuid())
+  dealId                   String       @map("deal_id")
+  deal                     Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  cdeOrganizationId        String       @map("cde_organization_id")
+  cdeOrganization          Organization @relation("CdeOrg", fields: [cdeOrganizationId], references: [id])
+  allocateeOrganizationId  String?      @map("allocatee_organization_id")
+  allocateeOrganization    Organization? @relation("AllocateeOrg", fields: [allocateeOrganizationId], references: [id])
+  subCdeName               String?      @map("sub_cde_name")
+  allocationControlNumber  String?      @map("allocation_control_number")
+  qeiAmount                Decimal?     @map("qei_amount") @db.Decimal(18, 2)
+  allocationAmount         Decimal?     @map("allocation_amount") @db.Decimal(18, 2)
+  isLeadCde                Boolean      @default(false) @map("is_lead_cde")
+  privateSettings          Json         @default("{}") @map("private_settings")
+  createdAt                DateTime     @default(now()) @map("created_at")
+
+  qlicis                    Qlici[]
+  shareSnapshotsControlled  SharedOutcomeSnapshot[]
+  snapshotApprovals         CdeSnapshotApproval[]
+  exportBatches              ExportBatch[]
+
+  @@unique([dealId, cdeOrganizationId])
+  @@map("cde_participations")
+}
+
+model ProjectAddress {
+  id               String   @id @default(uuid())
+  dealId           String   @map("deal_id")
+  deal             Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  addressType      String   @default("primary") @map("address_type") // primary | secondary | service_area | other
+  address1         String
+  address2         String?
+  city             String
+  stateCode        String   @map("state_code") @db.Char(2)
+  postalCode       String   @map("postal_code")
+  postalCodePlus4  String?  @map("postal_code_plus4")
+  county           String?
+  censusTract      String?  @map("census_tract")
+  longitude        Decimal? @db.Decimal(12, 8)
+  latitude         Decimal? @db.Decimal(11, 8)
+  cimsAddressId    String?  @map("cims_address_id")
+  eligibilityData  Json     @default("{}") @map("eligibility_data")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("project_addresses")
+}
+
+model Qlici {
+  id                 String       @id @default(uuid())
+  dealId             String       @map("deal_id")
+  deal               Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  cdeParticipationId String       @map("cde_participation_id")
+  cdeParticipation   CdeParticipation @relation(fields: [cdeParticipationId], references: [id], onDelete: Cascade)
+  qliciCode          String       @map("qlici_code")
+  qliciType          QliciType    @default(loan) @map("qlici_type")
+  noteClass          String?      @map("note_class")
+  originalPrincipal  Decimal?     @map("original_principal") @db.Decimal(18, 2)
+  currentPrincipal   Decimal?     @map("current_principal") @db.Decimal(18, 2)
+  interestRate       Decimal?     @map("interest_rate") @db.Decimal(9, 6)
+  maturityDate       DateTime?    @map("maturity_date") @db.Date
+  qliciDate          DateTime?    @map("qlici_date") @db.Date
+  status             QliciStatus  @default(active)
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  @@unique([dealId, cdeParticipationId, qliciCode])
+  @@map("qlicis")
+}
+
+// ---------- Evidence & Data ----------
+
+model Document {
+  id                    String         @id @default(uuid())
+  dealId                String?        @map("deal_id")
+  deal                  Deal?          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  ownerOrganizationId   String?        @map("owner_organization_id")
+  ownerOrganization     Organization?  @relation(fields: [ownerOrganizationId], references: [id])
+  documentType          String         @map("document_type")
+  title                 String
+  legalEntityPartyId    String?        @map("legal_entity_party_id")
+  legalEntityParty      DealParty?     @relation(fields: [legalEntityPartyId], references: [id])
+  reportingPeriodStart  DateTime?      @map("reporting_period_start") @db.Date
+  reportingPeriodEnd    DateTime?      @map("reporting_period_end") @db.Date
+  shareScope            ShareScope     @default(impact_only) @map("share_scope")
+  status                DocumentStatus @default(active)
+  currentVersion        Int            @default(1) @map("current_version")
+  createdById           String?        @map("created_by")
+  createdBy             User?          @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  versions             DocumentVersion[]
+  accessGrants          DocumentAccessGrant[]
+  requirementSources     RequirementSource[]
+  submissionLinks        SubmissionDocument[]
+  structuredValues        StructuredValue[]
+  jobRecordSources         JobRecord[]
+  exportFieldLineage        ExportFieldLineage[]
+
+  @@index([dealId, documentType, reportingPeriodEnd])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id                  String    @id @default(uuid())
+  documentId          String    @map("document_id")
+  document            Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber       Int       @map("version_number")
+  s3Bucket            String    @map("s3_bucket")
+  s3ObjectKey         String    @map("s3_object_key")
+  s3VersionId         String?   @map("s3_version_id")
+  fileName            String    @map("file_name")
+  mimeType            String?   @map("mime_type")
+  fileSizeBytes       BigInt?   @map("file_size_bytes")
+  sha256Checksum      String    @map("sha256_checksum")
+  kmsKeyArn           String?   @map("kms_key_arn")
+  malwareScanStatus   MalwareScanStatus @default(pending) @map("malware_scan_status")
+  uploadedById        String?   @map("uploaded_by")
+  uploadedBy          User?     @relation(fields: [uploadedById], references: [id])
+  uploadedAt          DateTime  @default(now()) @map("uploaded_at")
+  supersededAt        DateTime? @map("superseded_at")
+
+  structuredValueSources StructuredValue[]
+
+  @@unique([documentId, versionNumber])
+  @@unique([s3Bucket, s3ObjectKey, s3VersionId])
+  @@map("document_versions")
+}
+
+model DocumentAccessGrant {
+  id             String               @id @default(uuid())
+  documentId     String               @map("document_id")
+  document       Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  organizationId String               @map("organization_id")
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accessLevel    DocumentAccessLevel  @default(view) @map("access_level")
+  grantedById    String?              @map("granted_by")
+  grantedBy      User?                @relation(fields: [grantedById], references: [id])
+  grantedAt      DateTime             @default(now()) @map("granted_at")
+  revokedAt      DateTime?            @map("revoked_at")
+
+  @@unique([documentId, organizationId])
+  @@map("document_access_grants")
+}
+
+// ---------- Requirements & Workflow ----------
+
+model RequirementDefinition {
+  id                    String                @id @default(uuid())
+  dealId                String                @map("deal_id")
+  deal                  Deal                  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  requirementCode       String                @map("requirement_code")
+  version               Int
+  title                 String
+  category              RequirementCategory
+  cadence               RequirementCadence
+  appliesToPartyRoles   String[]              @default([]) @map("applies_to_party_roles")
+  dueRule               Json                  @map("due_rule")
+  evidenceSchema        Json                  @default("{}") @map("evidence_schema")
+  validationRules       Json                  @default("[]") @map("validation_rules")
+  reviewWorkflow        Json                  @default("[]") @map("review_workflow")
+  reminderRule          Json                  @default("{}") @map("reminder_rule")
+  shareScope            String                @default("deal_shared") @map("share_scope")
+  severity              Severity              @default(normal)
+  effectiveFrom         DateTime?             @map("effective_from") @db.Date
+  effectiveTo           DateTime?             @map("effective_to") @db.Date
+  status                RequirementDefStatus  @default(draft)
+  conflictStatus        ConflictStatus        @default(none) @map("conflict_status")
+  conflictResolutionNote String?              @map("conflict_resolution_note")
+  createdById           String?               @map("created_by")
+  createdBy             User?                 @relation("ReqDefCreatedBy", fields: [createdById], references: [id])
+  publishedById         String?               @map("published_by")
+  publishedBy           User?                 @relation("ReqDefPublishedBy", fields: [publishedById], references: [id])
+  publishedAt           DateTime?             @map("published_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
+
+  sources    RequirementSource[]
+  instances  RequirementInstance[]
+
+  @@unique([dealId, requirementCode, version])
+  @@index([dealId, status])
+  @@map("requirement_definitions")
+}
+
+model RequirementSource {
+  id                       String                 @id @default(uuid())
+  requirementDefinitionId  String                 @map("requirement_definition_id")
+  requirementDefinition    RequirementDefinition  @relation(fields: [requirementDefinitionId], references: [id], onDelete: Cascade)
+  sourceDocumentId         String?                @map("source_document_id")
+  sourceDocument           Document?              @relation(fields: [sourceDocumentId], references: [id])
+  sourceDocumentName       String                 @map("source_document_name")
+  sectionReference         String?                @map("section_reference")
+  exhibitReference         String?                @map("exhibit_reference")
+  pageReference             String?                @map("page_reference")
+  sourceExcerpt              String?                @map("source_excerpt")
+  sourceExcerptHash           String?                @map("source_excerpt_hash")
+  sourceEffectiveDate          DateTime?              @map("source_effective_date") @db.Date
+  sourcePriority                 Int                    @default(100) @map("source_priority")
+  createdAt                       DateTime               @default(now()) @map("created_at")
+
+  @@map("requirement_sources")
+}
+
+model RequirementInstance {
+  id                        String                    @id @default(uuid())
+  dealId                    String                    @map("deal_id")
+  deal                      Deal                      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  requirementDefinitionId   String                    @map("requirement_definition_id")
+  requirementDefinition     RequirementDefinition     @relation(fields: [requirementDefinitionId], references: [id])
+  definitionVersion         Int                       @map("definition_version")
+  responsiblePartyId        String?                   @map("responsible_party_id")
+  responsibleParty          DealParty?                @relation(fields: [responsiblePartyId], references: [id])
+  reportingPeriodStart      DateTime?                 @map("reporting_period_start") @db.Date
+  reportingPeriodEnd        DateTime?                 @map("reporting_period_end") @db.Date
+  dueDate                   DateTime?                 @map("due_date") @db.Date
+  dueDateBasis               Json                      @default("{}") @map("due_date_basis")
+  requestedAt                 DateTime?                 @map("requested_at")
+  status                       RequirementInstanceStatus @default(not_due)
+  isOverdue                     Boolean                   @default(false) @map("is_overdue")
+  isException                     Boolean                   @default(false) @map("is_exception")
+  currentSubmissionVersion          Int                       @default(0) @map("current_submission_version")
+  createdAt                           DateTime                  @default(now()) @map("created_at")
+  updatedAt                             DateTime                  @updatedAt @map("updated_at")
+
+  submissions  Submission[]
+  reviews      Review[]
+  comments     Comment[]
+  issues       Issue[]
+  notifications Notification[]
+
+  @@unique([requirementDefinitionId, responsiblePartyId, reportingPeriodStart, reportingPeriodEnd, dueDate])
+  @@index([dealId, dueDate, status])
+  @@index([responsiblePartyId, dueDate])
+  @@map("requirement_instances")
+}
+
+model Submission {
+  id                         String            @id @default(uuid())
+  requirementInstanceId      String            @map("requirement_instance_id")
+  requirementInstance        RequirementInstance @relation(fields: [requirementInstanceId], references: [id], onDelete: Cascade)
+  submissionVersion          Int               @map("submission_version")
+  submittedByOrganizationId  String            @map("submitted_by_organization_id")
+  submittedByUserId          String            @map("submitted_by_user_id")
+  submittedByUser            User              @relation("SubmittedByUser", fields: [submittedByUserId], references: [id])
+  attestedByUserId           String?           @map("attested_by_user_id")
+  attestedByUser              User?             @relation("AttestedByUser", fields: [attestedByUserId], references: [id])
+  attestationText              String?           @map("attestation_text")
+  attestedAt                     DateTime?         @map("attested_at")
+  submittedAt                      DateTime?         @map("submitted_at")
+  status                              SubmissionStatus  @default(draft)
+  responseNote                          String?           @map("response_note")
+  createdAt                               DateTime          @default(now()) @map("created_at")
+
+  documents  SubmissionDocument[]
+  reviews    Review[]
+  comments   Comment[]
+  structuredValueSources StructuredValue[]
+
+  @@unique([requirementInstanceId, submissionVersion])
+  @@map("submissions")
+}
+
+model SubmissionDocument {
+  submissionId  String     @map("submission_id")
+  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  documentId    String     @map("document_id")
+  document      Document   @relation(fields: [documentId], references: [id])
+  evidenceRole  String?    @map("evidence_role")
+
+  @@id([submissionId, documentId])
+  @@map("submission_documents")
+}
+
+model FieldDefinition {
+  id             String        @id @default(uuid())
+  fieldCode      String        @map("field_code")
+  version        Int           @default(1)
+  label          String
+  module         FieldModule
+  dataType       FieldDataType @map("data_type")
+  unit           String?
+  optionValues   Json?         @map("option_values")
+  validation     Json          @default("{}")
+  status         String        @default("active") // active | retired
+
+  structuredValues     StructuredValue[]
+  sharedOutcomeValues  SharedOutcomeValue[]
+  amisFieldMappings    AmisFieldMapping[]
+
+  @@unique([fieldCode, version])
+  @@map("field_definitions")
+}
+
+model StructuredValue {
+  id                       String            @id @default(uuid())
+  dealId                   String            @map("deal_id")
+  deal                     Deal              @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  fieldDefinitionId        String            @map("field_definition_id")
+  fieldDefinition          FieldDefinition   @relation(fields: [fieldDefinitionId], references: [id])
+  reportingPartyId         String?           @map("reporting_party_id")
+  reportingParty           DealParty?        @relation(fields: [reportingPartyId], references: [id])
+  reportingPeriodStart     DateTime?         @map("reporting_period_start") @db.Date
+  reportingPeriodEnd       DateTime?         @map("reporting_period_end") @db.Date
+  valueText                String?           @map("value_text")
+  valueNumber               Decimal?          @map("value_number") @db.Decimal(24, 8)
+  valueBoolean                Boolean?          @map("value_boolean")
+  valueDate                     DateTime?         @map("value_date") @db.Date
+  valueJson                       Json?             @map("value_json")
+  sourceSubmissionId                 String?           @map("source_submission_id")
+  sourceSubmission                     Submission?       @relation(fields: [sourceSubmissionId], references: [id])
+  sourceDocumentId                       String?           @map("source_document_id")
+  sourceDocument                           Document?         @relation(fields: [sourceDocumentId], references: [id])
+  sourceDocumentVersionId                     String?           @map("source_document_version_id")
+  sourceDocumentVersion                         DocumentVersion?  @relation(fields: [sourceDocumentVersionId], references: [id])
+  enteredById                                     String?           @map("entered_by")
+  enteredBy                                         User?             @relation("StructuredValueEnteredBy", fields: [enteredById], references: [id])
+  entryMethod                                         EntryMethod       @default(manual) @map("entry_method")
+  validationStatus                                      ValidationStatus  @default(unreviewed) @map("validation_status")
+  approvedById                                            String?           @map("approved_by")
+  approvedBy                                                User?             @relation("StructuredValueApprovedBy", fields: [approvedById], references: [id])
+  approvedAt                                                  DateTime?         @map("approved_at")
+  supersededById                                                String?           @unique @map("superseded_by")
+  supersededBy                                                    StructuredValue?  @relation("SupersededChain", fields: [supersededById], references: [id])
+  supersedes                                                        StructuredValue?  @relation("SupersededChain")
+  createdAt                                                           DateTime          @default(now()) @map("created_at")
+
+  exportFieldLineage ExportFieldLineage[]
+
+  @@index([dealId, fieldDefinitionId, reportingPeriodEnd])
+  @@map("structured_values")
+}
+
+model Review {
+  id                     String              @id @default(uuid())
+  requirementInstanceId  String              @map("requirement_instance_id")
+  requirementInstance    RequirementInstance @relation(fields: [requirementInstanceId], references: [id], onDelete: Cascade)
+  submissionId           String?             @map("submission_id")
+  submission             Submission?         @relation(fields: [submissionId], references: [id])
+  reviewStage            ReviewStage         @map("review_stage")
+  reviewingOrganizationId String             @map("reviewing_organization_id")
+  reviewerUserId          String             @map("reviewer_user_id")
+  reviewerUser             User               @relation(fields: [reviewerUserId], references: [id])
+  decision                   ReviewDecision     @map("decision")
+  decisionNote                  String?            @map("decision_note")
+  decidedAt                       DateTime           @default(now()) @map("decided_at")
+
+  exportFieldLineage ExportFieldLineage[]
+
+  @@index([requirementInstanceId, reviewStage, decidedAt(sort: Desc)])
+  @@map("reviews")
+}
+
+model Comment {
+  id                    String              @id @default(uuid())
+  dealId                String              @map("deal_id")
+  deal                  Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  requirementInstanceId String?             @map("requirement_instance_id")
+  requirementInstance   RequirementInstance? @relation(fields: [requirementInstanceId], references: [id], onDelete: Cascade)
+  submissionId          String?             @map("submission_id")
+  submission            Submission?         @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  authorUserId          String              @map("author_user_id")
+  authorUser            User                @relation(fields: [authorUserId], references: [id])
+  authorOrganizationId  String              @map("author_organization_id")
+  authorOrganization    Organization        @relation(fields: [authorOrganizationId], references: [id])
+  visibility            CommentVisibility
+  body                  String
+  createdAt             DateTime            @default(now()) @map("created_at")
+  editedAt               DateTime?           @map("edited_at")
+
+  @@map("comments")
+}
+
+model Issue {
+  id                        String       @id @default(uuid())
+  dealId                    String       @map("deal_id")
+  deal                      Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  requirementInstanceId     String?      @map("requirement_instance_id")
+  requirementInstance       RequirementInstance? @relation(fields: [requirementInstanceId], references: [id])
+  issueType                 IssueType    @map("issue_type")
+  severity                  Severity
+  title                     String
+  description               String?
+  assignedToUserId          String?      @map("assigned_to_user_id")
+  assignedToUser             User?        @relation(fields: [assignedToUserId], references: [id])
+  assignedToOrganizationId    String?      @map("assigned_to_organization_id")
+  assignedToOrganization        Organization? @relation(fields: [assignedToOrganizationId], references: [id])
+  status                          IssueStatus  @default(open)
+  dueDate                             DateTime?    @map("due_date") @db.Date
+  resolution                            String?
+  resolvedAt                              DateTime?    @map("resolved_at")
+  createdAt                                 DateTime     @default(now()) @map("created_at")
+  updatedAt                                   DateTime     @updatedAt @map("updated_at")
+
+  @@index([dealId, status, severity])
+  @@map("issues")
+}
+
+// ---------- Community Benefits ----------
+
+model CbrReportingPeriod {
+  id                String   @id @default(uuid())
+  dealId            String   @map("deal_id")
+  deal              Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  calendarYear      Int      @map("calendar_year")
+  periodStart       DateTime @map("period_start") @db.Date
+  periodEnd         DateTime @map("period_end") @db.Date
+  status            CbrPeriodStatus @default(not_started)
+  targetSnapshotDate DateTime? @map("target_snapshot_date") @db.Date
+  priorPeriodId     String?  @map("prior_period_id")
+  priorPeriod       CbrReportingPeriod? @relation("CbrPriorPeriod", fields: [priorPeriodId], references: [id])
+  laterPeriods      CbrReportingPeriod[] @relation("CbrPriorPeriod")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  projectProfile    CbrProjectProfile?
+  jobRecords        JobRecord[]
+  benefitRecords    BenefitRecord[]
+  tenantOccupants   TenantOccupant[]
+  serviceOutcomes   ServiceOutcome[]
+
+  @@unique([dealId, calendarYear])
+  @@map("cbr_reporting_periods")
+}
+
+model CbrProjectProfile {
+  id                              String   @id @default(uuid())
+  cbrPeriodId                     String   @unique @map("cbr_period_id")
+  cbrPeriod                       CbrReportingPeriod @relation(fields: [cbrPeriodId], references: [id], onDelete: Cascade)
+  projectDescription              String?  @map("project_description")
+  butForStatement                 String?  @map("but_for_statement")
+  licBenefitDescription           String?  @map("lic_benefit_description")
+  newServicesDescription          String?  @map("new_services_description")
+  revitalizationPlan              String?  @map("revitalization_plan")
+  privateInvestmentStabilization  String?  @map("private_investment_stabilization")
+  annualGrossRevenue              Decimal? @map("annual_gross_revenue") @db.Decimal(18, 2)
+  annualNetOperatingIncome        Decimal? @map("annual_net_operating_income") @db.Decimal(18, 2)
+  federalTaxEstimate              Decimal? @map("federal_tax_estimate") @db.Decimal(18, 2)
+  stateTaxEstimate                Decimal? @map("state_tax_estimate") @db.Decimal(18, 2)
+  communityEngagement             String?  @map("community_engagement")
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @updatedAt @map("updated_at")
+
+  @@map("cbr_project_profiles")
+}
+
+model JobRecord {
+  id                            String       @id @default(uuid())
+  cbrPeriodId                   String       @map("cbr_period_id")
+  cbrPeriod                     CbrReportingPeriod @relation(fields: [cbrPeriodId], references: [id], onDelete: Cascade)
+  employerPartyId                String?      @map("employer_party_id")
+  employerParty                    DealParty?   @relation(fields: [employerPartyId], references: [id])
+  jobTitle                          String       @map("job_title")
+  fteCount                            Decimal      @default(0) @map("fte_count") @db.Decimal(12, 4)
+  jobStatus                             JobStatus?   @map("job_status")
+  employmentType                          EmploymentType? @map("employment_type")
+  hourlyWage                                Decimal?     @map("hourly_wage") @db.Decimal(12, 2)
+  annualSalary                                Decimal?     @map("annual_salary") @db.Decimal(18, 2)
+  hoursPerWeek                                  Decimal?     @map("hours_per_week") @db.Decimal(8, 2)
+  benefitsBurdenPercent                           Decimal?     @map("benefits_burden_percent") @db.Decimal(7, 4)
+  accessibleToLicLip                                Boolean?     @map("accessible_to_lic_lip")
+  collegeDegreeRequired                               Boolean?     @map("college_degree_required")
+  minimumEducationLevel                                 String?      @map("minimum_education_level")
+  trainingProvided                                        Boolean?     @map("training_provided")
+  employeesEligibleHealthcare                               Decimal?     @map("employees_eligible_healthcare") @db.Decimal(12, 4)
+  employeesEnrolledHealthcare                                 Decimal?     @map("employees_enrolled_healthcare") @db.Decimal(12, 4)
+  sourceDocumentId                                              String?      @map("source_document_id")
+  sourceDocument                                                  Document?    @relation(fields: [sourceDocumentId], references: [id])
+  createdAt                                                         DateTime     @default(now()) @map("created_at")
+  updatedAt                                                           DateTime     @updatedAt @map("updated_at")
+
+  @@index([cbrPeriodId, jobStatus])
+  @@map("job_records")
+}
+
+model BenefitRecord {
+  id               String        @id @default(uuid())
+  cbrPeriodId      String        @map("cbr_period_id")
+  cbrPeriod        CbrReportingPeriod @relation(fields: [cbrPeriodId], references: [id], onDelete: Cascade)
+  employerPartyId  String?       @map("employer_party_id")
+  employerParty    DealParty?    @relation(fields: [employerPartyId], references: [id])
+  employeeClass    EmployeeClass @map("employee_class")
+  benefitCode      String        @map("benefit_code")
+  isOffered        Boolean?      @map("is_offered")
+  percentReceiving Decimal?      @map("percent_receiving") @db.Decimal(7, 4)
+  detail           String?
+
+  @@unique([cbrPeriodId, employerPartyId, employeeClass, benefitCode])
+  @@map("benefit_records")
+}
+
+model TenantOccupant {
+  id                        String   @id @default(uuid())
+  cbrPeriodId               String   @map("cbr_period_id")
+  cbrPeriod                 CbrReportingPeriod @relation(fields: [cbrPeriodId], references: [id], onDelete: Cascade)
+  tenantPartyId              String?  @map("tenant_party_id")
+  tenantParty                  DealParty? @relation(fields: [tenantPartyId], references: [id])
+  organizationName               String   @map("organization_name")
+  organizationType                  String?  @map("organization_type")
+  purposeGoodsServices                String?  @map("purpose_goods_services")
+  leaseStart                             DateTime? @map("lease_start") @db.Date
+  leaseEnd                                 DateTime? @map("lease_end") @db.Date
+  squareFeet                                 Decimal?  @map("square_feet") @db.Decimal(18, 2)
+  currentEmployees                             Decimal?  @map("current_employees") @db.Decimal(12, 2)
+  averageHourlyWage                              Decimal?  @map("average_hourly_wage") @db.Decimal(12, 2)
+  employeesReceivingMedical                        Decimal?  @map("employees_receiving_medical") @db.Decimal(12, 2)
+  jobsHsOrLess                                       Decimal?  @map("jobs_hs_or_less") @db.Decimal(12, 2)
+  createdAt                                            DateTime  @default(now()) @map("created_at")
+
+  @@map("tenant_occupants")
+}
+
+model ServiceOutcome {
+  id                     String   @id @default(uuid())
+  cbrPeriodId            String   @map("cbr_period_id")
+  cbrPeriod              CbrReportingPeriod @relation(fields: [cbrPeriodId], references: [id], onDelete: Cascade)
+  serviceType            String?  @map("service_type")
+  serviceName            String   @map("service_name")
+  description            String?
+  unitCount               Decimal? @map("unit_count") @db.Decimal(18, 4)
+  squareFeet                 Decimal? @map("square_feet") @db.Decimal(18, 2)
+  peopleServedBaseline          Decimal? @map("people_served_baseline") @db.Decimal(18, 2)
+  peopleServedCurrent              Decimal? @map("people_served_current") @db.Decimal(18, 2)
+  percentLowIncome                    Decimal? @map("percent_low_income") @db.Decimal(7, 4)
+  percentPeopleOfColor                   Decimal? @map("percent_people_of_color") @db.Decimal(7, 4)
+  outcomeNarrative                          String?
+  successIndicators                            String?  @map("success_indicators")
+  createdAt                                       DateTime @default(now()) @map("created_at")
+
+  @@map("service_outcomes")
+}
+
+// ---------- CDE / AMIS ----------
+
+model SharedOutcomeSnapshot {
+  id                          String         @id @default(uuid())
+  dealId                      String         @map("deal_id")
+  deal                        Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  reportingPeriodEnd          DateTime       @map("reporting_period_end") @db.Date
+  snapshotVersion             Int            @map("snapshot_version")
+  status                      SnapshotStatus @default(draft)
+  controlledByCdeParticipationId String?     @map("controlled_by_cde_participation_id")
+  controlledByCdeParticipation   CdeParticipation? @relation(fields: [controlledByCdeParticipationId], references: [id])
+  createdById                       String?        @map("created_by")
+  createdBy                           User?          @relation(fields: [createdById], references: [id])
+  createdAt                             DateTime       @default(now()) @map("created_at")
+  lockedAt                                DateTime?      @map("locked_at")
+
+  values      SharedOutcomeValue[]
+  approvals   CdeSnapshotApproval[]
+
+  @@unique([dealId, reportingPeriodEnd, snapshotVersion])
+  @@map("shared_outcome_snapshots")
+}
+
+model SharedOutcomeValue {
+  id                      String   @id @default(uuid())
+  snapshotId              String   @map("snapshot_id")
+  snapshot                SharedOutcomeSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  fieldDefinitionId       String   @map("field_definition_id")
+  fieldDefinition         FieldDefinition @relation(fields: [fieldDefinitionId], references: [id])
+  valueText               String?  @map("value_text")
+  valueNumber              Decimal? @map("value_number") @db.Decimal(24, 8)
+  valueBoolean                Boolean? @map("value_boolean")
+  valueDate                      DateTime? @map("value_date") @db.Date
+  sourceStructuredValueId           String?  @unique @map("source_structured_value_id")
+
+  exportFieldLineage ExportFieldLineage[]
+
+  @@unique([snapshotId, fieldDefinitionId])
+  @@map("shared_outcome_values")
+}
+
+model CdeSnapshotApproval {
+  id                 String   @id @default(uuid())
+  snapshotId         String   @map("snapshot_id")
+  snapshot           SharedOutcomeSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  cdeParticipationId String   @map("cde_participation_id")
+  cdeParticipation   CdeParticipation @relation(fields: [cdeParticipationId], references: [id])
+  decision           SnapshotApprovalDecision @default(pending)
+  decidedById        String?  @map("decided_by")
+  decidedBy          User?    @relation(fields: [decidedById], references: [id])
+  decisionNote       String?  @map("decision_note")
+  decidedAt          DateTime? @map("decided_at")
+
+  @@unique([snapshotId, cdeParticipationId])
+  @@map("cde_snapshot_approvals")
+}
+
+model AmisMappingVersion {
+  id                 String   @id @default(uuid())
+  mappingName        String   @map("mapping_name")
+  versionCode        String   @map("version_code")
+  transport          AmisTransport
+  effectiveFrom      DateTime? @map("effective_from") @db.Date
+  effectiveTo        DateTime? @map("effective_to") @db.Date
+  templateFileName   String?  @map("template_file_name")
+  templateChecksum   String?  @map("template_checksum")
+  schemaFileName     String?  @map("schema_file_name")
+  schemaChecksum     String?  @map("schema_checksum")
+  status             AmisMappingStatus @default(draft)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  fieldMappings  AmisFieldMapping[]
+  exportBatches  ExportBatch[]
+
+  @@unique([mappingName, versionCode, transport])
+  @@map("amis_mapping_versions")
+}
+
+model AmisFieldMapping {
+  id                 String   @id @default(uuid())
+  mappingVersionId   String   @map("mapping_version_id")
+  mappingVersion     AmisMappingVersion @relation(fields: [mappingVersionId], references: [id], onDelete: Cascade)
+  internalFieldCode  String   @map("internal_field_code")
+  fieldDefinitionId  String?  @map("field_definition_id")
+  fieldDefinition    FieldDefinition? @relation(fields: [fieldDefinitionId], references: [id])
+  amisObject         String   @map("amis_object")
+  amisFieldName      String   @map("amis_field_name")
+  transformRule      String?  @map("transform_rule")
+  conditionalRule    String?  @map("conditional_rule")
+  validationRules    Json     @default("[]") @map("validation_rules")
+  sourcePreference   Json     @default("[]") @map("source_preference")
+  approvalRole       String?  @map("approval_role")
+  sortOrder          Int      @default(1000) @map("sort_order")
+
+  exportFieldLineage ExportFieldLineage[]
+
+  @@unique([mappingVersionId, amisObject, amisFieldName])
+  @@map("amis_field_mappings")
+}
+
+model ExportBatch {
+  id                 String       @id @default(uuid())
+  dealId             String?      @map("deal_id")
+  deal               Deal?        @relation(fields: [dealId], references: [id])
+  cdeParticipationId String?      @map("cde_participation_id")
+  cdeParticipation   CdeParticipation? @relation(fields: [cdeParticipationId], references: [id])
+  mappingVersionId   String       @map("mapping_version_id")
+  mappingVersion     AmisMappingVersion @relation(fields: [mappingVersionId], references: [id])
+  reportingPeriodEnd DateTime?    @map("reporting_period_end") @db.Date
+  exportType         ExportType   @map("export_type")
+  status             ExportStatus @default(building)
+  s3Bucket           String?      @map("s3_bucket")
+  s3ObjectKey        String?      @map("s3_object_key")
+  fileName           String?      @map("file_name")
+  fileChecksum       String?      @map("file_checksum")
+  validationResults  Json         @default("[]") @map("validation_results")
+  generatedById      String?      @map("generated_by")
+  generatedBy        User?        @relation(fields: [generatedById], references: [id])
+  generatedAt        DateTime     @default(now()) @map("generated_at")
+  filedAt            DateTime?    @map("filed_at")
+  certifiedAt        DateTime?    @map("certified_at")
+
+  fieldLineage ExportFieldLineage[]
+
+  @@index([dealId, status, generatedAt(sort: Desc)])
+  @@map("export_batches")
+}
+
+model ExportFieldLineage {
+  id                     String   @id @default(uuid())
+  exportBatchId          String   @map("export_batch_id")
+  exportBatch            ExportBatch @relation(fields: [exportBatchId], references: [id], onDelete: Cascade)
+  amisFieldMappingId     String   @map("amis_field_mapping_id")
+  amisFieldMapping       AmisFieldMapping @relation(fields: [amisFieldMappingId], references: [id])
+  outputRowKey           String?  @map("output_row_key")
+  outputFieldName        String   @map("output_field_name")
+  outputValue            String?  @map("output_value")
+  sourceStructuredValueId String? @map("source_structured_value_id")
+  sourceStructuredValue   StructuredValue? @relation(fields: [sourceStructuredValueId], references: [id])
+  sourceSnapshotValueId   String? @map("source_snapshot_value_id")
+  sourceSnapshotValue     SharedOutcomeValue? @relation(fields: [sourceSnapshotValueId], references: [id])
+  sourceDocumentId        String? @map("source_document_id")
+  sourceDocument          Document? @relation(fields: [sourceDocumentId], references: [id])
+  sourceReviewId          String? @map("source_review_id")
+  sourceReview            Review? @relation(fields: [sourceReviewId], references: [id])
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@map("export_field_lineage")
+}
+
+// ---------- Notifications & Audit ----------
+
+model Notification {
+  id                     String   @id @default(uuid())
+  userId                 String?  @map("user_id")
+  user                   User?    @relation(fields: [userId], references: [id])
+  organizationId         String?  @map("organization_id")
+  organization           Organization? @relation(fields: [organizationId], references: [id])
+  dealId                 String?  @map("deal_id")
+  deal                   Deal?    @relation(fields: [dealId], references: [id])
+  requirementInstanceId  String?  @map("requirement_instance_id")
+  requirementInstance    RequirementInstance? @relation(fields: [requirementInstanceId], references: [id])
+  notificationType       String   @map("notification_type")
+  channel                NotificationChannel
+  subject                String?
+  body                   String?
+  scheduledFor           DateTime? @map("scheduled_for")
+  sentAt                 DateTime? @map("sent_at")
+  status                 NotificationStatus @default(queued)
+  providerMessageId      String?  @map("provider_message_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model AuditEvent {
+  id                   String   @id @default(uuid())
+  occurredAt           DateTime @default(now()) @map("occurred_at")
+  actorUserId          String?  @map("actor_user_id")
+  actorUser            User?    @relation(fields: [actorUserId], references: [id])
+  actorOrganizationId  String?  @map("actor_organization_id")
+  actorOrganization    Organization? @relation(fields: [actorOrganizationId], references: [id])
+  dealId               String?  @map("deal_id")
+  deal                 Deal?    @relation(fields: [dealId], references: [id])
+  objectType           String   @map("object_type")
+  objectId             String?  @map("object_id")
+  action               String
+  beforeData           Json?    @map("before_data")
+  afterData            Json?    @map("after_data")
+  requestId            String?  @map("request_id")
+  ipAddress            String?  @map("ip_address")
+  userAgent            String?  @map("user_agent")
+  metadata             Json     @default("{}")
+
+  @@index([dealId, occurredAt(sort: Desc)])
+  @@index([objectType, objectId, occurredAt(sort: Desc)])
+  @@map("audit_events")
+}
