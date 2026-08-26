@@ -59,10 +59,14 @@ snapshotsRouter.post(
           create: await Promise.all(
             golden.map(async (g) => {
               const fieldDefinition = await ensureFieldDefinition(g.fieldCode, g.label, g.dataType);
+              // text and date both store as valueText — a date's golden value is
+              // already an ISO date string, not a number, so it belongs with text here
+              // even though it's a distinct dataType for display/formatting purposes.
+              const isTextLike = g.dataType === "text" || g.dataType === "date";
               return {
                 fieldDefinitionId: fieldDefinition.id,
-                valueText: g.dataType === "text" ? String(g.value ?? "") : undefined,
-                valueNumber: g.dataType !== "text" ? (g.value as number | undefined) : undefined,
+                valueText: isTextLike ? String(g.value ?? "") : undefined,
+                valueNumber: isTextLike ? undefined : (g.value as number | undefined),
               };
             })
           ),

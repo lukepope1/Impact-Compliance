@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type SharedOutcomeSnapshotDetail } from "../../api/client";
-import { formatCurrency, formatNumber } from "../../utils/format";
+import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
 
 // Snapshot values don't carry a field-type flag, only a human label — mirrors the
 // fieldCode-keyed sets in AmisCenter.tsx, keyed by label instead since that's what this
 // endpoint returns.
-const CURRENCY_LABELS = new Set(["Annual Gross Revenue"]);
-const COUNT_LABELS = new Set(["Actual Jobs Created"]);
+const CURRENCY_LABELS = new Set([
+  "Annual Gross Revenue",
+  "Annual Net Operating Income",
+  "Total QEI Amount",
+  "Total QLICI Original Principal",
+]);
+const COUNT_LABELS = new Set(["Actual Jobs Created", "Actual Jobs Retained", "Actual Construction Jobs", "Tenants / Occupants Reported"]);
+const DATE_LABELS = new Set(["Closing Date"]);
 
 function formatSnapshotValue(label: string, valueText: string | null, valueNumber: string | null) {
   const raw = valueText ?? valueNumber;
   if (CURRENCY_LABELS.has(label)) return formatCurrency(raw);
   if (COUNT_LABELS.has(label)) return formatNumber(raw);
+  if (DATE_LABELS.has(label)) return formatDate(raw);
   return raw ?? "—";
 }
 

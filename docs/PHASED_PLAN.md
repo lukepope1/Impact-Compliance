@@ -44,6 +44,17 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   participating CDE has decided
 - AMIS field readiness + CSV export generation, blocked while fields are missing, every
   output value traced to its source (manual filing only — no auto-submission to AMIS)
+- **Field catalog expanded from 3 to 13 real fields** (`lib/goldenFields.ts`): revenue,
+  NOI, jobs created/retained/construction, tenant count (CBR-sourced, year-scoped);
+  closing date, QEI total, QLICI principal total, lead CDE allocation control number,
+  project census tract/city/state (deal/CDE/QLICI/address-sourced, year-independent).
+  Verified live against the seeded deal — real computed values for populated fields
+  (jobs retained: 18, construction: 1), correctly `"missing"` for genuinely unpopulated
+  ones (QEI, QLICI, project address weren't seeded), proving the readiness-gating logic
+  holds at this larger field count. Caught and fixed a real bug along the way: adding a
+  `date` dataType exposed that `snapshots.ts`'s field-value storage only handled
+  `text` vs. everything-else-is-numeric, which would have silently mis-stored a date
+  string as `valueNumber`.
 
 ## Auth ✅ (real, not a stub)
 - Bcrypt-hashed passwords, JWT-signed sessions (`POST /api/auth/login`), verified on every
@@ -184,8 +195,8 @@ use plain `requireRole`.
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
 - No sharing of CDE-private data across CDE organizations
-- AMIS export covers a small hardcoded field set (goldenFields.ts) proving the mechanism,
-  not the full field catalog a production build would need
+- AMIS export covers a hardcoded 13-field set (goldenFields.ts) proving the mechanism at
+  a realistic scale, not AMIS's full production field catalog
 
 ## UAT pass ✅ (live functional walkthrough)
 Walked every portal's golden path against the running app — see docs/UAT_PASS.md for
@@ -206,6 +217,9 @@ just in isolation.
   Evidence storage section above) before relying on it
 - Decide and build the production clamd deployment shape (sidecar/service/async Lambda —
   see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
-- Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
+- Expand the AMIS field catalog further toward AMIS's actual production field set (13
+  real fields now covered, up from 3 — still not exhaustive) and drive it from
+  `field_definitions` + `source_preference` config per the schema's original design,
+  rather than the hardcoded resolver in `goldenFields.ts`
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability

@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
-import { formatCurrency, formatNumber } from "../../utils/format";
+import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
 
 // goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
-// plain counts vs. text — mirrored here since the readiness API returns raw values, not a
-// display type.
-const CURRENCY_FIELDS = new Set(["annual_gross_revenue"]);
-const COUNT_FIELDS = new Set(["jobs_created_actual"]);
+// plain counts vs. dates vs. text — mirrored here since the readiness API returns raw
+// values, not a display type.
+const CURRENCY_FIELDS = new Set(["annual_gross_revenue", "annual_net_operating_income", "total_qei_amount", "total_qlici_original_principal"]);
+const COUNT_FIELDS = new Set(["jobs_created_actual", "jobs_retained_actual", "jobs_construction_actual", "tenant_count"]);
+const DATE_FIELDS = new Set(["project_closing_date"]);
 
 function formatFieldValue(fieldCode: string, value: string | number | null) {
   if (CURRENCY_FIELDS.has(fieldCode)) return formatCurrency(value);
   if (COUNT_FIELDS.has(fieldCode)) return formatNumber(value);
+  if (DATE_FIELDS.has(fieldCode)) return formatDate(value as string | null);
   return value ?? "—";
 }
 
