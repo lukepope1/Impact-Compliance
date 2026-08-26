@@ -308,11 +308,16 @@ and documented at the time:
   requirement was submitted and Impact-approved for real so the CDE's "pending review"
   count isn't uniformly zero across every deal.
 
-  Verified live: logged in as Impact, confirmed the Deal Portfolio now shows all 3 deals
-  with correct per-deal overdue/upcoming counts and status badges (Harbor 1 overdue,
-  Riverside 5, Millennium 2 — 8 total, matching the stat card). CDE and QALICB dashboard
-  verification is otherwise identical code/data path, confirmed via the same
-  `StatusBadge`/`stat-grid` components already proven live on the Impact dashboard.
+  Verified live, all three dashboards: Impact's Deal Portfolio shows all 3 deals with
+  correct per-deal overdue/upcoming counts and status badges (Harbor 1 overdue,
+  Riverside 5, Millennium 2 — 8 total, matching the stat card); the CDE Portfolio (signed
+  in as `reviewer@enterprisecde.example`) shows the same 3 deals with matching per-deal
+  overdue counts, 8 total, 2 deals with something pending CDE review; the QALICB
+  Dashboard (signed in as the new `mchen@riversidemfg.example`) correctly shows only
+  Riverside's own 28 requirement instances (5 overdue), with one already `Impact
+  Approved` from the review-queue test — none of Harbor's or Millennium's data leaking
+  into a QALICB user's own dashboard, confirming the tenancy scoping held under the new
+  multi-deal data too.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
