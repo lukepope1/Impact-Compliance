@@ -59,6 +59,10 @@ export default function CdePortfolio() {
                   <Link to={`/cde/deals/${d.id}/documents`}>Documents</Link>
                   {" · "}
                   <Link to={`/cde/deals/${d.id}/issues`}>Issues</Link>
+                  {" · "}
+                  <Link to={`/cde/deals/${d.id}/snapshot`}>Shared snapshot</Link>
+                  {" · "}
+                  <Link to={`/cde/deals/${d.id}/amis`}>AMIS</Link>
                 </td>
               </tr>
             );

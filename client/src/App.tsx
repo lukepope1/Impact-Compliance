@@ -16,6 +16,9 @@ import CdePortfolio from "./pages/cde/CdePortfolio";
 import ReviewQueue from "./pages/shared/ReviewQueue";
 import ReviewDetail from "./pages/shared/ReviewDetail";
 import Issues from "./pages/shared/Issues";
+import CommunityBenefits from "./pages/shared/CommunityBenefits";
+import MultiCdeSnapshot from "./pages/shared/MultiCdeSnapshot";
+import AmisCenter from "./pages/shared/AmisCenter";
 
 export default function App() {
   return (
@@ -34,6 +37,9 @@ export default function App() {
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/audit" element={<AuditLog />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
+          <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
+          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot />} />
+          <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"
             element={<ReviewQueue stage="impact" portal="impact" title="I-01 — Impact Review Queue" />}
@@ -47,12 +53,15 @@ export default function App() {
         <Route path="/qalicb" element={<QalicbLayout />}>
           <Route index element={<QalicbDashboard />} />
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
+          <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
         </Route>
 
         <Route path="/cde" element={<CdeLayout />}>
           <Route index element={<CdePortfolio />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
+          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot />} />
+          <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"
             element={<ReviewQueue stage="cde" portal="cde" title="C-03 — CDE Review Queue" />}

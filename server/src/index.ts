@@ -16,6 +16,9 @@ import { documentsRouter } from "./routes/documents";
 import { auditEventsRouter } from "./routes/auditEvents";
 import { requirementInstancesRouter } from "./routes/requirementInstances";
 import { issuesRouter } from "./routes/issues";
+import { cbrRouter } from "./routes/cbr";
+import { snapshotsRouter } from "./routes/snapshots";
+import { amisRouter } from "./routes/amis";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
 // natively and Node treats the resulting rejection as fatal, so patch it globally
@@ -39,6 +42,9 @@ app.use("/api/deals/:dealId/documents", requireAuth, documentsRouter);
 app.use("/api/deals/:dealId/audit-events", requireAuth, auditEventsRouter);
 app.use("/api/deals/:dealId/requirement-instances", requireAuth, requirementInstancesRouter);
 app.use("/api/deals/:dealId/issues", requireAuth, issuesRouter);
+app.use("/api/deals/:dealId/cbr", requireAuth, cbrRouter);
+app.use("/api/deals/:dealId/snapshots", requireAuth, snapshotsRouter);
+app.use("/api/deals/:dealId/amis", requireAuth, amisRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

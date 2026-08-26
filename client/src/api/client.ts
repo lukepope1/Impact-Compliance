@@ -182,6 +182,58 @@ export interface IssueRow {
   requirementInstance: { id: string; dueDate: string | null } | null;
 }
 
+export interface JobRecordRow {
+  id: string;
+  jobTitle: string;
+  fteCount: string;
+  jobStatus: string | null;
+  hourlyWage: string | null;
+  accessibleToLicLip: boolean | null;
+}
+
+export interface TenantOccupantRow {
+  id: string;
+  organizationName: string;
+  organizationType: string | null;
+  purposeGoodsServices: string | null;
+  squareFeet: string | null;
+  currentEmployees: string | null;
+}
+
+export interface CbrPeriod {
+  id: string;
+  calendarYear: number;
+  status: string;
+  projectProfile: { annualGrossRevenue: string | null; projectDescription: string | null; butForStatement: string | null } | null;
+  jobRecords: JobRecordRow[];
+  tenantOccupants: TenantOccupantRow[];
+}
+
+export interface GoldenFieldRow {
+  fieldCode: string;
+  label: string;
+  value: string | number | null;
+  source: string;
+  status: "ready" | "missing";
+}
+
+export interface SharedOutcomeSnapshotDetail {
+  id: string;
+  snapshotVersion: number;
+  status: string;
+  values: { fieldDefinition: { label: string }; valueText: string | null; valueNumber: string | null }[];
+  approvals: { decision: string; decisionNote: string | null; cdeParticipation: { cdeOrganization: { legalName: string } } }[];
+  controlledByCdeParticipation: { cdeOrganization: { legalName: string } } | null;
+}
+
+export interface ExportBatchRow {
+  id: string;
+  exportType: string;
+  status: string;
+  fileName: string | null;
+  generatedAt: string;
+}
+
 export const api = {
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
@@ -304,4 +356,37 @@ export const api = {
   ) => request<IssueRow>(`/deals/${dealId}/issues`, { method: "POST", body: JSON.stringify(data) }),
   resolveIssue: (dealId: string, issueId: string, resolution: string) =>
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
+
+  getCbrPeriod: (dealId: string, year: number) => request<CbrPeriod>(`/deals/${dealId}/cbr/${year}`),
+  saveCbrProfile: (dealId: string, year: number, data: { annualGrossRevenue?: number; projectDescription?: string; butForStatement?: string }) =>
+    request<unknown>(`/deals/${dealId}/cbr/${year}/profile`, { method: "PUT", body: JSON.stringify(data) }),
+  addJobRecord: (dealId: string, year: number, data: { jobTitle: string; fteCount: number; jobStatus?: string; hourlyWage?: number; accessibleToLicLip?: boolean }) =>
+    request<JobRecordRow>(`/deals/${dealId}/cbr/${year}/jobs`, { method: "POST", body: JSON.stringify(data) }),
+  addTenant: (dealId: string, year: number, data: { organizationName: string; organizationType?: string; purposeGoodsServices?: string; squareFeet?: number; currentEmployees?: number }) =>
+    request<TenantOccupantRow>(`/deals/${dealId}/cbr/${year}/tenants`, { method: "POST", body: JSON.stringify(data) }),
+
+  getSnapshot: (dealId: string, year: number) => request<SharedOutcomeSnapshotDetail | null>(`/deals/${dealId}/snapshots/${year}`),
+  generateSnapshot: (dealId: string, year: number) =>
+    request<SharedOutcomeSnapshotDetail>(`/deals/${dealId}/snapshots/${year}/generate`, { method: "POST" }),
+  decideSnapshot: (dealId: string, snapshotId: string, decision: string, decisionNote?: string) =>
+    request<unknown>(`/deals/${dealId}/snapshots/${snapshotId}/approve`, { method: "POST", body: JSON.stringify({ decision, decisionNote }) }),
+
+  getAmisReadiness: (dealId: string, year: number) => request<GoldenFieldRow[]>(`/deals/${dealId}/amis/readiness/${year}`),
+  listAmisExports: (dealId: string) => request<ExportBatchRow[]>(`/deals/${dealId}/amis/exports`),
+  generateAmisExport: (dealId: string, year: number) =>
+    request<ExportBatchRow>(`/deals/${dealId}/amis/exports/${year}`, { method: "POST" }),
+  async downloadAmisExport(dealId: string, exportId: string, fileName: string) {
+    const res = await fetch(`/api/deals/${dealId}/amis/exports/${exportId}/download`, { headers: { "x-user-email": ACTING_USER_EMAIL } });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };

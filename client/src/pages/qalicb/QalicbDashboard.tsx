@@ -40,7 +40,12 @@ export default function QalicbDashboard() {
   return (
     <main>
       <h1>Q-01 — QALICB Dashboard</h1>
-      <p>{deals?.map((d) => d.legalName).join(", ") || "Loading…"}</p>
+      <p>
+        {deals?.map((d) => d.legalName).join(", ") || "Loading…"}
+        {deals && deals.length > 0 && (
+          <> &nbsp;·&nbsp; <Link to={`/qalicb/deals/${deals[0].id}/cbr`}>Community Benefits Report</Link></>
+        )}
+      </p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 

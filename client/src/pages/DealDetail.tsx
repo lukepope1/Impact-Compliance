@@ -34,11 +34,17 @@ export default function DealDetail() {
         {" · "}
         <Link to={`/impact/deals/${dealId}/audit`}>Audit log</Link>
       </div>
+      <div className="card">
+        <Link to={`/impact/deals/${dealId}/cbr`}>Community Benefits Report</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/snapshot`}>Multi-CDE shared snapshot</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/amis`}>AMIS readiness & export</Link>
+      </div>
       <p style={{ color: "#666" }}>
         <Link to="/qalicb">Open the QALICB portal</Link> to submit against this deal's requirements, or{" "}
         <Link to="/cde">open the CDE portal</Link> to review Impact-approved submissions
         (dev-only: each acts as a different seeded user — see the notes in api/client.ts).
-        AMIS export lands in Phase 6 (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );
