@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
 
@@ -17,7 +17,34 @@ function formatFieldValue(fieldCode: string, value: string | number | null) {
   return value ?? "—";
 }
 
-export default function AmisCenter() {
+// Where each field's underlying value can actually be seen/edited, per portal — only
+// fields where the target page genuinely renders that value. Several golden fields (the
+// QLICI principal total, the multi-CDE project number) have no page that surfaces them
+// today, so they're deliberately left out rather than linking somewhere that wouldn't
+// show what the row claims to source.
+const CBR_FIELDS = new Set([
+  "annual_gross_revenue",
+  "annual_net_operating_income",
+  "jobs_created_actual",
+  "jobs_retained_actual",
+  "jobs_construction_actual",
+  "tenant_count",
+]);
+const IMPACT_SETUP_FIELDS = new Set([
+  "project_closing_date",
+  "total_qei_amount",
+  "lead_cde_allocation_control_number",
+  "project_census_tract",
+  "project_city_state",
+]);
+
+function sourceLink(fieldCode: string, portal: "impact" | "cde", dealId: string): string | null {
+  if (CBR_FIELDS.has(fieldCode)) return `/${portal}/deals/${dealId}/cbr`;
+  if (portal === "impact" && IMPACT_SETUP_FIELDS.has(fieldCode)) return `/impact/deals/${dealId}/setup`;
+  return null;
+}
+
+export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
   const year = new Date().getFullYear();
   const [readiness, setReadiness] = useState<GoldenFieldRow[] | null>(null);
@@ -71,16 +98,21 @@ export default function AmisCenter() {
       </div>
 
       <table>
-        <thead><tr><th>AMIS field</th><th>Value</th><th>Source</th><th>Status</th></tr></thead>
+        <thead><tr><th>AMIS field</th><th>Internal field</th><th>Value</th><th>Source</th><th>Status</th><th></th></tr></thead>
         <tbody>
-          {readiness?.map((r) => (
-            <tr key={r.fieldCode}>
-              <td>{r.label}</td>
-              <td>{formatFieldValue(r.fieldCode, r.value)}</td>
-              <td>{r.source}</td>
-              <td style={r.status === "missing" ? { color: "#b00" } : { color: "#1f7a8c" }}>{r.status.toUpperCase()}</td>
-            </tr>
-          ))}
+          {readiness?.map((r) => {
+            const link = dealId ? sourceLink(r.fieldCode, portal, dealId) : null;
+            return (
+              <tr key={r.fieldCode}>
+                <td>{r.label}</td>
+                <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 12.5 }}>{r.fieldCode}</td>
+                <td>{formatFieldValue(r.fieldCode, r.value)}</td>
+                <td>{r.source}</td>
+                <td style={r.status === "missing" ? { color: "#b00" } : { color: "#1f7a8c" }}>{r.status.toUpperCase()}</td>
+                <td>{link && <Link to={link}>{r.status === "missing" ? "Resolve" : "View source"}</Link>}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

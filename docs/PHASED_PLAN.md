@@ -558,6 +558,33 @@ and documented at the time:
   Financial CDE and confirmed it live-updated to "CDE Review" / "1 of 2" — matching the
   wireframe's displayed state exactly.
 
+- **AMIS Readiness table: Internal field column + real "View source" links**, matching a
+  "C-08" wireframe. `AmisCenter.tsx` gained an `Internal field` column showing the same
+  `fieldCode` the server already uses internally (`annual_gross_revenue`, etc.) — no new
+  data, just displaying what was already there — and a per-row action link
+  (`sourceLink()`) to wherever that field's value is actually visible: CBR-sourced fields
+  link to the (now dual-portal) CBR page, deal/CDE/address fields link to Impact's Deal
+  Setup page.
+
+  Explicitly scoped down from the wireframe: skipped the "Warnings" status tier,
+  "Mapping version", and "Confirm N/A" action — none of those concepts exist in the
+  schema (readiness is strictly ready/missing today, there's no versioned field-mapping
+  concept, and no way to mark a field not-applicable), so building them would mean
+  inventing data rather than surfacing it. Confirmed scope with the user first.
+
+  The link is deliberately portal-and-field-aware, not just deal-aware: two fields
+  (`multi_cde_project_number`, `total_qlici_original_principal`) get no link on either
+  portal because no page anywhere actually renders those values yet; the deal/CDE/address
+  fields link only for Impact, since only Impact's Deal Setup page shows them — CDE has no
+  equivalent view. `AmisCenter` needed a `portal` prop for this (it previously rendered
+  identically for both portals) and both `/impact/deals/:dealId/amis` and
+  `/cde/deals/:dealId/amis` routes in `App.tsx` were updated accordingly.
+
+  Verified live for both portals on Millennium Holdings: Impact saw "View source" on all
+  11 fields with a real destination (6 → CBR page, 5 → Deal Setup) and correctly no link
+  on the 2 with none; CDE saw "View source" only on the 6 CBR-sourced fields, correctly
+  losing the 5 Deal-Setup links since that page doesn't exist for CDE users.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
