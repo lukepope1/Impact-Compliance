@@ -116,3 +116,45 @@ requirementDefinitionsRouter.post(
     res.json(def);
   }
 );
+
+const conflictSchema = z.object({
+  conflictStatus: z.enum(["none", "suspected", "confirmed", "resolved"]),
+  conflictResolutionNote: z.string().min(1, "A resolution note is required whenever conflict status changes"),
+});
+
+/**
+ * Records a source-conflict decision (e.g. two source documents giving different due
+ * dates — see requirement_sources). The SQL schema's implementation notes require a
+ * human resolution note whenever a conflict is flagged; this endpoint is the only way
+ * to change conflict_status so that note can never be skipped.
+ */
+requirementDefinitionsRouter.patch(
+  "/:id/conflict",
+  requireDealAccess,
+  requireRole("impact_compliance_manager", "impact_analyst"),
+  async (req, res) => {
+    const existing = await prisma.requirementDefinition.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.dealId !== req.params.dealId) {
+      return res.status(404).json({ error: "Requirement definition not found" });
+    }
+
+    const parsed = conflictSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const def = await prisma.requirementDefinition.update({
+      where: { id: req.params.id },
+      data: parsed.data,
+    });
+
+    await recordAuditEvent(req, {
+      dealId: req.params.dealId,
+      objectType: "requirement_definition",
+      objectId: def.id,
+      action: "conflict_resolution",
+      beforeData: existing,
+      afterData: def,
+    });
+
+    res.json(def);
+  }
+);

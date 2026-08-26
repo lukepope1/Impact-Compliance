@@ -12,7 +12,10 @@ export default function DealList() {
 
   return (
     <main>
-      <h1>C-01 — Deal Portfolio</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h1>C-01 — Deal Portfolio</h1>
+        <Link to="/impact/deals/new"><button>+ New Deal</button></Link>
+      </div>
       <p>Impact Marketplace internal view. Deal-scoped access is enforced server-side.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}

@@ -53,3 +53,24 @@ dealsRouter.post("/", requireRole("impact_super_admin", "impact_compliance_manag
   await recordAuditEvent(req, { dealId: deal.id, objectType: "deal", objectId: deal.id, action: "create", afterData: deal });
   res.status(201).json(deal);
 });
+
+const updateDealSchema = createDealSchema.partial().extend({
+  status: z.enum(["onboarding", "active", "exception", "winding_down", "closed", "archived"]).optional(),
+  multiCdeProjectNumber: z.string().optional(),
+});
+
+dealsRouter.patch(
+  "/:dealId",
+  requireDealAccess,
+  requireRole("impact_super_admin", "impact_compliance_manager"),
+  async (req, res) => {
+    const parsed = updateDealSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const before = await prisma.deal.findUnique({ where: { id: req.params.dealId } });
+    const deal = await prisma.deal.update({ where: { id: req.params.dealId }, data: parsed.data });
+
+    await recordAuditEvent(req, { dealId: deal.id, objectType: "deal", objectId: deal.id, action: "update", beforeData: before, afterData: deal });
+    res.json(deal);
+  }
+);

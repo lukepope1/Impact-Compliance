@@ -3,6 +3,9 @@ import cors from "cors";
 import express from "express";
 import { requireAuth } from "./middleware/auth";
 import { dealsRouter } from "./routes/deals";
+import { dealPartiesRouter } from "./routes/dealParties";
+import { cdeParticipationsRouter } from "./routes/cdeParticipations";
+import { organizationsRouter } from "./routes/organizations";
 import { requirementDefinitionsRouter } from "./routes/requirementDefinitions";
 
 const app = express();
@@ -11,7 +14,10 @@ app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
+app.use("/api/organizations", requireAuth, organizationsRouter);
 app.use("/api/deals", requireAuth, dealsRouter);
+app.use("/api/deals/:dealId/parties", requireAuth, dealPartiesRouter);
+app.use("/api/deals/:dealId/cde-participations", requireAuth, cdeParticipationsRouter);
 app.use("/api/deals/:dealId/requirement-definitions", requireAuth, requirementDefinitionsRouter);
 
 const port = Number(process.env.PORT ?? 4100);

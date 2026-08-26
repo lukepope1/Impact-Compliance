@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, type Deal } from "../api/client";
 
 export default function DealDetail() {
@@ -19,8 +19,13 @@ export default function DealDetail() {
         <p>Status: {deal.status}</p>
         <p>Multi-CDE: {deal.isMultiCde ? "Yes" : "No"}</p>
       </div>
+      <div className="card">
+        <Link to={`/impact/deals/${dealId}/setup`}>Deal setup (parties & CDEs)</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/requirements`}>Requirement builder</Link>
+      </div>
       <p style={{ color: "#666" }}>
-        Requirement builder, evidence library and review queue land in Phase 1–2 (see docs/PHASED_PLAN.md).
+        Evidence library and review queue land in Phase 2+ (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );
