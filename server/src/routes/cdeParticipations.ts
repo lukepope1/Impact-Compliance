@@ -101,3 +101,46 @@ cdeParticipationsRouter.post(
     res.status(201).json(participation);
   }
 );
+
+const updateSchema = z.object({
+  subCdeName: z.string().optional(),
+  allocationControlNumber: z.string().optional(),
+  qeiAmount: z.number().optional(),
+  allocationAmount: z.number().optional(),
+});
+
+/**
+ * Edits the deal-setup fields on an existing participation — allocation control number and
+ * dollar amounts are usually only finalized after closing, so unlike most of this app these
+ * fields need to be editable well after creation, not just set once. Deliberately excludes
+ * cdeOrganizationId/isLeadCde/allocateeOrganizationId — changing which org participates or
+ * who's lead is a bigger structural change than this endpoint is meant for.
+ */
+cdeParticipationsRouter.patch(
+  "/:participationId",
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
+  async (req, res) => {
+    const parsed = updateSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const existing = await prisma.cdeParticipation.findUnique({ where: { id: req.params.participationId } });
+    if (!existing || existing.dealId !== req.params.dealId) return res.status(404).json({ error: "CDE participation not found" });
+
+    const updated = await prisma.cdeParticipation.update({
+      where: { id: req.params.participationId },
+      data: parsed.data,
+      include: { cdeOrganization: true, allocateeOrganization: true },
+    });
+
+    await recordAuditEvent(req, {
+      dealId: req.params.dealId,
+      objectType: "cde_participation",
+      objectId: updated.id,
+      action: "update",
+      beforeData: existing,
+      afterData: updated,
+    });
+
+    res.json(updated);
+  }
+);

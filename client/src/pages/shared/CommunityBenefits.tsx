@@ -23,6 +23,7 @@ export default function CommunityBenefits() {
   const [period, setPeriod] = useState<CbrPeriod | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revenue, setRevenue] = useState("");
+  const [noi, setNoi] = useState("");
   const [newJob, setNewJob] = useState({ jobTitle: "", fteCount: "1", jobStatus: "created" });
   const [newTenant, setNewTenant] = useState({ organizationName: "", purposeGoodsServices: "" });
   const [benefitDraft, setBenefitDraft] = useState<Record<string, { isOffered: boolean; percentReceiving: string }>>({});
@@ -33,6 +34,7 @@ export default function CommunityBenefits() {
     api.getCbrPeriod(dealId, year).then((p) => {
       setPeriod(p);
       setRevenue(p.projectProfile?.annualGrossRevenue ?? "");
+      setNoi(p.projectProfile?.annualNetOperatingIncome ?? "");
     }).catch((e) => setError(String(e.message ?? e)));
   }
 
@@ -42,7 +44,10 @@ export default function CommunityBenefits() {
     e.preventDefault();
     if (!dealId) return;
     try {
-      await api.saveCbrProfile(dealId, year, { annualGrossRevenue: revenue ? Number(revenue) : undefined });
+      await api.saveCbrProfile(dealId, year, {
+        annualGrossRevenue: revenue ? Number(revenue) : undefined,
+        annualNetOperatingIncome: noi ? Number(noi) : undefined,
+      });
       refresh();
     } catch (e) {
       setError(String((e as Error).message ?? e));
@@ -140,6 +145,9 @@ export default function CommunityBenefits() {
         <h2 style={{ margin: 0 }}>Project Profile</h2>
         <label>Annual gross revenue
           <input type="number" value={revenue} onChange={(e) => setRevenue(e.target.value)} />
+        </label>
+        <label>Annual net operating income
+          <input type="number" value={noi} onChange={(e) => setNoi(e.target.value)} />
         </label>
         <button type="submit">Save</button>
         {period.projectProfile?.annualGrossRevenue && (

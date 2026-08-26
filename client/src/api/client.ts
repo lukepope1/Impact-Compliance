@@ -84,6 +84,19 @@ export interface CdeParticipation {
   cdeOrganization: Organization;
 }
 
+export interface ProjectAddress {
+  id: string;
+  addressType: string;
+  address1: string;
+  address2: string | null;
+  city: string;
+  stateCode: string;
+  postalCode: string;
+  postalCodePlus4: string | null;
+  county: string | null;
+  censusTract: string | null;
+}
+
 export interface QliciRow {
   id: string;
   qliciCode: string;
@@ -287,7 +300,12 @@ export interface CbrPeriod {
   id: string;
   calendarYear: number;
   status: string;
-  projectProfile: { annualGrossRevenue: string | null; projectDescription: string | null; butForStatement: string | null } | null;
+  projectProfile: {
+    annualGrossRevenue: string | null;
+    annualNetOperatingIncome: string | null;
+    projectDescription: string | null;
+    butForStatement: string | null;
+  } | null;
   jobRecords: JobRecordRow[];
   tenantOccupants: TenantOccupantRow[];
   benefitRecords: BenefitRecordRow[];
@@ -402,8 +420,33 @@ export const api = {
     dealId: string,
     data: { cdeOrganizationId: string; subCdeName?: string; allocationControlNumber?: string; isLeadCde?: boolean }
   ) => request<CdeParticipation>(`/deals/${dealId}/cde-participations`, { method: "POST", body: JSON.stringify(data) }),
+  updateCdeParticipation: (
+    dealId: string,
+    participationId: string,
+    data: { subCdeName?: string; allocationControlNumber?: string; qeiAmount?: number; allocationAmount?: number }
+  ) =>
+    request<CdeParticipation>(`/deals/${dealId}/cde-participations/${participationId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 
   listQlicis: (dealId: string) => request<QliciRow[]>(`/deals/${dealId}/qlicis`),
+
+  getPrimaryProjectAddress: (dealId: string) =>
+    request<ProjectAddress[]>(`/deals/${dealId}/project-addresses`).then((rows) => rows.find((a) => a.addressType === "primary") ?? null),
+  savePrimaryProjectAddress: (
+    dealId: string,
+    data: {
+      address1: string;
+      address2?: string;
+      city: string;
+      stateCode: string;
+      postalCode: string;
+      postalCodePlus4?: string;
+      county?: string;
+      censusTract?: string;
+    }
+  ) => request<ProjectAddress>(`/deals/${dealId}/project-addresses/primary`, { method: "PUT", body: JSON.stringify(data) }),
 
   listRequirementDefinitions: (dealId: string) =>
     request<RequirementDefinition[]>(`/deals/${dealId}/requirement-definitions`),
@@ -529,7 +572,11 @@ export const api = {
     }),
 
   getCbrPeriod: (dealId: string, year: number) => request<CbrPeriod>(`/deals/${dealId}/cbr/${year}`),
-  saveCbrProfile: (dealId: string, year: number, data: { annualGrossRevenue?: number; projectDescription?: string; butForStatement?: string }) =>
+  saveCbrProfile: (
+    dealId: string,
+    year: number,
+    data: { annualGrossRevenue?: number; annualNetOperatingIncome?: number; projectDescription?: string; butForStatement?: string }
+  ) =>
     request<unknown>(`/deals/${dealId}/cbr/${year}/profile`, { method: "PUT", body: JSON.stringify(data) }),
   addJobRecord: (dealId: string, year: number, data: { jobTitle: string; fteCount: number; jobStatus?: string; hourlyWage?: number; accessibleToLicLip?: boolean }) =>
     request<JobRecordRow>(`/deals/${dealId}/cbr/${year}/jobs`, { method: "POST", body: JSON.stringify(data) }),

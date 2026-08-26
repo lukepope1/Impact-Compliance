@@ -475,6 +475,41 @@ and documented at the time:
   status line and a two-entry `Full decision history` list, both reflecting the real new
   `Review` row.
 
+- **Closed the AMIS field data-entry gaps**: the AMIS Readiness screen showed 5 fields as
+  permanently `MISSING` with no way, anywhere in the app, to actually enter the underlying
+  data — not a missing form on top of a working API, but genuinely no write path at all
+  for 4 of the 5.
+
+  `Annual Net Operating Income` had a ready server route (`PUT /cbr/:year/profile`
+  already accepted it) but no input in the QALICB Community Benefits form — added it next
+  to the existing Annual Gross Revenue field, same form, same save action, since it's the
+  same kind of QALICB-reported project-profile data.
+
+  `Total QEI Amount` and `Lead CDE Allocation Control Number` live on `CdeParticipation`,
+  which only had a create-time API (`POST /cde-participations`) — added `PATCH
+  /cde-participations/:participationId` (Impact-role-gated, deliberately excludes
+  `cdeOrganizationId`/`isLeadCde` — those are structural changes, not data entry) plus an
+  inline "Edit" action per CDE row in Impact's Deal Setup page.
+
+  `Project Census Tract` and `Project City / State` were the most severe gap: the
+  `ProjectAddress` Prisma model existed and `goldenFields.ts` already read from it, but
+  there was no route and no form anywhere — not even a way to create the first record.
+  Added a new `project-addresses` router (`GET` + `PUT /primary`, upserting the one
+  `addressType: "primary"` row per deal, since that's the only address type anything in
+  the app currently reads) and a "Project address" card in Deal Setup.
+
+  All three are Impact-editable (deal/CDE-setup data), consistent with the existing
+  pattern where Impact owns `DealSetup.tsx`; NOI stayed QALICB-editable since it's
+  self-reported project-profile data living in the exact same form/model as revenue.
+
+  Verified live end-to-end against Millennium Holdings: filled in the project address,
+  edited Enterprise Financial CDE's QEI/allocation amounts, entered NOI on the CBR form,
+  and corrected the allocation control number on the actual lead CDE (it had originally
+  been entered on the non-lead participation, which correctly kept the AMIS field
+  `MISSING` — confirming the resolver's "lead CDE only" logic, not a bug). AMIS Readiness
+  went from `11 ready · 2 missing` to `13 ready · 0 missing`, matching the values entered
+  through each form.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
