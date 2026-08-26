@@ -210,6 +210,8 @@ export interface Review {
   decision: string;
   decisionNote: string | null;
   decidedAt: string;
+  reviewerUser?: { email: string };
+  reviewingOrganizationName?: string | null;
 }
 
 export interface CommentRow {
@@ -494,6 +496,8 @@ export const api = {
 
   listReviewQueue: (dealId: string, stage: "impact" | "cde") =>
     request<RequirementInstance[]>(`/deals/${dealId}/requirement-instances/review-queue?stage=${stage}`),
+  listReviewHistory: (dealId: string, instanceId: string) =>
+    request<Review[]>(`/deals/${dealId}/requirement-instances/${instanceId}/review`),
   recordReview: (dealId: string, instanceId: string, stage: "impact" | "cde", decision: string, decisionNote?: string) =>
     request<Review>(`/deals/${dealId}/requirement-instances/${instanceId}/review`, {
       method: "POST",

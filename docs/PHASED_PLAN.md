@@ -439,6 +439,42 @@ and documented at the time:
   `Impact review`) and an honest empty state with real `—` placeholders when nothing was
   pending, rather than "0"/blank cells that would look like a loading bug.
 
+- **Requirement Review redesign to a fourth wireframe**: `ReviewDetail.tsx` (shared
+  between the Impact and CDE review-decision screens) rebuilt to match a "C-04
+  Requirement Review" mock — header line with deal / sub-CDE (CDE portal only) /
+  responsible party / period; an `Impact status` card; a `Source basis` card; the
+  existing `Submitted evidence` and attestation cards; the existing decision form; and a
+  right-side `Context / History` panel (submission version/date, Impact approval date,
+  sharing status, full decision history, and an Impact-only audit-log link).
+
+  The mock implied review-decision history (who decided what, when, at both stages) was
+  already viewable here, but no such data was ever exposed by the API — the `Review`
+  model existed with zero `GET` routes. Added `GET
+  /deals/:dealId/requirement-instances/:instanceId/review` to `reviews.ts`, returning
+  every review for the instance with the reviewer's email and reviewing org's name. Since
+  `Review.reviewingOrganizationId` is a plain FK column with no declared Prisma relation
+  to `Organization`, the route resolves names with a second small `findMany` rather than
+  adding a schema relation just for this one read.
+
+  `Source basis` renders the requirement definition's real `sources` (document name,
+  section reference, excerpt) — already modeled and populated, just never surfaced on
+  this screen before. `Sharing status` in the Context panel is derived from the actual
+  `shareScope` of the submission's attached evidence documents (most-restrictive first),
+  not a fabricated field — there's no separate "submission sharing scope" concept in the
+  schema, only per-document visibility.
+
+  Verified live: fetched a real Millennium Holdings instance
+  (`69a18438-d40d-48a5-ba22-ec5ec671f2b2`, Quarterly Financial Statements, Q4 2025) as
+  both the Impact compliance manager and the Enterprise Financial CDE reviewer. Impact
+  view showed the correct header (`Millennium Holdings · Millennium Holdings LLC
+  (borrower) · Q4 2025`), the real Impact approval (reviewer email, org name, timestamp),
+  the real source citation (`QLICI Loan Agreement · §7.11(e)`), and the Impact-only audit
+  link. CDE view additionally showed `Enterprise Sub-CDE 45` in the header and CDE-scoped
+  comment visibility, correctly hid the audit link, and — after recording a live CDE
+  approval decision through the same screen — correctly showed a second `CDE: Approved`
+  status line and a two-entry `Full decision history` list, both reflecting the real new
+  `Review` row.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

@@ -17,6 +17,27 @@ const reviewSchema = z.object({
   decisionNote: z.string().optional(),
 });
 
+/** Full review history for one requirement instance — who decided what, when, at both stages. */
+reviewsRouter.get("/", requireDealAccess, async (req, res) => {
+  const instance = await prisma.requirementInstance.findUnique({ where: { id: req.params.instanceId } });
+  if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });
+
+  const reviews = await prisma.review.findMany({
+    where: { requirementInstanceId: req.params.instanceId },
+    include: { reviewerUser: { select: { email: true } } },
+    orderBy: { decidedAt: "asc" },
+  });
+
+  // reviewingOrganizationId has no declared Prisma relation to Organization (a plain FK
+  // column, not modeled as a relation) — resolve names with a second small query rather
+  // than adding a schema relation just for this one read.
+  const orgIds = [...new Set(reviews.map((r) => r.reviewingOrganizationId))];
+  const orgs = await prisma.organization.findMany({ where: { id: { in: orgIds } }, select: { id: true, legalName: true } });
+  const orgNameById = new Map(orgs.map((o) => [o.id, o.legalName]));
+
+  res.json(reviews.map((r) => ({ ...r, reviewingOrganizationName: orgNameById.get(r.reviewingOrganizationId) ?? null })));
+});
+
 /**
  * Records an impact or CDE review decision on a requirement instance's current
  * submission and advances the instance's status accordingly:
