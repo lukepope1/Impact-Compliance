@@ -84,6 +84,7 @@ export default function App() {
           <Route path="deals/:dealId" element={<CdeDealOverview />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
+          <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
           <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="cde" />} />
           <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route

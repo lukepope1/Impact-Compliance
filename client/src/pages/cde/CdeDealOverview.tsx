@@ -132,11 +132,11 @@ export default function CdeDealOverview() {
             </span>
           )}
         </div>
-        <div className="stat-card">
+        <Link to={`/cde/deals/${dealId}/cbr`} className="stat-card" style={{ display: "block", color: "inherit", textDecoration: "none" }}>
           <div className="stat-label" style={{ marginBottom: 6 }}>CBR progress</div>
           <div className="stat-value">{cbrPercent}%</div>
           <span className="badge badge-navy" style={{ marginTop: 6 }}>CY {year}</span>
-        </div>
+        </Link>
         <div className={`stat-card${amisMissing > 0 ? " stat-warning" : ""}`}>
           <div className="stat-label" style={{ marginBottom: 6 }}>AMIS readiness</div>
           <div className="stat-value">{amisReady} / {amisTotal}</div>

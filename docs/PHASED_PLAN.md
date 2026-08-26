@@ -510,6 +510,28 @@ and documented at the time:
   went from `11 ready · 2 missing` to `13 ready · 0 missing`, matching the values entered
   through each form.
 
+- **Wired the CBR page into the CDE portal**: the shared `CommunityBenefits.tsx` form was
+  already used by Impact and QALICB, and the server route (`GET/PUT /deals/:dealId/cbr/*`)
+  only checks deal-level org access, not role — a CDE user with deal access could already
+  read/write it. The only thing missing was the plumbing: no `/cde/deals/:dealId/cbr`
+  route existed, and `CdeDealOverview.tsx`'s "CBR progress" stat card, despite already
+  fetching the CBR data it displays, was a dead end with no link anywhere. Added the
+  route (reusing the same portal-agnostic component, no changes needed there) and made
+  the stat card a link to it.
+
+  Deliberately did *not* build the full wireframe the user showed alongside this request
+  (a read-only "reviewer dashboard" with baseline/CY-comparison columns, per-metric
+  targets, variance flags, and reviewer notes) — none of those concepts (targets,
+  baseline-year tracking, variance flagging) exist in the schema, so building that view
+  would mean inventing data, not surfacing it. Asked and confirmed scope: wire in the
+  real existing form, not fabricate the dashboard.
+
+  Verified live as the Enterprise Financial CDE reviewer: the stat card correctly linked
+  to `/cde/deals/:dealId/cbr`, and the page rendered the deal's real CBR data (65 FTE
+  across 7 real job records, the "Job training center" service outcome, the NOI/revenue
+  just entered) — same shared component, same real data, just reachable from a portal
+  that couldn't get to it before.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
