@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireRoleOnDealOrg } from "../middleware/auth";
 import { notify, resolveDealMembers } from "../lib/notifications";
 
 const IMPACT_REVIEWER_ROLES = ["impact_super_admin", "impact_compliance_manager", "impact_analyst"] as const;
@@ -22,7 +22,7 @@ const SUBMITTER_ROLES = [
  * Idempotent on purpose — the QALICB portal calls this every time it opens a
  * requirement, whether or not a draft already exists (Q-03's "Draft Submitted" state).
  */
-submissionsRouter.post("/draft", requireDealAccess, requireRole(...SUBMITTER_ROLES), async (req, res) => {
+submissionsRouter.post("/draft", requireRoleOnDealOrg(...SUBMITTER_ROLES), async (req, res) => {
   const instance = await prisma.requirementInstance.findUnique({ where: { id: req.params.instanceId } });
   if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });
 
@@ -38,7 +38,10 @@ submissionsRouter.post("/draft", requireDealAccess, requireRole(...SUBMITTER_ROL
         data: {
           requirementInstanceId: instance.id,
           submissionVersion: nextVersion,
-          submittedByOrganizationId: req.user!.memberships[0]?.organizationId ?? "",
+          // The specific org requireRoleOnDealOrg matched — not just "some" membership,
+          // which could otherwise attribute the draft to an org that isn't actually the
+          // submitter (e.g. a multi-org user's unrelated Impact membership).
+          submittedByOrganizationId: (res.locals.dealOrgMembership as { organizationId: string }).organizationId,
           submittedByUserId: req.user!.id,
           status: "draft",
         },
@@ -65,7 +68,7 @@ submissionsRouter.post("/draft", requireDealAccess, requireRole(...SUBMITTER_ROL
 const linkDocSchema = z.object({ documentId: z.string().min(1), evidenceRole: z.string().optional() });
 
 /** Attaches an already-uploaded document to a draft submission as evidence. */
-submissionsRouter.post("/:submissionId/documents", requireDealAccess, requireRole(...SUBMITTER_ROLES), async (req, res) => {
+submissionsRouter.post("/:submissionId/documents", requireRoleOnDealOrg(...SUBMITTER_ROLES), async (req, res) => {
   const submission = await prisma.submission.findUnique({ where: { id: req.params.submissionId } });
   if (!submission || submission.requirementInstanceId !== req.params.instanceId) {
     return res.status(404).json({ error: "Submission not found" });
@@ -111,7 +114,7 @@ const submitSchema = z.object({
  * for the status transitions a review can make (returned/approved/superseded). The
  * requirement instance moves to "submitted" and its current_submission_version is bumped.
  */
-submissionsRouter.post("/:submissionId/submit", requireDealAccess, requireRole(...SUBMITTER_ROLES), async (req, res) => {
+submissionsRouter.post("/:submissionId/submit", requireRoleOnDealOrg(...SUBMITTER_ROLES), async (req, res) => {
   const submission = await prisma.submission.findUnique({ where: { id: req.params.submissionId } });
   if (!submission || submission.requirementInstanceId !== req.params.instanceId) {
     return res.status(404).json({ error: "Submission not found" });

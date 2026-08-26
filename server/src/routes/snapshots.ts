@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 import { ensureFieldDefinition, resolveGoldenValues } from "../lib/goldenFields";
 
 export const snapshotsRouter = Router({ mergeParams: true });
@@ -28,8 +28,7 @@ snapshotsRouter.get("/:year", requireDealAccess, async (req, res) => {
  */
 snapshotsRouter.post(
   "/:year/generate",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const year = Number(req.params.year);
     const reportingPeriodEnd = new Date(Date.UTC(year, 11, 31));
@@ -91,13 +90,13 @@ const approveSchema = z.object({
 });
 
 /** A CDE's own approval decision on the shared snapshot — does not affect other CDEs' rows. */
-snapshotsRouter.post("/:snapshotId/approve", requireDealAccess, requireRole("cde_admin", "cde_reviewer"), async (req, res) => {
+snapshotsRouter.post("/:snapshotId/approve", requireRoleOnDealOrg("cde_admin", "cde_reviewer"), async (req, res) => {
   const parsed = approveSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
-  const membership = req.user!.memberships.find((m) => m.roleCode === "cde_admin" || m.roleCode === "cde_reviewer");
+  const membership = res.locals.dealOrgMembership as { organizationId: string };
   const participation = await prisma.cdeParticipation.findFirst({
-    where: { dealId: req.params.dealId, cdeOrganizationId: membership!.organizationId },
+    where: { dealId: req.params.dealId, cdeOrganizationId: membership.organizationId },
   });
   if (!participation) return res.status(403).json({ error: "This organization is not a CDE participant on this deal" });
 

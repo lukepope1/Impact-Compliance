@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 import { generatePeriods, computeIsOverdue, computeDisplayStatus, type DueRule } from "../lib/deadlineEngine";
 import { notify, resolveDealMembers } from "../lib/notifications";
 import { submissionsRouter } from "./submissions";
@@ -122,8 +122,7 @@ requirementInstancesRouter.get("/:instanceId", requireDealAccess, async (req, re
  */
 requirementInstancesRouter.post(
   "/generate/:requirementDefinitionId",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const def = await prisma.requirementDefinition.findUnique({ where: { id: req.params.requirementDefinitionId } });
     if (!def || def.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement definition not found" });
@@ -198,8 +197,7 @@ const requestSchema = z.object({ responseDays: z.number().int().positive().defau
 /** on_request requirements have no scheduled due date — this creates the instance the moment it's actually asked for. */
 requirementInstancesRouter.post(
   "/request/:requirementDefinitionId",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager", "impact_analyst"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager", "impact_analyst"),
   async (req, res) => {
     const def = await prisma.requirementDefinition.findUnique({ where: { id: req.params.requirementDefinitionId } });
     if (!def || def.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement definition not found" });

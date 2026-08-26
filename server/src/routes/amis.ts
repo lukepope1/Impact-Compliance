@@ -2,7 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 import { resolveGoldenValues, ensureFieldDefinition } from "../lib/goldenFields";
 import { storage, EVIDENCE_BUCKET } from "../lib/storage";
 
@@ -55,24 +55,11 @@ amisRouter.get("/exports", requireDealAccess, async (req, res) => {
  */
 amisRouter.post(
   "/exports/:year",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager", "cde_admin"),
+  // requireRoleOnDealOrg confirms the specific org backing the matched role actually
+  // has access to this deal — without it, an unrelated CDE's cde_admin could pull
+  // another deal's financial export just by holding the role somewhere.
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager", "cde_admin"),
   async (req, res) => {
-    // requireRole only proves the user holds cde_admin *somewhere*, not that the org
-    // behind it participates in this deal — without this check, an unrelated CDE could
-    // pull another deal's financial export. Impact roles aren't tied to a single deal's
-    // participant list, so only the cde_admin path needs the extra check.
-    const cdeMembership = req.user!.memberships.find((m) => m.roleCode === "cde_admin");
-    const isImpactMember = req.user!.memberships.some(
-      (m) => m.roleCode === "impact_super_admin" || m.roleCode === "impact_compliance_manager"
-    );
-    if (!isImpactMember) {
-      const participation = cdeMembership
-        ? await prisma.cdeParticipation.findFirst({ where: { dealId: req.params.dealId, cdeOrganizationId: cdeMembership.organizationId } })
-        : null;
-      if (!participation) return res.status(403).json({ error: "This organization is not a CDE participant on this deal" });
-    }
-
     const year = Number(req.params.year);
     const golden = await resolveGoldenValues(req.params.dealId, year);
     const missing = golden.filter((g) => g.value === null || g.value === "");

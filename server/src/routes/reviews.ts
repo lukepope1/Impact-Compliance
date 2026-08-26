@@ -1,14 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { RoleCode } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess } from "../middleware/auth";
+import { findDealOrgMembership, requireDealAccess } from "../middleware/auth";
 import { notify, resolveDealMembers } from "../lib/notifications";
 
 export const reviewsRouter = Router({ mergeParams: true });
 
-const IMPACT_REVIEWER_ROLES = new Set(["impact_super_admin", "impact_compliance_manager", "impact_analyst"]);
-const CDE_REVIEWER_ROLES = new Set(["cde_admin", "cde_reviewer"]);
+const IMPACT_REVIEWER_ROLES: RoleCode[] = ["impact_super_admin", "impact_compliance_manager", "impact_analyst"];
+const CDE_REVIEWER_ROLES: RoleCode[] = ["cde_admin", "cde_reviewer"];
 
 const reviewSchema = z.object({
   stage: z.enum(["impact", "cde"]),
@@ -45,33 +46,13 @@ reviewsRouter.post("/", requireDealAccess, async (req, res) => {
   // requireDealAccess only proves the user belongs to *some* org with access to this
   // deal — it does not prove the specific org backing this review does. A user who is a
   // cde_admin at an unrelated CDE could otherwise "borrow" deal access from any other
-  // membership and record a binding review decision. Find a candidate membership with
-  // the right role, then confirm that exact org is actually party to this deal in the
-  // relevant capacity before trusting it.
-  const candidates = req.user!.memberships.filter((m) =>
-    stage === "impact" ? IMPACT_REVIEWER_ROLES.has(m.roleCode) : CDE_REVIEWER_ROLES.has(m.roleCode)
-  );
-  if (candidates.length === 0) return res.status(403).json({ error: `Not authorized to record a ${stage} review` });
-
-  let membership: (typeof candidates)[number] | undefined;
-  if (stage === "impact") {
-    for (const m of candidates) {
-      const access = await prisma.dealOrganizationAccess.findFirst({ where: { dealId: req.params.dealId, organizationId: m.organizationId } });
-      if (access) {
-        membership = m;
-        break;
-      }
-    }
-  } else {
-    for (const m of candidates) {
-      const participation = await prisma.cdeParticipation.findFirst({ where: { dealId: req.params.dealId, cdeOrganizationId: m.organizationId } });
-      if (participation) {
-        membership = m;
-        break;
-      }
-    }
-  }
-  if (!membership) return res.status(403).json({ error: `Your organization is not a party to this deal in a ${stage}-reviewer capacity` });
+  // membership and record a binding review decision. The reviewer role set depends on
+  // `stage` from the request body, so this can't be a static requireRoleOnDealOrg(...)
+  // middleware — it calls the same org-scoped lookup that middleware uses, inline.
+  const roles = stage === "impact" ? IMPACT_REVIEWER_ROLES : CDE_REVIEWER_ROLES;
+  const found = await findDealOrgMembership(req.user!.memberships, req.params.dealId, roles);
+  if (!found) return res.status(403).json({ error: `Your organization is not a party to this deal in a ${stage}-reviewer capacity` });
+  const membership = found.membership;
 
   const instance = await prisma.requirementInstance.findUnique({ where: { id: req.params.instanceId } });
   if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });

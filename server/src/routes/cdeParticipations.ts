@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 
 export const cdeParticipationsRouter = Router({ mergeParams: true });
 
@@ -33,8 +33,7 @@ const createSchema = z.object({
  */
 cdeParticipationsRouter.post(
   "/",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });

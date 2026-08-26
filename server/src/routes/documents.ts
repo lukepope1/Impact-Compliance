@@ -6,7 +6,7 @@ import { recordAuditEvent } from "../lib/audit";
 import { storage, EVIDENCE_BUCKET, sanitizeFileName } from "../lib/storage";
 import { scanner, type ScanResult } from "../lib/scanner";
 import { canAccessDocument, orgTypeMap } from "../lib/documentAccess";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 
 export const documentsRouter = Router({ mergeParams: true });
 
@@ -86,8 +86,7 @@ documentsRouter.get("/:documentId", requireDealAccess, async (req, res) => {
  */
 documentsRouter.post(
   "/",
-  requireDealAccess,
-  requireRole(
+  requireRoleOnDealOrg(
     "impact_super_admin",
     "impact_compliance_manager",
     "impact_analyst",
@@ -160,8 +159,7 @@ documentsRouter.post(
  */
 documentsRouter.post(
   "/:documentId/versions",
-  requireDealAccess,
-  requireRole(
+  requireRoleOnDealOrg(
     "impact_super_admin",
     "impact_compliance_manager",
     "impact_analyst",
@@ -229,8 +227,7 @@ documentsRouter.post(
  */
 documentsRouter.post(
   "/:documentId/versions/:versionId/rescan",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const doc = await prisma.document.findUnique({ where: { id: req.params.documentId } });
     if (!doc || doc.dealId !== req.params.dealId) return res.status(404).json({ error: "Document not found" });
@@ -301,8 +298,7 @@ const shareAccessLevels = new Set(["view", "download", "review"]);
 /** Grants an org access to a document with selected_cdes/cde_private share scope. */
 documentsRouter.post(
   "/:documentId/access-grants",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const { organizationId, accessLevel } = req.body as { organizationId?: string; accessLevel?: string };
     if (!organizationId || !accessLevel || !shareAccessLevels.has(accessLevel)) {

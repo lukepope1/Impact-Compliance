@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRole, requireRoleOnDealOrg } from "../middleware/auth";
 
 export const dealsRouter = Router();
 
@@ -61,8 +61,7 @@ const updateDealSchema = createDealSchema.partial().extend({
 
 dealsRouter.patch(
   "/:dealId",
-  requireDealAccess,
-  requireRole("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
   async (req, res) => {
     const parsed = updateDealSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });

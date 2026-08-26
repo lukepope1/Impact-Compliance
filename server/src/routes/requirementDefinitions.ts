@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 
 export const requirementDefinitionsRouter = Router({ mergeParams: true });
 
@@ -44,8 +44,7 @@ const createSchema = z.object({
  */
 requirementDefinitionsRouter.post(
   "/",
-  requireDealAccess,
-  requireRole("impact_compliance_manager", "impact_analyst"),
+  requireRoleOnDealOrg("impact_compliance_manager", "impact_analyst"),
   async (req, res) => {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -88,8 +87,7 @@ requirementDefinitionsRouter.post(
 /** Publishing locks the version. Requirement instances only ever generate off published versions. */
 requirementDefinitionsRouter.post(
   "/:id/publish",
-  requireDealAccess,
-  requireRole("impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_compliance_manager"),
   async (req, res) => {
     const existing = await prisma.requirementDefinition.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.dealId !== req.params.dealId) {
@@ -130,8 +128,7 @@ const conflictSchema = z.object({
  */
 requirementDefinitionsRouter.patch(
   "/:id/conflict",
-  requireDealAccess,
-  requireRole("impact_compliance_manager", "impact_analyst"),
+  requireRoleOnDealOrg("impact_compliance_manager", "impact_analyst"),
   async (req, res) => {
     const existing = await prisma.requirementDefinition.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.dealId !== req.params.dealId) {

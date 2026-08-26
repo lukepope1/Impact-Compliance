@@ -150,13 +150,28 @@ Reviewed and found solid (no changes needed): generic login error messages, `doc
 scoping, no raw SQL/`exec`, no hardcoded secrets, `.env` never committed to git history,
 `.env.example` contains only placeholders, dependency versions current.
 
-**Structural note for future work**: `requireRole` and `requireDealAccess` are still
-independently checked rather than jointly scoped — a user with a privileged role in one
-org and merely *some* access-granting membership in another can combine them on routes
-that don't do the extra per-route participation check the two HIGH findings above now do.
-The two fixed routes close the exploitable instances found; a systemic fix (a combined
-`requireRoleOnDealOrg` middleware) would remove the need to repeat this check per-route
-as new deal-scoped write routes are added.
+**Structural fix, built and rolled out**: `requireRoleOnDealOrg(...roles)` (in
+`middleware/auth.ts`) replaces the `requireDealAccess` + `requireRole` pair everywhere a
+deal-scoped write route needs both — it finds a membership holding one of the given
+roles *and* confirms that specific organization has `DealOrganizationAccess` on this
+exact deal, attaching the matched membership as `res.locals.dealOrgMembership` so the
+handler doesn't have to re-derive it. Rolled out across every deal-scoped write route
+that previously chained the two separately: `cbr.ts` (all 5), `submissions.ts` (all 3 —
+also fixed `submittedByOrganizationId` to use the matched org instead of
+`memberships[0]`), `documents.ts` (upload, new-version, rescan, access-grants),
+`requirementDefinitions.ts` (create/publish/conflict), `requirementInstances.ts`
+(generate/request), `snapshots.ts` (generate/approve — approve's inline check replaced
+with the shared middleware), `amis.ts` (export), `reviews.ts` (via the exported
+`findDealOrgMembership` helper, since its role set depends on `stage` from the request
+body and can't be a static middleware), `dealParties.ts`, `cdeParticipations.ts`,
+`auditEvents.ts`, and `deals.ts`'s update route. Verified live: a QALICB user's draft
+submission still attributes to the correct org, read routes are unaffected, and a CDE
+reviewer's cross-org impact-stage review attempt now correctly returns 403.
+
+Read-only routes (`GET .../requirement-instances`, `GET .../cbr/:year`, etc.) still use
+plain `requireDealAccess` — they don't write data tied to a specific org, so the extra
+per-org check isn't needed there; deal list/create routes with no `dealId` in scope still
+use plain `requireRole`.
 
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
@@ -177,7 +192,5 @@ as new deal-scoped write routes are added.
 - Replace the request-triggered reminder recompute with a real scheduled sweep (cron / EventBridge)
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability
-- Formal UAT against the original backlog's acceptance criteria (the security review pass
-  is done — see above)
-- The structural `requireRole`/`requireDealAccess` note above — a combined middleware
-  before adding more deal-scoped write routes
+- Formal UAT against the original backlog's acceptance criteria (the security review pass,
+  including the `requireRoleOnDealOrg` structural fix, is done — see above)

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { requireDealAccess, requireRole } from "../middleware/auth";
+import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
 
 export const cbrRouter = Router({ mergeParams: true });
 
@@ -50,7 +50,7 @@ const profileSchema = z.object({
   annualNetOperatingIncome: z.number().optional(),
 });
 
-cbrRouter.put("/:year/profile", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+cbrRouter.put("/:year/profile", requireRoleOnDealOrg(...EDITOR_ROLES), async (req, res) => {
   const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
   const parsed = profileSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -73,7 +73,7 @@ const jobSchema = z.object({
   accessibleToLicLip: z.boolean().optional(),
 });
 
-cbrRouter.post("/:year/jobs", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+cbrRouter.post("/:year/jobs", requireRoleOnDealOrg(...EDITOR_ROLES), async (req, res) => {
   const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
   const parsed = jobSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -91,7 +91,7 @@ const tenantSchema = z.object({
   currentEmployees: z.number().optional(),
 });
 
-cbrRouter.post("/:year/tenants", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+cbrRouter.post("/:year/tenants", requireRoleOnDealOrg(...EDITOR_ROLES), async (req, res) => {
   const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
   const parsed = tenantSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -113,7 +113,7 @@ const benefitSchema = z.object({
  * rather than upsert(), since employer_party_id is nullable here and Prisma's compound-
  * unique where input rejects null (see the same pattern in requirementInstances.ts).
  */
-cbrRouter.put("/:year/benefits", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+cbrRouter.put("/:year/benefits", requireRoleOnDealOrg(...EDITOR_ROLES), async (req, res) => {
   const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
   const parsed = benefitSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -143,7 +143,7 @@ const serviceOutcomeSchema = z.object({
   successIndicators: z.string().optional(),
 });
 
-cbrRouter.post("/:year/service-outcomes", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+cbrRouter.post("/:year/service-outcomes", requireRoleOnDealOrg(...EDITOR_ROLES), async (req, res) => {
   const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
   const parsed = serviceOutcomeSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
