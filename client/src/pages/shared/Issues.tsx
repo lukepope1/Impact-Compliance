@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, type IssueRow } from "../../api/client";
+import { api, type IssueNoteRow, type IssueRow } from "../../api/client";
 
 const ISSUE_TYPES = [
   "missing_item",
@@ -21,6 +21,12 @@ export default function Issues() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState({ issueType: "other", severity: "normal", title: "", description: "" });
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<IssueNoteRow[] | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteVisibility, setNoteVisibility] = useState<"org_private" | "deal_shared">("org_private");
+  const [postingNote, setPostingNote] = useState(false);
 
   function refresh() {
     if (!dealId) return;
@@ -53,6 +59,38 @@ export default function Issues() {
       refresh();
     } catch (e) {
       setError(String((e as Error).message ?? e));
+    }
+  }
+
+  function loadNotes(issueId: string) {
+    if (!dealId) return;
+    api.listIssueNotes(dealId, issueId).then(setNotes).catch((e) => setError(String((e as Error).message ?? e)));
+  }
+
+  function toggleNotes(issueId: string) {
+    if (expandedId === issueId) {
+      setExpandedId(null);
+      setNotes(null);
+      return;
+    }
+    setExpandedId(issueId);
+    setNotes(null);
+    setNoteDraft("");
+    loadNotes(issueId);
+  }
+
+  async function postNote(issueId: string) {
+    if (!dealId || !noteDraft.trim()) return;
+    setPostingNote(true);
+    setError(null);
+    try {
+      await api.postIssueNote(dealId, issueId, noteDraft.trim(), noteVisibility);
+      setNoteDraft("");
+      loadNotes(issueId);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setPostingNote(false);
     }
   }
 
@@ -91,32 +129,86 @@ export default function Issues() {
 
       <table>
         <thead>
-          <tr><th>Severity</th><th>Issue</th><th>Type</th><th>Status</th><th>Resolution</th></tr>
+          <tr><th>Severity</th><th>Issue</th><th>Type</th><th>Status</th><th>Resolution</th><th></th></tr>
         </thead>
         <tbody>
-          {issues?.map((i) => (
-            <tr key={i.id}>
-              <td>{i.severity}</td>
-              <td>{i.title}</td>
-              <td>{i.issueType}</td>
-              <td>{i.status}</td>
-              <td>
-                {i.status === "resolved" ? (
-                  i.resolution
-                ) : (
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      placeholder="Resolution note"
-                      value={resolutionNotes[i.id] ?? ""}
-                      onChange={(e) => setResolutionNotes({ ...resolutionNotes, [i.id]: e.target.value })}
-                    />
-                    <button onClick={() => resolve(i.id)}>Resolve</button>
-                  </div>
+          {issues?.map((i) => {
+            const isExpanded = expandedId === i.id;
+            return (
+              <Fragment key={i.id}>
+                <tr>
+                  <td>{i.severity}</td>
+                  <td>{i.title}</td>
+                  <td>{i.issueType}</td>
+                  <td>{i.status}</td>
+                  <td>
+                    {i.status === "resolved" ? (
+                      i.resolution
+                    ) : (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          placeholder="Resolution note"
+                          value={resolutionNotes[i.id] ?? ""}
+                          onChange={(e) => setResolutionNotes({ ...resolutionNotes, [i.id]: e.target.value })}
+                        />
+                        <button onClick={() => resolve(i.id)}>Resolve</button>
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <button onClick={() => toggleNotes(i.id)}>{isExpanded ? "Hide notes" : "Notes"}</button>
+                  </td>
+                </tr>
+                {isExpanded && (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="card" style={{ margin: "8px 0" }}>
+                        <h3 style={{ marginTop: 0 }}>Notes — {i.title}</h3>
+                        <p style={{ marginTop: 0, fontSize: 12.5 }}>
+                          Private notes are visible only to your organization and Impact — not shared with other orgs on this
+                          deal, including other CDEs.
+                        </p>
+                        {!notes && <p>Loading…</p>}
+                        {notes && notes.length === 0 && <p style={{ color: "var(--text-muted)" }}>No notes yet.</p>}
+                        {notes && notes.length > 0 && (
+                          <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                            {notes.map((n) => (
+                              <div key={n.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+                                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                                  {n.authorOrganization.legalName} · {n.authorUser.email} ·{" "}
+                                  {n.visibility === "org_private" ? "Private" : "Shared with deal"} ·{" "}
+                                  {new Date(n.createdAt).toLocaleString()}
+                                </div>
+                                <div>{n.body}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display: "grid", gap: 8 }}>
+                          <textarea
+                            placeholder="Add a note…"
+                            rows={2}
+                            value={noteDraft}
+                            onChange={(e) => setNoteDraft(e.target.value)}
+                          />
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <select value={noteVisibility} onChange={(e) => setNoteVisibility(e.target.value as "org_private" | "deal_shared")}>
+                              <option value="org_private">Private (my org + Impact only)</option>
+                              <option value="deal_shared">Shared with everyone on the deal</option>
+                            </select>
+                            <button onClick={() => postNote(i.id)} disabled={postingNote || !noteDraft.trim()}>
+                              {postingNote ? "Posting…" : "Post note"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </td>
-            </tr>
-          ))}
-          {issues && issues.length === 0 && <tr><td colSpan={5}>No issues logged.</td></tr>}
+              </Fragment>
+            );
+          })}
+          {issues && issues.length === 0 && <tr><td colSpan={6}>No issues logged.</td></tr>}
         </tbody>
       </table>
     </main>

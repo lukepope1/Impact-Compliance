@@ -3,8 +3,11 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess } from "../middleware/auth";
+import { issueNotesRouter } from "./issueNotes";
 
 export const issuesRouter = Router({ mergeParams: true });
+
+issuesRouter.use("/:issueId/notes", issueNotesRouter);
 
 issuesRouter.get("/", requireDealAccess, async (req, res) => {
   const issues = await prisma.issue.findMany({

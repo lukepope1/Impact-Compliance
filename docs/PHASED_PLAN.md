@@ -217,7 +217,11 @@ use plain `requireRole`.
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
-- No sharing of CDE-private data across CDE organizations
+- No sharing of CDE-private *evidence* (documents) across CDE organizations — correctly
+  enforced via per-org access grants. Note: `comments.ts`'s `cde_private` visibility is
+  looser than the name implies (shared across every CDE on a deal, not just the
+  authoring one) — see the CDE-private issue notes entry below for the contrast and why
+  it wasn't fixed here
 - AMIS export covers a hardcoded 13-field set (goldenFields.ts) proving the mechanism at
   a realistic scale, not AMIS's full production field catalog
 
@@ -232,6 +236,36 @@ sweep) held up under real interactive use, including a live cross-portal review-
 flow and a live 403 against an under-privileged account. The login rate limiter fired
 correctly under this session's own repeated test traffic, confirming it live rather than
 just in isolation.
+
+## Post-UAT feature additions ✅
+Requested and built one at a time after the UAT pass, each typechecked, verified live,
+and documented at the time:
+- **Notification preferences & email digest** — see the Notifications section above
+- **Document search/filtering** (`Documents.tsx`): client-side title/type/sharing-level
+  filters over the already-access-controlled list. Verified live: a title search
+  correctly narrowed 3 documents to 1 matching row.
+- **Bulk-waive** (`Deadlines.tsx`): checkboxes on every waivable instance, a shared reason
+  field, sequential calls to the existing single-instance review endpoint (each waive
+  stays its own real write with its own audit event). Verified live: two real instances
+  waived together, both flipped to `"waived"` in the refreshed list.
+- **Audit Log CSV export** (`AuditLog.tsx`): client-side CSV generation from the
+  already-fetched (server-capped at 200) events, RFC 4180-ish escaping, a UTF-8 BOM for
+  Excel. Verified the escaping logic against edge cases (commas, embedded quotes,
+  newlines) in Node; the actual file-save is inert in this session's sandboxed browser
+  pane so that specific step wasn't directly observable here.
+- **CDE-private notes on issues** (new `IssueNote` model + `/issues/:issueId/notes`
+  routes + a notes panel on `Issues.tsx`): a note distinct from an issue's shared
+  title/description, either `org_private` (visible only to the authoring org and Impact)
+  or `deal_shared`. Built correctly scoped to the *specific* authoring organization —
+  unlike `comments.ts`'s existing `cde_private` visibility, which is scoped by org *type*
+  and so actually shares a "CDE-private" comment across every CDE on a multi-CDE deal,
+  not just the authoring one (a real gap in that earlier feature, left as-is since fixing
+  it wasn't what was asked — flagged here for visibility). Verified live end to end:
+  Enterprise Financial CDE posted a private note and a shared one; Impact and Enterprise
+  both saw both, QALICB saw only the shared one, and — checked directly against the same
+  filter logic used at request time — HRV Sub-CDE 62 (a different CDE on the same deal)
+  would see only the shared note too, confirming the org-scoping actually holds instead
+  of leaking across CDEs the way the comment feature does.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

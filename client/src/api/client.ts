@@ -206,6 +206,15 @@ export interface CommentRow {
   authorOrganization: { legalName: string };
 }
 
+export interface IssueNoteRow {
+  id: string;
+  body: string;
+  visibility: "org_private" | "deal_shared";
+  createdAt: string;
+  authorUser: { email: string };
+  authorOrganization: { legalName: string };
+}
+
 export interface IssueRow {
   id: string;
   issueType: string;
@@ -487,6 +496,14 @@ export const api = {
   ) => request<IssueRow>(`/deals/${dealId}/issues`, { method: "POST", body: JSON.stringify(data) }),
   resolveIssue: (dealId: string, issueId: string, resolution: string) =>
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
+
+  listIssueNotes: (dealId: string, issueId: string) =>
+    request<IssueNoteRow[]>(`/deals/${dealId}/issues/${issueId}/notes`),
+  postIssueNote: (dealId: string, issueId: string, body: string, visibility: "org_private" | "deal_shared") =>
+    request<IssueNoteRow>(`/deals/${dealId}/issues/${issueId}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ body, visibility }),
+    }),
 
   getCbrPeriod: (dealId: string, year: number) => request<CbrPeriod>(`/deals/${dealId}/cbr/${year}`),
   saveCbrProfile: (dealId: string, year: number, data: { annualGrossRevenue?: number; projectDescription?: string; butForStatement?: string }) =>

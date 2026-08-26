@@ -382,6 +382,7 @@ model Organization {
   documentAccessGrants   DocumentAccessGrant[]
   comments               Comment[]
   assignedIssues         Issue[]
+  issueNotes             IssueNote[]
   notifications          Notification[]
   auditEvents            AuditEvent[]
 
@@ -417,6 +418,7 @@ model User {
   reviews                Review[]
   comments               Comment[]
   assignedIssues         Issue[]
+  issueNotes             IssueNote[]
   resolvedStructuredValues StructuredValue[]       @relation("StructuredValueEnteredBy")
   approvedStructuredValues StructuredValue[]       @relation("StructuredValueApprovedBy")
   createdSnapshots        SharedOutcomeSnapshot[]
@@ -474,6 +476,7 @@ model Deal {
   requirementInstances   RequirementInstance[]
   comments               Comment[]
   issues                 Issue[]
+  issueNotes             IssueNote[]
   cbrReportingPeriods    CbrReportingPeriod[]
   sharedOutcomeSnapshots SharedOutcomeSnapshot[]
   structuredValues       StructuredValue[]
@@ -925,8 +928,39 @@ model Issue {
   createdAt                                 DateTime     @default(now()) @map("created_at")
   updatedAt                                   DateTime     @updatedAt @map("updated_at")
 
+  notes                     IssueNote[]
+
   @@index([dealId, status, severity])
   @@map("issues")
+}
+
+enum IssueNoteVisibility {
+  org_private
+  deal_shared
+}
+
+// Private notes on an issue, distinct from its public title/description — a CDE
+// (or QALICB, or Impact) can jot something down that isn't meant for every other org
+// with deal access. org_private means "only the authoring org and Impact can see this,"
+// not "shared with every CDE on the deal" — scoped to the specific authoring
+// organization, matching how documentAccess.ts's cde_private grants work (per-org, not
+// per-org-type), not comments.ts's broader same-org-type check.
+model IssueNote {
+  id                   String              @id @default(uuid())
+  issueId              String              @map("issue_id")
+  issue                Issue               @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  dealId               String              @map("deal_id")
+  deal                 Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  authorUserId         String              @map("author_user_id")
+  authorUser           User                @relation(fields: [authorUserId], references: [id])
+  authorOrganizationId String              @map("author_organization_id")
+  authorOrganization   Organization        @relation(fields: [authorOrganizationId], references: [id])
+  visibility           IssueNoteVisibility @default(org_private)
+  body                 String
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  @@index([issueId, createdAt])
+  @@map("issue_notes")
 }
 
 // ---------- Community Benefits ----------
