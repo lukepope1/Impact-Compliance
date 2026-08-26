@@ -182,7 +182,18 @@ use plain `requireRole`.
 - No sharing of CDE-private data across CDE organizations
 - AMIS export covers a small hardcoded field set (goldenFields.ts) proving the mechanism,
   not the full field catalog a production build would need
-- No formal UAT pass — see below
+
+## UAT pass ✅ (live functional walkthrough)
+Walked every portal's golden path against the running app — see docs/UAT_PASS.md for
+the full account. Not a re-check against the original backlog/wireframe documents (chat
+uploads, not accessible from this environment anymore) — a live interactive pass
+instead, verified via a mix of browser interaction, direct API calls, and reading
+responses/console/network. No bugs found; every recent fix (the security review's
+`requireRoleOnDealOrg` middleware, the currency/number formatting pass, the deadline
+sweep) held up under real interactive use, including a live cross-portal review-approval
+flow and a live 403 against an under-privileged account. The login rate limiter fired
+correctly under this session's own repeated test traffic, confirming it live rather than
+just in isolation.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
@@ -197,5 +208,3 @@ use plain `requireRole`.
   docs/NOTIFICATIONS.md; the sweep itself is real and verified live, just single-process
 - Point SMTP at a production provider (SES/SendGrid) with real DNS/SPF/DKIM — the send path
   itself is verified (Ethereal), but not production deliverability
-- Formal UAT against the original backlog's acceptance criteria (the security review pass,
-  including the `requireRoleOnDealOrg` structural fix, is done — see above)
