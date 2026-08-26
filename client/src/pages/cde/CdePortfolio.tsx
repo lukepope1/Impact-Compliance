@@ -110,7 +110,7 @@ export default function CdePortfolio() {
 
   return (
     <main>
-      <h1>C-01 — CDE Portfolio Dashboard</h1>
+      <h1>CDE Portfolio Dashboard</h1>
       <p>Enterprise Financial CDE · only deals assigned to this CDE organization are shown.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}

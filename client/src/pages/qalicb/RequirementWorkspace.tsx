@@ -95,7 +95,7 @@ export default function RequirementWorkspace() {
   if (reviewMode && draft) {
     return (
       <main>
-        <h1>Q-04 — Submission Review & Attestation</h1>
+        <h1>Submission Review & Attestation</h1>
         <p>{def.title} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)}</p>
 
         {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
@@ -132,7 +132,7 @@ export default function RequirementWorkspace() {
 
   return (
     <main>
-      <h1>Q-03 — Requirement Detail & Upload</h1>
+      <h1>Requirement Detail & Upload</h1>
       <p>{def.title} · Due {fmt(instance.dueDate)} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)}</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}

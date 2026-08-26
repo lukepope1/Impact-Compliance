@@ -42,7 +42,7 @@ export default function QalicbDashboard() {
 
   return (
     <main>
-      <h1>Q-01 — QALICB Dashboard</h1>
+      <h1>QALICB Dashboard</h1>
       <p>{deals?.map((d) => d.legalName).join(", ") || "Loading…"}</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}

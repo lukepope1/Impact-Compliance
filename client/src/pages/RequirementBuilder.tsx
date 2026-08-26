@@ -109,7 +109,7 @@ export default function RequirementBuilder() {
 
   return (
     <main>
-      <h1>I-03 — Requirement Builder & Conflict Resolution</h1>
+      <h1>Requirement Builder & Conflict Resolution</h1>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 

@@ -48,7 +48,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
 
   return (
     <main>
-      <h1>{stage === "impact" ? "I-02 — Requirement Review" : "C-04 — Requirement Review"}</h1>
+      <h1>Requirement Review</h1>
       <p>{def.title} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)} · Due {fmt(instance.dueDate)}</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}

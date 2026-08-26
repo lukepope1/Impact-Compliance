@@ -58,7 +58,7 @@ export default function App() {
           <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"
-            element={<ReviewQueue stage="impact" portal="impact" title="I-01 — Impact Review Queue" />}
+            element={<ReviewQueue stage="impact" portal="impact" title="Impact Review Queue" />}
           />
           <Route
             path="deals/:dealId/review/:instanceId"
@@ -86,7 +86,7 @@ export default function App() {
           <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"
-            element={<ReviewQueue stage="cde" portal="cde" title="C-03 — CDE Review Queue" />}
+            element={<ReviewQueue stage="cde" portal="cde" title="CDE Review Queue" />}
           />
           <Route
             path="deals/:dealId/review/:instanceId"

@@ -73,7 +73,7 @@ export default function DealSetup() {
 
   return (
     <main>
-      <h1>I-02 — Deal Setup</h1>
+      <h1>Deal Setup</h1>
       <p>{deal.dealCode} · {deal.legalName}</p>
 
       <div className="card">
