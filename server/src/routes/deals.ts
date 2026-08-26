@@ -54,9 +54,36 @@ dealsRouter.post("/", requireRole("impact_super_admin", "impact_compliance_manag
   res.status(201).json(deal);
 });
 
+const DEAL_STATUSES = ["onboarding", "active", "exception", "winding_down", "closed", "archived"] as const;
+type DealStatus = (typeof DEAL_STATUSES)[number];
+
+/**
+ * The deal lifecycle this build enforces — not every status-to-status jump makes sense
+ * (going straight from "onboarding" to "archived" would skip actually running the deal).
+ * "closed" only reachable via "winding_down", and "archived" only from "closed" — a deal
+ * has to actually wind down and close before it can be archived. "archived" is terminal:
+ * once archived, a deal is excluded from the deadline sweep (see deadlineSweep.ts's
+ * `status: { notIn: ["closed", "archived"] }` filter) and this build has no "un-archive"
+ * path, matching what "archival" is supposed to mean.
+ */
+const ALLOWED_TRANSITIONS: Record<DealStatus, DealStatus[]> = {
+  onboarding: ["active"],
+  active: ["exception", "winding_down"],
+  exception: ["active", "winding_down"],
+  winding_down: ["active", "closed"],
+  closed: ["winding_down", "archived"],
+  archived: [],
+};
+
+// closed/archived meaningfully change what the deal shows up in (reporting, the deadline
+// sweep) — worth requiring a human-readable reason in the audit trail, the same way
+// returning or waiving a requirement already requires a note elsewhere in this app.
+const REASON_REQUIRED_FOR: DealStatus[] = ["closed", "archived"];
+
 const updateDealSchema = createDealSchema.partial().extend({
-  status: z.enum(["onboarding", "active", "exception", "winding_down", "closed", "archived"]).optional(),
+  status: z.enum(DEAL_STATUSES).optional(),
   multiCdeProjectNumber: z.string().optional(),
+  statusChangeReason: z.string().optional(),
 });
 
 dealsRouter.patch(
@@ -67,9 +94,33 @@ dealsRouter.patch(
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
     const before = await prisma.deal.findUnique({ where: { id: req.params.dealId } });
-    const deal = await prisma.deal.update({ where: { id: req.params.dealId }, data: parsed.data });
+    if (!before) return res.status(404).json({ error: "Deal not found" });
 
-    await recordAuditEvent(req, { dealId: deal.id, objectType: "deal", objectId: deal.id, action: "update", beforeData: before, afterData: deal });
+    const { statusChangeReason, ...data } = parsed.data;
+
+    if (data.status && data.status !== before.status) {
+      if (!ALLOWED_TRANSITIONS[before.status].includes(data.status)) {
+        return res.status(409).json({
+          error: `Cannot move a deal from "${before.status}" to "${data.status}" — allowed next statuses: ${
+            ALLOWED_TRANSITIONS[before.status].join(", ") || "none, this status is terminal"
+          }`,
+        });
+      }
+      if (REASON_REQUIRED_FOR.includes(data.status) && !statusChangeReason?.trim()) {
+        return res.status(400).json({ error: `A reason is required to move a deal to "${data.status}"` });
+      }
+    }
+
+    const deal = await prisma.deal.update({ where: { id: req.params.dealId }, data });
+
+    await recordAuditEvent(req, {
+      dealId: deal.id,
+      objectType: "deal",
+      objectId: deal.id,
+      action: "update",
+      beforeData: before,
+      afterData: statusChangeReason ? { ...deal, statusChangeReason } : deal,
+    });
     res.json(deal);
   }
 );

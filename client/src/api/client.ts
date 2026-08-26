@@ -370,6 +370,8 @@ export const api = {
     request<Deal>("/deals", { method: "POST", body: JSON.stringify(data) }),
   updateDeal: (id: string, data: Partial<Deal>) =>
     request<Deal>(`/deals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  updateDealStatus: (id: string, status: string, statusChangeReason?: string) =>
+    request<Deal>(`/deals/${id}`, { method: "PATCH", body: JSON.stringify({ status, statusChangeReason }) }),
 
   listOrganizations: (type?: string) =>
     request<Organization[]>(`/organizations${type ? `?type=${type}` : ""}`),

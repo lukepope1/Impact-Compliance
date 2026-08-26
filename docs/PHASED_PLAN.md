@@ -266,6 +266,25 @@ and documented at the time:
   filter logic used at request time — HRV Sub-CDE 62 (a different CDE on the same deal)
   would see only the shared note too, confirming the org-scoping actually holds instead
   of leaking across CDEs the way the comment feature does.
+- **Deal archival workflow** (`DealDetail.tsx` + `deals.ts`'s `PATCH` route): a status
+  widget replacing the old plain "Status: X" text — a dropdown of only the *valid* next
+  statuses for the deal's current one, a required reason (recorded in the audit log, not
+  a persisted column) when moving to `closed` or `archived`. Server-enforced lifecycle:
+  `onboarding → active → {exception, winding_down} → closed → archived`, with `archived`
+  terminal (no un-archive path) and `closed`/`archived` excluded from the deadline sweep
+  (see `deadlineSweep.ts`'s existing `notIn: ["closed", "archived"]` filter — this gives
+  that filter an actual UI path to reach, instead of only being reachable by a raw PATCH).
+  Verified live end to end: an invalid jump (`onboarding` straight to `closed`) correctly
+  rejected with 409 and the allowed-next-statuses listed; a valid multi-step path through
+  to `closed` without a reason correctly rejected with 400, then succeeded once a reason
+  was supplied; confirmed via a direct query that the closed deal was then excluded from
+  the sweep's target list; and the dropdown/button flow itself was exercised live in the
+  browser (`active → exception → active`), correctly narrowing to just the valid next
+  options at each step. Also surfaced, in passing, a real pre-existing gap unrelated to
+  this feature: a deal created via `NewDeal.tsx` gets no `DealOrganizationAccess` row for
+  its creating org, so nobody — including the Impact user who just created it — can open
+  it afterward (404s indefinitely); noted here since it isn't what was asked and wasn't
+  fixed, but is worth someone's attention.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
