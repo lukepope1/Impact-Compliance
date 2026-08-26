@@ -1,45 +1,64 @@
 # Phased build plan
 
 Derived from the developer handoff (blueprint, backlog, schema, wireframes) and the README's
-own sprint plan. Each phase must work end-to-end before the next starts — versioning and
-immutability are painful to retrofit, so the foundation gets the most care.
+own sprint plan. Each phase was built to work end-to-end before the next started —
+versioning and immutability are painful to retrofit, so the foundation got the most care.
 
-## Phase 0 — Foundation (this commit)
+All six phases are now built and verified live (in-browser, against the local embedded
+Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
+
+## Phase 0 — Foundation ✅
 - Repo scaffold: server (Express + TS + Prisma/Postgres), client (React + TS + Vite)
 - Full canonical data model as Prisma schema, 1:1 with `NMTC_Phase_1_Database_Schema.sql`
 - Auth scaffold: session/user model, org-scoped membership, role checking middleware
 - Seed script with one sample deal (Millennium Holdings, matching the wireframes)
 
-## Phase 1 — Tenancy, deal configuration, requirement definitions (Sprint 1)
+## Phase 1 — Tenancy, deal configuration, requirement definitions ✅
 - Organizations, users, memberships, deal CRUD, deal party/CDE participation setup
 - Requirement definition builder (versioned, with source-clause lineage + conflict flagging)
 - Impact Marketplace admin screens: deal setup wizard (I-02), requirement builder (I-03)
 
-## Phase 2 — Evidence & audit (Sprint 2)
-- Document upload → S3 (private, SSE-KMS) with version lineage, checksum, malware-scan status
-- Document access grants (share-scope enforcement server-side)
+## Phase 2 — Evidence & audit ✅
+- Document upload with version lineage, checksum, malware-scan status (local disk backend
+  in dev — see server/src/lib/storage.ts for the S3+KMS swap point)
+- Document access grants (share-scope enforcement server-side, not client-filtered)
 - Audit event log wired into every mutation
 
-## Phase 3 — Deadline engine & requirement instances (Sprint 3)
-- Requirement instance generator from due_rule JSON (fixed dates / days-after / on-request)
-- Conflict resolution workflow, overdue/upcoming calculation
+## Phase 3 — Deadline engine & requirement instances ✅
+- Requirement instance generator from due_rule JSON (days-after-period-end / fixed dates /
+  one-time / on-request), calendar-aligned periods
+- Overdue/upcoming status recomputed live
 
-## Phase 4 — QALICB portal (Sprint 4)
-- Dashboard, compliance tasks, requirement detail & upload, submission review & attestation
-- Submissions immutable once submitted (DB trigger mirrors the SQL schema's protection)
+## Phase 4 — QALICB portal ✅
+- Dashboard, requirement detail & upload, submission review & attestation
+- Submissions immutable once submitted (enforced in the submission route, mirroring the
+  SQL schema's protect_final_submission trigger)
 
-## Phase 5 — Review & CDE portal (Sprint 5)
-- Impact review queue, return/resubmit workflow
+## Phase 5 — Review & CDE portal ✅
+- Impact review queue, return/resubmit workflow (return requires a note)
 - CDE portfolio dashboard, review queue, requirement review, documents, issues
 
-## Phase 6 — CBR, AMIS, Multi-CDE, pilot hardening (Sprint 6)
-- Community Benefits Report builder (jobs, benefits, tenants, service outcomes)
-- Multi-CDE shared outcome snapshots + per-CDE approval
-- AMIS field mapping versions + review XLSX / CSV export generation (manual filing only —
-  Phase 1 never auto-submits to AMIS)
-- Security review, UAT against the backlog's acceptance criteria
+## Phase 6 — CBR, AMIS, Multi-CDE ✅
+- Community Benefits Report builder (project profile, jobs, tenants)
+- Multi-CDE shared outcome snapshots + per-CDE approval — locks only once every
+  participating CDE has decided
+- AMIS field readiness + CSV export generation, blocked while fields are missing, every
+  output value traced to its source (manual filing only — no auto-submission to AMIS)
 
-## Explicit non-goals for Phase 1
+## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
 - No sharing of CDE-private data across CDE organizations
+- No real identity provider — auth is a header-based dev stub (see the note on
+  `requireAuth` in server/src/middleware/auth.ts); this is the single biggest gap before
+  any real deployment
+- AMIS export covers a small hardcoded field set (goldenFields.ts) proving the mechanism,
+  not the full field catalog a production build would need
+- No security review / formal UAT pass — see below
+
+## Before this could go anywhere near production
+- Real auth (AWS Cognito or equivalent) replacing the `x-user-email` header stub
+- Real S3 + KMS for evidence storage, replacing the local-disk dev backend
+- A real malware-scan pipeline — uploads are currently marked "clean" immediately
+- Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
+- Security review and UAT against the original backlog's acceptance criteria
