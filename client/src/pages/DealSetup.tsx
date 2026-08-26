@@ -92,7 +92,7 @@ export default function DealSetup() {
         <h2>Deal profile</h2>
         <p>Deal code: {deal.dealCode}</p>
         <p>Legal name: {deal.legalName}</p>
-        <p>Closing date: {deal.closingDate ? new Date(deal.closingDate).toLocaleDateString() : "—"}</p>
+        <p>Closing date: {deal.closingDate ? new Date(deal.closingDate).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—"}</p>
         <p>Multi-CDE: {deal.isMultiCde ? "Yes" : "No"}</p>
       </div>
 

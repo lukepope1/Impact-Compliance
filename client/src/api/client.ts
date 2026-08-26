@@ -122,6 +122,17 @@ async function requestForm<T>(path: string, form: FormData): Promise<T> {
   return res.json();
 }
 
+export interface RequirementInstance {
+  id: string;
+  reportingPeriodStart: string | null;
+  reportingPeriodEnd: string | null;
+  dueDate: string | null;
+  status: string;
+  isOverdue: boolean;
+  requirementDefinition: { title: string; category: string; severity: string };
+  responsibleParty: { legalName: string; partyRole: string } | null;
+}
+
 export const api = {
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
@@ -187,4 +198,16 @@ export const api = {
     `/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`,
 
   listAuditEvents: (dealId: string) => request<AuditEventRow[]>(`/deals/${dealId}/audit-events`),
+
+  listRequirementInstances: (dealId: string) => request<RequirementInstance[]>(`/deals/${dealId}/requirement-instances`),
+  generateInstances: (dealId: string, requirementDefinitionId: string) =>
+    request<{ periodsConsidered: number; created: number }>(
+      `/deals/${dealId}/requirement-instances/generate/${requirementDefinitionId}`,
+      { method: "POST" }
+    ),
+  requestOnDemandInstance: (dealId: string, requirementDefinitionId: string, responseDays?: number) =>
+    request<RequirementInstance>(`/deals/${dealId}/requirement-instances/request/${requirementDefinitionId}`, {
+      method: "POST",
+      body: JSON.stringify({ responseDays }),
+    }),
 };

@@ -5,6 +5,7 @@ import DealSetup from "./pages/DealSetup";
 import RequirementBuilder from "./pages/RequirementBuilder";
 import Documents from "./pages/Documents";
 import AuditLog from "./pages/AuditLog";
+import Deadlines from "./pages/Deadlines";
 import NewDeal from "./pages/NewDeal";
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/impact/deals/:dealId" element={<DealDetail />} />
         <Route path="/impact/deals/:dealId/setup" element={<DealSetup />} />
         <Route path="/impact/deals/:dealId/requirements" element={<RequirementBuilder />} />
+        <Route path="/impact/deals/:dealId/deadlines" element={<Deadlines />} />
         <Route path="/impact/deals/:dealId/documents" element={<Documents />} />
         <Route path="/impact/deals/:dealId/audit" element={<AuditLog />} />
       </Routes>

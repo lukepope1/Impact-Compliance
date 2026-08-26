@@ -87,6 +87,26 @@ export default function RequirementBuilder() {
     }
   }
 
+  const [generateResult, setGenerateResult] = useState<Record<string, string>>({});
+
+  async function generateInstances(def: RequirementDefinition) {
+    if (!dealId) return;
+    try {
+      if (def.cadence === "on_request") {
+        await api.requestOnDemandInstance(dealId, def.id);
+        setGenerateResult((prev) => ({ ...prev, [def.id]: "Instance created for this request." }));
+      } else {
+        const result = await api.generateInstances(dealId, def.id);
+        setGenerateResult((prev) => ({
+          ...prev,
+          [def.id]: `${result.created} new instance(s) created (${result.periodsConsidered} period(s) considered).`,
+        }));
+      }
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    }
+  }
+
   return (
     <main>
       <h1>I-03 — Requirement Builder & Conflict Resolution</h1>
@@ -168,6 +188,15 @@ export default function RequirementBuilder() {
 
           {def.status === "draft" && (
             <button style={{ marginTop: 12 }} onClick={() => publish(def.id)}>Publish v{def.version}</button>
+          )}
+
+          {def.status === "published" && (
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => generateInstances(def)}>
+                {def.cadence === "on_request" ? "Create instance for this request" : "Generate instances"}
+              </button>
+              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "#1f7a8c" }}>{generateResult[def.id]}</span>}
+            </div>
           )}
         </div>
       ))}

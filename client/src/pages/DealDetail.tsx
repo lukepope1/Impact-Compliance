@@ -24,12 +24,14 @@ export default function DealDetail() {
         {" · "}
         <Link to={`/impact/deals/${dealId}/requirements`}>Requirement builder</Link>
         {" · "}
+        <Link to={`/impact/deals/${dealId}/deadlines`}>Deadlines</Link>
+        {" · "}
         <Link to={`/impact/deals/${dealId}/documents`}>Documents & evidence</Link>
         {" · "}
         <Link to={`/impact/deals/${dealId}/audit`}>Audit log</Link>
       </div>
       <p style={{ color: "#666" }}>
-        Review queue and requirement instances land in Phase 3+ (see docs/PHASED_PLAN.md).
+        Submission workflow and review queue land in Phase 4+ (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );
