@@ -38,7 +38,7 @@ export default function App() {
           <Route path="deals/:dealId/audit" element={<AuditLog />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
-          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot />} />
+          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="impact" />} />
           <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"
@@ -60,7 +60,7 @@ export default function App() {
           <Route index element={<CdePortfolio />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/issues" element={<Issues />} />
-          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot />} />
+          <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="cde" />} />
           <Route path="deals/:dealId/amis" element={<AmisCenter />} />
           <Route
             path="deals/:dealId/review-queue"

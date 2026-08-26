@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRole } from "../middleware/auth";
@@ -38,6 +39,10 @@ cdeParticipationsRouter.post(
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
+    // The pre-check below is not atomic (a concurrent request can pass it before either
+    // commits) — the real guard is the `one_lead_cde_per_deal` partial unique index, added
+    // in migration 20260826180000, which matches the canonical SQL schema. The pre-check
+    // just avoids a raw constraint-violation error in the common non-concurrent case.
     if (parsed.data.isLeadCde) {
       const existingLead = await prisma.cdeParticipation.findFirst({
         where: { dealId: req.params.dealId, isLeadCde: true },
@@ -47,33 +52,44 @@ cdeParticipationsRouter.post(
       }
     }
 
-    const participation = await prisma.$transaction(async (tx) => {
-      const created = await tx.cdeParticipation.create({
-        data: { dealId: req.params.dealId, ...parsed.data },
-        include: { cdeOrganization: true },
-      });
+    let participation;
+    try {
+      participation = await prisma.$transaction(async (tx) => {
+        const created = await tx.cdeParticipation.create({
+          data: { dealId: req.params.dealId, ...parsed.data },
+          include: { cdeOrganization: true },
+        });
 
-      await tx.dealOrganizationAccess.upsert({
-        where: {
-          dealId_organizationId_dealRole: {
+        await tx.dealOrganizationAccess.upsert({
+          where: {
+            dealId_organizationId_dealRole: {
+              dealId: req.params.dealId,
+              organizationId: parsed.data.cdeOrganizationId,
+              dealRole: "cde",
+            },
+          },
+          create: {
             dealId: req.params.dealId,
             organizationId: parsed.data.cdeOrganizationId,
             dealRole: "cde",
+            canViewSharedEvidence: true,
+            canReview: true,
+            canApprove: true,
           },
-        },
-        create: {
-          dealId: req.params.dealId,
-          organizationId: parsed.data.cdeOrganizationId,
-          dealRole: "cde",
-          canViewSharedEvidence: true,
-          canReview: true,
-          canApprove: true,
-        },
-        update: {},
-      });
+          update: {},
+        });
 
-      return created;
-    });
+        return created;
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        // Unique constraint violation — Prisma detects this from the underlying Postgres
+        // error, so it fires even though this partial index isn't declared in schema.prisma
+        // (@@unique can't express a WHERE clause). This is the race the pre-check above can miss.
+        return res.status(409).json({ error: "Deal already has a lead CDE" });
+      }
+      throw e;
+    }
 
     await recordAuditEvent(req, {
       dealId: req.params.dealId,

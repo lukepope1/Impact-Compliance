@@ -39,6 +39,16 @@ issuesRouter.post("/", requireDealAccess, async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
+  // requirementInstanceId is client-supplied — without this check, a user with access to
+  // this deal could link an issue here to a requirement instance that actually belongs to
+  // a different deal, leaking that other deal's instance data through this deal's issue list.
+  if (parsed.data.requirementInstanceId) {
+    const instance = await prisma.requirementInstance.findUnique({ where: { id: parsed.data.requirementInstanceId } });
+    if (!instance || instance.dealId !== req.params.dealId) {
+      return res.status(404).json({ error: "Requirement instance not found on this deal" });
+    }
+  }
+
   const issue = await prisma.issue.create({
     data: { dealId: req.params.dealId, ...parsed.data, assignedToOrganizationId: req.user!.memberships[0]?.organizationId },
   });

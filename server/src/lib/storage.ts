@@ -43,3 +43,16 @@ class LocalDiskStorage implements Storage {
 export const storage: Storage = new LocalDiskStorage();
 
 export const EVIDENCE_BUCKET = process.env.EVIDENCE_S3_BUCKET || "nmtc-compliance-local-dev";
+
+/**
+ * A client-supplied upload filename is untrusted input. Used raw, it can escape the
+ * storage root via path segments (`../../etc/...`) — LocalDiskStorage builds its path
+ * with `path.join`, which happily walks up out of the intended tree — and can break the
+ * download response's Content-Disposition header if it contains quotes or CR/LF. Strip
+ * to a safe basename before it ever reaches a storage key or a header.
+ */
+export function sanitizeFileName(name: string): string {
+  const base = name.replace(/^.*[\\/]/, ""); // drop any path component, keep only the leaf name
+  const cleaned = base.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 200);
+  return cleaned || "file";
+}

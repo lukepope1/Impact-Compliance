@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type SharedOutcomeSnapshotDetail } from "../../api/client";
 
-export default function MultiCdeSnapshot() {
+export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
   const year = new Date().getFullYear();
   const [snapshot, setSnapshot] = useState<SharedOutcomeSnapshotDetail | null>(null);
@@ -74,15 +74,20 @@ export default function MultiCdeSnapshot() {
             </table>
           </div>
 
-          <div className="card">
-            <h2>My CDE decision</h2>
-            <textarea placeholder="Note (optional)" rows={2} style={{ width: "100%", marginBottom: 8 }} value={note} onChange={(e) => setNote(e.target.value)} />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => decide("changes_requested")}>Request changes</button>
-              <button onClick={() => decide("not_reporting")}>Not reporting this field</button>
-              <button onClick={() => decide("approved")}>Approve snapshot</button>
+          {/* Approval is a CDE-only action — the server rejects it from any other role
+              anyway, but the Impact portal shouldn't even render controls that imply an
+              admin can record a CDE's decision on the CDE's behalf. */}
+          {portal === "cde" && (
+            <div className="card">
+              <h2>My CDE decision</h2>
+              <textarea placeholder="Note (optional)" rows={2} style={{ width: "100%", marginBottom: 8 }} value={note} onChange={(e) => setNote(e.target.value)} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => decide("changes_requested")}>Request changes</button>
+                <button onClick={() => decide("not_reporting")}>Not reporting this field</button>
+                <button onClick={() => decide("approved")}>Approve snapshot</button>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </main>

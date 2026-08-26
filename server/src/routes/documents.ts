@@ -3,7 +3,7 @@ import crypto from "crypto";
 import multer from "multer";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
-import { storage, EVIDENCE_BUCKET } from "../lib/storage";
+import { storage, EVIDENCE_BUCKET, sanitizeFileName } from "../lib/storage";
 import { canAccessDocument, orgTypeMap } from "../lib/documentAccess";
 import { requireDealAccess, requireRole } from "../middleware/auth";
 
@@ -54,7 +54,8 @@ documentsRouter.post(
     if (!documentType || !title) return res.status(400).json({ error: "documentType and title are required" });
 
     const checksum = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
-    const key = `${req.params.dealId}/${crypto.randomUUID()}/v1/${req.file.originalname}`;
+    const safeFileName = sanitizeFileName(req.file.originalname);
+    const key = `${req.params.dealId}/${crypto.randomUUID()}/v1/${safeFileName}`;
     await storage.put(EVIDENCE_BUCKET, key, req.file.buffer);
 
     const ownerOrgId = req.user!.memberships[0]?.organizationId;
@@ -76,7 +77,7 @@ documentsRouter.post(
             versionNumber: 1,
             s3Bucket: EVIDENCE_BUCKET,
             s3ObjectKey: key,
-            fileName: req.file.originalname,
+            fileName: safeFileName,
             mimeType: req.file.mimetype,
             fileSizeBytes: BigInt(req.file.size),
             sha256Checksum: checksum,
@@ -123,7 +124,8 @@ documentsRouter.post(
 
     const checksum = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
     const nextVersion = doc.currentVersion + 1;
-    const key = `${req.params.dealId}/${doc.id}/v${nextVersion}/${req.file.originalname}`;
+    const safeFileName = sanitizeFileName(req.file.originalname);
+    const key = `${req.params.dealId}/${doc.id}/v${nextVersion}/${safeFileName}`;
     await storage.put(EVIDENCE_BUCKET, key, req.file.buffer);
 
     const [, version] = await prisma.$transaction([
@@ -137,7 +139,7 @@ documentsRouter.post(
           versionNumber: nextVersion,
           s3Bucket: EVIDENCE_BUCKET,
           s3ObjectKey: key,
-          fileName: req.file.originalname,
+          fileName: safeFileName,
           mimeType: req.file.mimetype,
           fileSizeBytes: BigInt(req.file.size),
           sha256Checksum: checksum,

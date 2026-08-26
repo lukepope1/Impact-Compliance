@@ -74,6 +74,15 @@ submissionsRouter.post("/:submissionId/documents", requireDealAccess, requireRol
   const parsed = linkDocSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
+  // documentId comes straight from the request body — without this check, a user with
+  // access to this deal could attach any document ID they've observed from a *different*
+  // deal as "evidence" here, cross-linking unrelated deals' evidence and exposing the
+  // other deal's document metadata through this submission's evidence list.
+  const targetDoc = await prisma.document.findUnique({ where: { id: parsed.data.documentId } });
+  if (!targetDoc || targetDoc.dealId !== req.params.dealId) {
+    return res.status(404).json({ error: "Document not found on this deal" });
+  }
+
   const link = await prisma.submissionDocument.create({
     data: { submissionId: submission.id, documentId: parsed.data.documentId, evidenceRole: parsed.data.evidenceRole },
   });
