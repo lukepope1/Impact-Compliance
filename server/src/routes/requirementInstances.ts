@@ -5,10 +5,12 @@ import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRole } from "../middleware/auth";
 import { generatePeriods, computeIsOverdue, computeDisplayStatus, type DueRule } from "../lib/deadlineEngine";
 import { submissionsRouter } from "./submissions";
+import { reviewsRouter } from "./reviews";
 
 export const requirementInstancesRouter = Router({ mergeParams: true });
 
 requirementInstancesRouter.use("/:instanceId/submissions", submissionsRouter);
+requirementInstancesRouter.use("/:instanceId/review", reviewsRouter);
 
 /** Applies the overdue/upcoming recompute (normally a scheduled job) and returns the fresh rows. */
 requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
@@ -39,6 +41,22 @@ requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
   }
   if (updates.length) await prisma.$transaction(updates);
 
+  res.json(instances);
+});
+
+const REVIEW_QUEUE_STATUS: Record<string, string> = { impact: "submitted", cde: "impact_approved" };
+
+/** Pending-review worklist for either stage — I-01/C-03 in the wireframes. */
+requirementInstancesRouter.get("/review-queue", requireDealAccess, async (req, res) => {
+  const stage = req.query.stage === "cde" ? "cde" : "impact";
+  const instances = await prisma.requirementInstance.findMany({
+    where: { dealId: req.params.dealId, status: REVIEW_QUEUE_STATUS[stage] as never },
+    include: {
+      requirementDefinition: { select: { title: true, category: true, severity: true } },
+      responsibleParty: { select: { legalName: true, partyRole: true } },
+    },
+    orderBy: [{ dueDate: "asc" }],
+  });
   res.json(instances);
 });
 

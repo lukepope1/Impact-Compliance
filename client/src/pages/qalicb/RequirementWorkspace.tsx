@@ -86,7 +86,10 @@ export default function RequirementWorkspace() {
   const def = instance.requirementDefinition;
   const requiredTypes = def.evidenceSchema?.requiredDocumentTypes ?? [];
   const attachedCount = draft?.documents.length ?? 0;
-  const isFinal = draft && draft.status !== "draft";
+  // "returned" isn't locked — the QALICB side needs to fix and resubmit. Uploading again
+  // creates a fresh draft (see ensureDraft), leaving the returned submission's history intact.
+  const isLocked = !!draft && draft.status !== "draft" && draft.status !== "returned";
+  const wasReturned = draft?.status === "returned";
 
   if (reviewMode && draft) {
     return (
@@ -139,10 +142,16 @@ export default function RequirementWorkspace() {
           <p><strong>Source basis:</strong> {def.sources.map((s) => `${s.sourceDocumentName}${s.sectionReference ? ` ${s.sectionReference}` : ""}`).join("; ")}</p>
         )}
         {requiredTypes.length > 0 && <p><strong>Evidence required:</strong> {requiredTypes.join(", ")}</p>}
-        <p><strong>Status:</strong> {isFinal ? draft!.status : draft ? "Draft" : "Not started"}</p>
+        <p><strong>Status:</strong> {isLocked ? draft!.status : wasReturned ? "Returned — revise and resubmit" : draft ? "Draft" : "Not started"}</p>
       </div>
 
-      {!isFinal && (
+      {wasReturned && (
+        <div className="card" style={{ background: "#fdf8e8", border: "1px solid #e8dfa8" }}>
+          <strong>Returned for revision:</strong> {draft!.responseNote || "See reviewer note."}
+        </div>
+      )}
+
+      {!isLocked && (
         <form className="card" onSubmit={uploadEvidence} style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input type="file" ref={fileInput} required />
           <button type="submit" disabled={busy}>{busy ? "Uploading…" : "Upload evidence"}</button>
@@ -155,12 +164,12 @@ export default function RequirementWorkspace() {
         {(!draft || draft.documents.length === 0) && <p>No files attached yet.</p>}
       </div>
 
-      {!isFinal && (
+      {!isLocked && (
         <button onClick={() => setReviewMode(true)} disabled={!draft || attachedCount === 0}>
           Review & Submit
         </button>
       )}
-      {isFinal && <p style={{ color: "#1f7a8c" }}>Submitted {fmt(draft!.submittedAt)}. This submission is now locked.</p>}
+      {isLocked && <p style={{ color: "#1f7a8c" }}>Submitted {fmt(draft!.submittedAt)}. This submission is now locked.</p>}
     </main>
   );
 }

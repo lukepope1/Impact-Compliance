@@ -161,6 +161,27 @@ export interface RequirementInstanceDetail extends RequirementInstance {
   submissions: Submission[];
 }
 
+export interface Review {
+  id: string;
+  reviewStage: string;
+  decision: string;
+  decisionNote: string | null;
+  decidedAt: string;
+}
+
+export interface IssueRow {
+  id: string;
+  issueType: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  status: string;
+  dueDate: string | null;
+  resolution: string | null;
+  assignedToOrganization: { legalName: string } | null;
+  requirementInstance: { id: string; dueDate: string | null } | null;
+}
+
 export const api = {
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
@@ -267,4 +288,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ attestationText }),
     }),
+
+  listReviewQueue: (dealId: string, stage: "impact" | "cde") =>
+    request<RequirementInstance[]>(`/deals/${dealId}/requirement-instances/review-queue?stage=${stage}`),
+  recordReview: (dealId: string, instanceId: string, stage: "impact" | "cde", decision: string, decisionNote?: string) =>
+    request<Review>(`/deals/${dealId}/requirement-instances/${instanceId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ stage, decision, decisionNote }),
+    }),
+
+  listIssues: (dealId: string) => request<IssueRow[]>(`/deals/${dealId}/issues`),
+  createIssue: (
+    dealId: string,
+    data: { issueType: string; severity: string; title: string; description?: string; requirementInstanceId?: string }
+  ) => request<IssueRow>(`/deals/${dealId}/issues`, { method: "POST", body: JSON.stringify(data) }),
+  resolveIssue: (dealId: string, issueId: string, resolution: string) =>
+    request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
 };

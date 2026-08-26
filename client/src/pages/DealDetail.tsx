@@ -28,12 +28,17 @@ export default function DealDetail() {
         {" · "}
         <Link to={`/impact/deals/${dealId}/documents`}>Documents & evidence</Link>
         {" · "}
+        <Link to={`/impact/deals/${dealId}/review-queue`}>Review queue</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/issues`}>Issues</Link>
+        {" · "}
         <Link to={`/impact/deals/${dealId}/audit`}>Audit log</Link>
       </div>
       <p style={{ color: "#666" }}>
-        <Link to="/qalicb">Open the QALICB portal</Link> to submit against this deal's requirements
-        (dev-only: acts as the seeded QALICB admin user). Review queue and CDE portal land in Phase 5+
-        (see docs/PHASED_PLAN.md).
+        <Link to="/qalicb">Open the QALICB portal</Link> to submit against this deal's requirements, or{" "}
+        <Link to="/cde">open the CDE portal</Link> to review Impact-approved submissions
+        (dev-only: each acts as a different seeded user — see the notes in api/client.ts).
+        AMIS export lands in Phase 6 (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );

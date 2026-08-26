@@ -11,6 +11,11 @@ import NewDeal from "./pages/NewDeal";
 import QalicbLayout from "./pages/qalicb/QalicbLayout";
 import QalicbDashboard from "./pages/qalicb/QalicbDashboard";
 import RequirementWorkspace from "./pages/qalicb/RequirementWorkspace";
+import CdeLayout from "./pages/cde/CdeLayout";
+import CdePortfolio from "./pages/cde/CdePortfolio";
+import ReviewQueue from "./pages/shared/ReviewQueue";
+import ReviewDetail from "./pages/shared/ReviewDetail";
+import Issues from "./pages/shared/Issues";
 
 export default function App() {
   return (
@@ -28,11 +33,34 @@ export default function App() {
           <Route path="deals/:dealId/deadlines" element={<Deadlines />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
           <Route path="deals/:dealId/audit" element={<AuditLog />} />
+          <Route path="deals/:dealId/issues" element={<Issues />} />
+          <Route
+            path="deals/:dealId/review-queue"
+            element={<ReviewQueue stage="impact" portal="impact" title="I-01 — Impact Review Queue" />}
+          />
+          <Route
+            path="deals/:dealId/review/:instanceId"
+            element={<ReviewDetail stage="impact" portal="impact" />}
+          />
         </Route>
 
         <Route path="/qalicb" element={<QalicbLayout />}>
           <Route index element={<QalicbDashboard />} />
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
+        </Route>
+
+        <Route path="/cde" element={<CdeLayout />}>
+          <Route index element={<CdePortfolio />} />
+          <Route path="deals/:dealId/documents" element={<Documents />} />
+          <Route path="deals/:dealId/issues" element={<Issues />} />
+          <Route
+            path="deals/:dealId/review-queue"
+            element={<ReviewQueue stage="cde" portal="cde" title="C-03 — CDE Review Queue" />}
+          />
+          <Route
+            path="deals/:dealId/review/:instanceId"
+            element={<ReviewDetail stage="cde" portal="cde" />}
+          />
         </Route>
       </Routes>
     </>
