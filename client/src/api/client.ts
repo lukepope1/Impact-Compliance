@@ -348,6 +348,13 @@ export const api = {
       body: JSON.stringify({ eventKey, channel, enabled }),
     }),
 
+  getEmailDigestFrequency: () => request<{ frequency: "immediate" | "daily" }>("/notifications/digest"),
+  setEmailDigestFrequency: (frequency: "immediate" | "daily") =>
+    request<{ frequency: "immediate" | "daily" }>("/notifications/digest", {
+      method: "PUT",
+      body: JSON.stringify({ frequency }),
+    }),
+
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
   createDeal: (data: { dealCode: string; legalName: string; projectName?: string; isMultiCde: boolean }) =>

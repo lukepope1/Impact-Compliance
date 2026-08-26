@@ -136,6 +136,20 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   `in_app` row (confirmed directly against the database, since the earlier event before
   the preference existed still had both rows); the settings page itself round-tripped a
   live toggle through a page reload.
+- **Email digest / batching** (`lib/notificationDigest.ts`, a new
+  `UserNotificationSettings` table, a second scheduled sweep in `index.ts` next to the
+  deadline sweep): each user can choose immediate email (default) or a daily digest — one
+  consolidated message instead of one per event. In digest mode, `notify()` still records
+  the email row but leaves it `"queued"` instead of sending; `runDigestSweep()` finds
+  every daily-mode user's queued rows, sends one email, and flips them all to `"sent"`/
+  `"failed"` together. Coordinated across instances the same way as the deadline sweep
+  (its own Postgres advisory-lock key). In-app notifications are never digested — only
+  email batches, since delaying the bell itself would defeat the point of checking it.
+  Verified live end to end with real Ethereal SMTP: set a user to daily mode, ran a real
+  submit-then-return cycle, confirmed the email row sat at `"queued"` immediately after,
+  then ran the sweep directly and confirmed one real email sent with a real provider
+  message ID and the row flipped to `"sent"` — while an older, unrelated `"failed"` row
+  was correctly left untouched (the sweep only acts on `"queued"` rows).
 
 ## Security review ✅ (findings fixed and verified live)
 Three parallel audits (auth/access-control, deal-scoped/document routes, dependencies/infra)

@@ -48,6 +48,40 @@ API: `GET /api/notifications/preferences` returns the current user's full grid; 
 /api/notifications/preferences` (body: `{eventKey, channel, enabled}`) updates one cell
 and returns the refreshed grid.
 
+## Digest / batching
+
+Alongside the per-event on/off above, each user also has a single cross-event setting —
+**email delivery timing** — at the same `/notifications/preferences` screen: `immediate`
+(default, send each enabled email as it happens) or `daily` (batch every enabled email
+into one consolidated message per day). In-app notifications are unaffected either way —
+digesting the bell itself would just delay someone seeing something they're already
+looking at the app to check, which isn't what batching is for; it's for cutting down
+email noise, so only the email channel batches.
+
+`lib/notificationDigest.ts` holds the mechanism. When `notify()` finds a target in daily
+mode for a channel-enabled event, it still creates the `email` `Notification` row (so the
+event isn't lost) but leaves it at its default `status: "queued"` instead of calling
+`sendEmail()` — a queued row is exactly "recorded, awaiting its digest." A second
+scheduled job, `runDigestSweep()` (wired up in `index.ts` next to the deadline sweep,
+default daily via `EMAIL_DIGEST_INTERVAL_MINUTES`, its own 15s post-boot delay and its
+own Postgres advisory-lock key so it never contends with the deadline sweep's lock),
+finds every `daily`-mode user with any `queued` email rows, sends **one** email listing
+all of them, and updates every digested row to `sent` (with a shared `providerMessageId`)
+or `failed` together if that one send fails. Coordinated across multiple app instances
+the identical way the deadline sweep is — see that section above; this reuses the same
+pattern with its own lock key, not the same lock.
+
+Verified live end to end against the real embedded database and real Ethereal SMTP: set
+a demo user to daily digest, triggered a real submit-then-return cycle, confirmed the
+resulting email row sat at `status: "queued"` (not sent) immediately afterward, then ran
+`runDigestSweep()` directly and confirmed it sent one real email via Ethereal and flipped
+that row to `status: "sent"` with a real `providerMessageId` — while an older row from
+before digest mode was set (already `"failed"`, from an earlier SMTP-unconfigured test)
+was correctly left untouched, since the sweep only ever acts on rows still `"queued"`.
+
+API: `GET /api/notifications/digest` returns `{frequency}`; `PUT
+/api/notifications/digest` (body: `{frequency: "immediate" | "daily"}`) sets it.
+
 ## Deadline reminders: how they actually fire
 
 `lib/deadlineSweep.ts` holds the one implementation of "recompute overdue/upcoming status
@@ -130,7 +164,7 @@ of which portal they're in. Polls every 60 seconds (no websocket/SSE push in thi
 
 ## What this doesn't do yet
 
-- No digest/batching — every triggering event sends immediately, one at a time
+- No weekly (or other custom-interval) digest — only immediate or daily
 - No push/SMS channels — only in-app and email, matching the schema's `NotificationChannel` enum
 - Preferences are opt-out only, no per-deal overrides (a preference applies to a user
   across every deal, not "mute this one deal's deadline reminders")

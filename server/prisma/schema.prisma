@@ -424,6 +424,7 @@ model User {
   generatedExports         ExportBatch[]
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
+  notificationSettings     UserNotificationSettings?
   auditEvents              AuditEvent[]
 
   @@map("users")
@@ -1257,6 +1258,26 @@ model NotificationPreference {
 
   @@unique([userId, eventType, channel])
   @@map("notification_preferences")
+}
+
+enum EmailDigestFrequency {
+  immediate
+  daily
+}
+
+// A user's email delivery timing — separate from NotificationPreference (which is a
+// per-event on/off) since digest mode is a single cross-event setting: "batch all my
+// enabled-channel email into one daily message" vs. "send each one as it happens." A
+// missing row means "immediate," matching today's behavior for anyone who never visits
+// the settings screen.
+model UserNotificationSettings {
+  id                   String               @id @default(uuid())
+  userId               String               @unique @map("user_id")
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailDigestFrequency EmailDigestFrequency @default(immediate) @map("email_digest_frequency")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@map("user_notification_settings")
 }
 
 model AuditEvent {

@@ -2,6 +2,7 @@ import type { RoleCode } from "@prisma/client";
 import { prisma } from "./prisma";
 import { sendEmail } from "./email";
 import { isChannelEnabled } from "./notificationPreferences";
+import { getEmailDigestFrequency } from "./notificationDigest";
 
 interface NotifyTarget {
   userId: string;
@@ -68,22 +69,34 @@ export async function notify(params: {
     }
 
     if (emailEnabled) {
-      const emailResult = await sendEmail({ to: target.email, subject, body });
-      await prisma.notification.create({
-        data: {
-          userId: target.userId,
-          organizationId: target.organizationId,
-          dealId,
-          requirementInstanceId,
-          notificationType,
-          channel: "email",
-          subject,
-          body,
-          status: emailResult.status,
-          sentAt: emailResult.status === "sent" ? new Date() : undefined,
-          providerMessageId: emailResult.providerMessageId,
-        },
-      });
+      const digestFrequency = await getEmailDigestFrequency(target.userId);
+
+      if (digestFrequency === "daily") {
+        // Recorded but not sent — lib/notificationDigest.ts's scheduled sweep picks up
+        // every "queued" email row for this user and sends them as one consolidated
+        // message. Leaving status at its "queued" default (rather than "sent"/"failed")
+        // is what marks a row as still awaiting its digest.
+        await prisma.notification.create({
+          data: { userId: target.userId, organizationId: target.organizationId, dealId, requirementInstanceId, notificationType, channel: "email", subject, body },
+        });
+      } else {
+        const emailResult = await sendEmail({ to: target.email, subject, body });
+        await prisma.notification.create({
+          data: {
+            userId: target.userId,
+            organizationId: target.organizationId,
+            dealId,
+            requirementInstanceId,
+            notificationType,
+            channel: "email",
+            subject,
+            body,
+            status: emailResult.status,
+            sentAt: emailResult.status === "sent" ? new Date() : undefined,
+            providerMessageId: emailResult.providerMessageId,
+          },
+        });
+      }
     }
   }
 }

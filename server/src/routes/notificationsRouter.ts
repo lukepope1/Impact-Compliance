@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { getPreferenceGrid, setPreference } from "../lib/notificationPreferences";
+import { getEmailDigestFrequency, setEmailDigestFrequency } from "../lib/notificationDigest";
 
 export const notificationsRouter = Router();
 
@@ -29,6 +30,22 @@ notificationsRouter.put("/preferences", async (req, res) => {
 
   const grid = await getPreferenceGrid(req.user!.id);
   res.json(grid);
+});
+
+/** The current user's email delivery timing — "immediate" (default) or a batched "daily" digest. */
+notificationsRouter.get("/digest", async (req, res) => {
+  const frequency = await getEmailDigestFrequency(req.user!.id);
+  res.json({ frequency });
+});
+
+const digestSchema = z.object({ frequency: z.enum(["immediate", "daily"]) });
+
+notificationsRouter.put("/digest", async (req, res) => {
+  const parsed = digestSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  await setEmailDigestFrequency(req.user!.id, parsed.data.frequency);
+  res.json({ frequency: parsed.data.frequency });
 });
 
 /** The current user's own in-app notifications — not deal-scoped, since a user can have notifications across deals. */

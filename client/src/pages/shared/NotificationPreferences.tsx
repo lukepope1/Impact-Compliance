@@ -14,14 +14,30 @@ export default function NotificationPreferences() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<NotificationPreferenceRow[] | null>(null);
+  const [digestFrequency, setDigestFrequency] = useState<"immediate" | "daily" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [savingDigest, setSavingDigest] = useState(false);
 
   function refresh() {
     api.getNotificationPreferences().then(setRows).catch((e) => setError(String(e.message ?? e)));
+    api.getEmailDigestFrequency().then((r) => setDigestFrequency(r.frequency)).catch((e) => setError(String(e.message ?? e)));
   }
 
   useEffect(refresh, []);
+
+  async function changeDigest(frequency: "immediate" | "daily") {
+    setSavingDigest(true);
+    setError(null);
+    try {
+      const r = await api.setEmailDigestFrequency(frequency);
+      setDigestFrequency(r.frequency);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setSavingDigest(false);
+    }
+  }
 
   async function toggle(eventKey: string, channel: "in_app" | "email", current: boolean) {
     setSavingKey(`${eventKey}:${channel}`);
@@ -49,6 +65,38 @@ export default function NotificationPreferences() {
       </p>
 
       {error && <div className="card" style={{ color: "var(--danger)", background: "var(--danger-bg)", borderColor: "var(--danger)" }}>{error}</div>}
+
+      <div className="card">
+        <h2>Email delivery</h2>
+        <p style={{ marginTop: 0 }}>
+          Send each enabled email as it happens, or batch them into one message per day. This applies
+          across every event below — in-app notifications are always immediate either way.
+        </p>
+        <div style={{ display: "flex", gap: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="digest"
+              style={{ width: "auto", accentColor: "var(--teal)" }}
+              checked={digestFrequency === "immediate"}
+              disabled={savingDigest || digestFrequency === null}
+              onChange={() => changeDigest("immediate")}
+            />
+            Immediate — send as each event happens
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400, cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="digest"
+              style={{ width: "auto", accentColor: "var(--teal)" }}
+              checked={digestFrequency === "daily"}
+              disabled={savingDigest || digestFrequency === null}
+              onChange={() => changeDigest("daily")}
+            />
+            Daily digest — one email summarizing everything
+          </label>
+        </div>
+      </div>
 
       <table>
         <thead>

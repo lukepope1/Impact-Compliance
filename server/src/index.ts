@@ -24,6 +24,7 @@ import { amisRouter } from "./routes/amis";
 import { notificationsRouter } from "./routes/notificationsRouter";
 import { verifyStorageReachable } from "./lib/storage";
 import { runDeadlineSweep } from "./lib/deadlineSweep";
+import { runDigestSweep } from "./lib/notificationDigest";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
 // natively and Node treats the resulting rejection as fatal, so patch it globally
@@ -84,11 +85,32 @@ function startDeadlineSweeper() {
   setInterval(sweep, SWEEP_INTERVAL_MS);
 }
 
+// Sends one consolidated email per user in daily-digest mode, covering everything
+// notify() queued for them instead of sending immediately (see lib/notificationDigest.ts
+// and the digest-frequency setting in Notification Preferences). Same interval/lock
+// pattern as the deadline sweep, on its own schedule and its own advisory-lock key.
+const DIGEST_INTERVAL_MS = Number(process.env.EMAIL_DIGEST_INTERVAL_MINUTES ?? 1440) * 60 * 1000;
+
+function startDigestSweeper() {
+  const sweep = () =>
+    runDigestSweep()
+      .then((result) => {
+        if (result.usersDigested > 0) {
+          console.log(`Email digest sweep: ${result.usersDigested} user(s) sent a digest covering ${result.notificationsSent} notification(s).`);
+        }
+      })
+      .catch((err) => console.error("Email digest sweep failed:", err));
+
+  setTimeout(sweep, 15_000);
+  setInterval(sweep, DIGEST_INTERVAL_MS);
+}
+
 verifyStorageReachable()
   .then(() => {
     app.listen(port, () => {
       console.log(`NMTC Compliance Platform API listening on :${port}`);
       startDeadlineSweeper();
+      startDigestSweeper();
     });
   })
   .catch((err) => {
