@@ -69,6 +69,22 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   correctness against the documented SDK/AWS behavior but **not exercised against a live
   bucket** — see docs/AWS_SETUP.md for what to check before trusting it with real evidence
 
+## Malware scanning: real ClamAV pipeline
+- `scanner.ts` implements clamd's `INSTREAM` protocol directly (no third-party package) —
+  every upload is scanned before its database row is even created
+- Fail-closed: with no scanner configured, uploads stay `"pending"` (undownloadable), never
+  silently `"clean"` — this replaces a hardcoded `"clean"` that shipped with Phase 2 before
+  this pipeline existed
+- An infected result creates a critical `security` Issue on the deal, not just a quietly
+  blocked download; a `/rescan` endpoint recovers versions stuck at `pending`/`failed`
+  without touching an already-settled `clean`/`infected` result
+- See docs/MALWARE_SCANNING.md for local setup and production deployment shapes (sidecar
+  container, systemd service, or an async Lambda-based pattern for serverless)
+- The fail-closed behavior and rescan guard were verified live; the clamd protocol client
+  itself was not — a local ClamAV install was attempted but got stuck behind a Windows UAC
+  prompt this environment couldn't answer. Same "reviewed, not proven live" honesty as the
+  S3+KMS integration — see docs/MALWARE_SCANNING.md's verification-status note.
+
 ## What's deliberately out of scope for this build
 - No direct AMIS API integration or auto-certification
 - No legal/recapture determination logic — issues are operational flags, not conclusions
@@ -82,6 +98,7 @@ Postgres, not just typechecked). See docs/LOCAL_DEV.md to run it.
   system — see the Auth section above for what's already real vs. what's still interim
 - Run the S3+KMS integration against a real AWS account for the first time (see the
   Evidence storage section above) before relying on it
-- A real malware-scan pipeline — uploads are currently marked "clean" immediately
+- Decide and build the production clamd deployment shape (sidecar/service/async Lambda —
+  see docs/MALWARE_SCANNING.md) and keep its virus definitions updating on a schedule
 - Expand the AMIS field catalog and mapping config beyond the three proof-of-mechanism fields
 - Security review and UAT against the original backlog's acceptance criteria
