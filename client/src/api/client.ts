@@ -75,6 +75,53 @@ export interface RequirementDefinition {
   sources: RequirementSource[];
 }
 
+export interface DocumentVersionSummary {
+  id: string;
+  versionNumber: number;
+  fileName: string;
+  fileSizeBytes: string | number | null;
+  sha256Checksum: string;
+  malwareScanStatus: string;
+  uploadedAt: string;
+  supersededAt: string | null;
+}
+
+export interface DocumentSummary {
+  id: string;
+  documentType: string;
+  title: string;
+  shareScope: string;
+  status: string;
+  currentVersion: number;
+  reportingPeriodStart: string | null;
+  reportingPeriodEnd: string | null;
+  createdAt: string;
+  versions: DocumentVersionSummary[];
+}
+
+export interface AuditEventRow {
+  id: string;
+  occurredAt: string;
+  objectType: string;
+  objectId: string | null;
+  action: string;
+  actorUser: { email: string } | null;
+  actorOrganization: { legalName: string } | null;
+}
+
+async function requestForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: { "x-user-email": DEV_USER_EMAIL },
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
 export const api = {
   listDeals: () => request<Deal[]>("/deals"),
   getDeal: (id: string) => request<Deal>(`/deals/${id}`),
@@ -117,4 +164,27 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+
+  listDocuments: (dealId: string) => request<DocumentSummary[]>(`/deals/${dealId}/documents`),
+  uploadDocument: (
+    dealId: string,
+    file: File,
+    meta: { documentType: string; title: string; shareScope: string }
+  ) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("documentType", meta.documentType);
+    form.append("title", meta.title);
+    form.append("shareScope", meta.shareScope);
+    return requestForm<DocumentSummary>(`/deals/${dealId}/documents`, form);
+  },
+  uploadNewVersion: (dealId: string, documentId: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return requestForm<DocumentVersionSummary>(`/deals/${dealId}/documents/${documentId}/versions`, form);
+  },
+  downloadUrl: (dealId: string, documentId: string, versionId: string) =>
+    `/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`,
+
+  listAuditEvents: (dealId: string) => request<AuditEventRow[]>(`/deals/${dealId}/audit-events`),
 };

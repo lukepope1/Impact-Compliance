@@ -23,9 +23,13 @@ export default function DealDetail() {
         <Link to={`/impact/deals/${dealId}/setup`}>Deal setup (parties & CDEs)</Link>
         {" · "}
         <Link to={`/impact/deals/${dealId}/requirements`}>Requirement builder</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/documents`}>Documents & evidence</Link>
+        {" · "}
+        <Link to={`/impact/deals/${dealId}/audit`}>Audit log</Link>
       </div>
       <p style={{ color: "#666" }}>
-        Evidence library and review queue land in Phase 2+ (see docs/PHASED_PLAN.md).
+        Review queue and requirement instances land in Phase 3+ (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );
