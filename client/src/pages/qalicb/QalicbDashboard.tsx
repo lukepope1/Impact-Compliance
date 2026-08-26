@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type RequirementInstance } from "../../api/client";
+import StatusBadge from "../shared/StatusBadge";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
@@ -33,8 +34,10 @@ export default function QalicbDashboard() {
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 
-  const openCount = rows?.filter((r) => !["submitted", "impact_review", "impact_approved", "cde_review", "cde_approved", "amis_ready", "exported_filed", "closed", "waived"].includes(r.status)).length ?? 0;
+  const CLOSED_LIKE = ["submitted", "impact_review", "impact_approved", "cde_review", "cde_approved", "amis_ready", "exported_filed", "closed", "waived"];
+  const openCount = rows?.filter((r) => !CLOSED_LIKE.includes(r.status)).length ?? 0;
   const overdueCount = rows?.filter((r) => r.isOverdue).length ?? 0;
+  const upcomingCount = rows?.filter((r) => r.status === "upcoming").length ?? 0;
   const returnedCount = rows?.filter((r) => r.status === "returned").length ?? 0;
 
   return (
@@ -49,10 +52,23 @@ export default function QalicbDashboard() {
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
-      <div className="card">
-        <strong>{openCount}</strong> open tasks &nbsp;·&nbsp;
-        <strong style={{ color: overdueCount ? "#b00" : undefined }}>{overdueCount}</strong> overdue &nbsp;·&nbsp;
-        <strong>{returnedCount}</strong> returned
+      <div className="stat-grid">
+        <div className="stat-card">
+          <div className="stat-value">{openCount}</div>
+          <div className="stat-label">Open tasks</div>
+        </div>
+        <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
+          <div className="stat-value">{overdueCount}</div>
+          <div className="stat-label">Overdue</div>
+        </div>
+        <div className={`stat-card${upcomingCount > 0 ? " stat-warning" : ""}`}>
+          <div className="stat-value">{upcomingCount}</div>
+          <div className="stat-label">Due within 30 days</div>
+        </div>
+        <div className={`stat-card${returnedCount > 0 ? " stat-danger" : ""}`}>
+          <div className="stat-value">{returnedCount}</div>
+          <div className="stat-label">Returned for revision</div>
+        </div>
       </div>
 
       <table>
@@ -65,7 +81,7 @@ export default function QalicbDashboard() {
               <td>{fmt(r.dueDate)}</td>
               <td>{r.requirementDefinition.title}</td>
               <td>{r.responsibleParty ? r.responsibleParty.legalName : "Deal-level"} · {fmt(r.reportingPeriodEnd)}</td>
-              <td>{r.isOverdue ? "OVERDUE" : r.status}</td>
+              <td><StatusBadge status={r.status} isOverdue={r.isOverdue} /></td>
               <td><Link to={`/qalicb/deals/${r.dealId}/requirements/${r.id}`}>{ACTION_LABEL[r.status] ?? "View"}</Link></td>
             </tr>
           ))}

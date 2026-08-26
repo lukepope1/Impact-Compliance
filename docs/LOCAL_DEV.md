@@ -47,14 +47,21 @@ the API and client together (see root `package.json`).
 ## Signing in
 
 The app requires a real login — visit the client and sign in, or use the demo-account
-buttons on the login page. `npm run seed` prints the three demo accounts and prints the
-shared password (`password123`) they all share:
+buttons on the login page (only the original three appear as quick-fill buttons; the two
+added later still work, just type them manually). `npm run seed` prints all five demo
+accounts and the shared password (`password123`) they all share:
 
 | Email | Portal / role |
 |---|---|
 | compliance@impactmarketplace.com | Impact compliance manager |
-| jane.doe@millenniumholdings.example | QALICB admin (Millennium Holdings) |
-| reviewer@enterprisecde.example | CDE reviewer (Enterprise Financial CDE) |
+| jane.doe@millenniumholdings.example | QALICB admin (Millennium Holdings — `MILL-2025`) |
+| mchen@riversidemfg.example | QALICB admin (Riverside Manufacturing — `RIVER-2025`) |
+| rpatel@harborhealth.example | QALICB admin (Harbor Health Clinic — `HARBOR-2026`) |
+| reviewer@enterprisecde.example | CDE reviewer (Enterprise Financial CDE — sees all three deals above) |
+
+The three QALICB deals all participate with Enterprise Financial CDE, so its portfolio
+dashboard and Impact's deal list both show multiple rows with different statuses instead
+of a single-deal demo — see `prisma/additionalQalicbs.ts`.
 
 Auth is a self-issued JWT signed with `JWT_SECRET` (bcrypt-hashed passwords, `POST
 /api/auth/login`) — a real, working login, not a header stub — standing in for a real

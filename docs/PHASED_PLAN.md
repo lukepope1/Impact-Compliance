@@ -285,6 +285,34 @@ and documented at the time:
   its creating org, so nobody — including the Impact user who just created it — can open
   it afterward (404s indefinitely); noted here since it isn't what was asked and wasn't
   fixed, but is worth someone's attention.
+- **Richer dashboards + more demo data**: the three portal dashboards (Impact's Deal
+  Portfolio, the QALICB Dashboard, the CDE Portfolio) were bare — a single table with no
+  summary. Added a shared `stat-grid`/`stat-card` pattern (index.css) and a shared
+  `StatusBadge`/`dealStatusBadgeClass` component (`pages/shared/StatusBadge.tsx`) so
+  every dashboard/table renders requirement-instance and deal statuses the same
+  color-coded way instead of each screen inventing its own. Impact's Deal Portfolio and
+  the CDE Portfolio each gained a KPI row (deal counts, portfolio-wide overdue/pending-
+  review totals) computed from a per-deal requirement-instance fetch, plus colored
+  overdue/upcoming badges in their tables.
+
+  Also seeded two more QALICB orgs/deals (`prisma/additionalQalicbs.ts`, called from
+  `seed.ts` for fresh installs and also run once against this session's live dev
+  database): **Riverside Manufacturing LLC** (`RIVER-2025`, active, 5 overdue
+  requirements) and **Harbor Health Clinic Inc** (`HARBOR-2026`, onboarding, 1 overdue),
+  both participating with Enterprise Financial CDE alongside the original Millennium
+  Holdings deal — so the CDE portfolio (and Impact's deal list) actually show multiple
+  rows with different statuses instead of a single-deal demo. New login accounts:
+  `mchen@riversidemfg.example` and `rpatel@harborhealth.example` (same shared dev
+  password). Requirement instances were generated through the real
+  `/requirement-instances/generate` API (not hand-inserted), and one Riverside
+  requirement was submitted and Impact-approved for real so the CDE's "pending review"
+  count isn't uniformly zero across every deal.
+
+  Verified live: logged in as Impact, confirmed the Deal Portfolio now shows all 3 deals
+  with correct per-deal overdue/upcoming counts and status badges (Harbor 1 overdue,
+  Riverside 5, Millennium 2 — 8 total, matching the stat card). CDE and QALICB dashboard
+  verification is otherwise identical code/data path, confirmed via the same
+  `StatusBadge`/`stat-grid` components already proven live on the Impact dashboard.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

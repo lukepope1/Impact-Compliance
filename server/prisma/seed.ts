@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedAdditionalQalicbs } from "./additionalQalicbs";
 
 const prisma = new PrismaClient();
 
@@ -123,11 +124,20 @@ async function main() {
     },
   });
 
-  console.log("Seeded:", { deal: deal.dealCode, organizations: 4, users: 3 });
+  const additional = await seedAdditionalQalicbs(prisma, {
+    passwordHash,
+    impactId: impact.id,
+    enterpriseCdeId: enterpriseCde.id,
+    complianceManagerId: complianceManager.id,
+  });
+
+  console.log("Seeded:", { deals: 3, organizations: 7, users: 5 });
   console.log(`Demo login password for all seeded users: ${DEV_PASSWORD}`);
   console.log("  compliance@impactmarketplace.com  (Impact compliance manager)");
-  console.log("  jane.doe@millenniumholdings.example  (QALICB admin)");
-  console.log("  reviewer@enterprisecde.example  (CDE reviewer)");
+  console.log("  jane.doe@millenniumholdings.example  (QALICB admin — MILL-2025)");
+  console.log(`  mchen@riversidemfg.example  (QALICB admin — ${additional.riversideDeal.dealCode})`);
+  console.log(`  rpatel@harborhealth.example  (QALICB admin — ${additional.harborDeal.dealCode})`);
+  console.log("  reviewer@enterprisecde.example  (CDE reviewer — sees all three above)");
 }
 
 main()

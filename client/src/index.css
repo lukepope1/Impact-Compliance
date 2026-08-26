@@ -258,6 +258,54 @@ textarea { resize: vertical; min-height: 60px; }
 
 input::placeholder, textarea::placeholder { color: var(--text-faint); }
 
+/* ---------- Dashboards: stat cards & badges ---------- */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card .stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+}
+.stat-card.stat-danger .stat-value { color: var(--danger); }
+.stat-card.stat-warning .stat-value { color: var(--warning); }
+.stat-card.stat-success .stat-value { color: var(--success); }
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-neutral { background: #eef2f6; color: var(--text-muted); }
+.badge-navy { background: var(--teal-light); color: var(--navy); }
+
 /* ---------- Misc ---------- */
 
 code {
