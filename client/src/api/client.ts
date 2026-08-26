@@ -1,12 +1,18 @@
-// Phase 1 placeholder: identity comes from a header until real auth lands (see server/src/middleware/auth.ts).
-const DEV_USER_EMAIL = "compliance@impactmarketplace.com";
+// Phase 1 placeholder: identity comes from a header until real auth lands (see
+// server/src/middleware/auth.ts). Real auth will derive the acting user from a session/
+// JWT, not a client-selectable value — this switcher exists only so the Impact and
+// QALICB portals in this same dev build can demo as different logged-in users.
+let ACTING_USER_EMAIL = "compliance@impactmarketplace.com";
+export function setActingUser(email: string) {
+  ACTING_USER_EMAIL = email;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "x-user-email": DEV_USER_EMAIL,
+      "x-user-email": ACTING_USER_EMAIL,
       ...init?.headers,
     },
   });
@@ -112,7 +118,7 @@ export interface AuditEventRow {
 async function requestForm<T>(path: string, form: FormData): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: "POST",
-    headers: { "x-user-email": DEV_USER_EMAIL },
+    headers: { "x-user-email": ACTING_USER_EMAIL },
     body: form,
   });
   if (!res.ok) {
@@ -131,6 +137,28 @@ export interface RequirementInstance {
   isOverdue: boolean;
   requirementDefinition: { title: string; category: string; severity: string };
   responsibleParty: { legalName: string; partyRole: string } | null;
+}
+
+export interface SubmissionDocumentLink {
+  documentId: string;
+  evidenceRole: string | null;
+  document: DocumentSummary;
+}
+
+export interface Submission {
+  id: string;
+  submissionVersion: number;
+  status: string;
+  attestationText: string | null;
+  attestedAt: string | null;
+  submittedAt: string | null;
+  responseNote: string | null;
+  documents: SubmissionDocumentLink[];
+}
+
+export interface RequirementInstanceDetail extends RequirementInstance {
+  requirementDefinition: RequirementDefinition & { evidenceSchema: { requiredDocumentTypes?: string[] } };
+  submissions: Submission[];
 }
 
 export const api = {
@@ -194,8 +222,22 @@ export const api = {
     form.append("file", file);
     return requestForm<DocumentVersionSummary>(`/deals/${dealId}/documents/${documentId}/versions`, form);
   },
-  downloadUrl: (dealId: string, documentId: string, versionId: string) =>
-    `/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`,
+  async downloadDocument(dealId: string, documentId: string, versionId: string, fileName: string) {
+    const res = await fetch(`/api/deals/${dealId}/documents/${documentId}/versions/${versionId}/download`, {
+      headers: { "x-user-email": ACTING_USER_EMAIL },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   listAuditEvents: (dealId: string) => request<AuditEventRow[]>(`/deals/${dealId}/audit-events`),
 
@@ -209,5 +251,20 @@ export const api = {
     request<RequirementInstance>(`/deals/${dealId}/requirement-instances/request/${requirementDefinitionId}`, {
       method: "POST",
       body: JSON.stringify({ responseDays }),
+    }),
+  getRequirementInstance: (dealId: string, instanceId: string) =>
+    request<RequirementInstanceDetail>(`/deals/${dealId}/requirement-instances/${instanceId}`),
+
+  getOrCreateDraft: (dealId: string, instanceId: string) =>
+    request<Submission>(`/deals/${dealId}/requirement-instances/${instanceId}/submissions/draft`, { method: "POST" }),
+  attachEvidence: (dealId: string, instanceId: string, submissionId: string, documentId: string, evidenceRole?: string) =>
+    request<SubmissionDocumentLink>(`/deals/${dealId}/requirement-instances/${instanceId}/submissions/${submissionId}/documents`, {
+      method: "POST",
+      body: JSON.stringify({ documentId, evidenceRole }),
+    }),
+  submitSubmission: (dealId: string, instanceId: string, submissionId: string, attestationText: string) =>
+    request<Submission>(`/deals/${dealId}/requirement-instances/${instanceId}/submissions/${submissionId}/submit`, {
+      method: "POST",
+      body: JSON.stringify({ attestationText }),
     }),
 };

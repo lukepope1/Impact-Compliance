@@ -48,20 +48,11 @@ export default function Documents() {
 
   async function download(documentId: string, versionId: string, fileName: string) {
     if (!dealId) return;
-    const res = await fetch(api.downloadUrl(dealId, documentId, versionId), {
-      headers: { "x-user-email": "compliance@impactmarketplace.com" },
-    });
-    if (!res.ok) {
-      setError(`Download failed: ${res.status}`);
-      return;
+    try {
+      await api.downloadDocument(dealId, documentId, versionId, fileName);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   return (

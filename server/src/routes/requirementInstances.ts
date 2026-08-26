@@ -4,8 +4,11 @@ import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRole } from "../middleware/auth";
 import { generatePeriods, computeIsOverdue, computeDisplayStatus, type DueRule } from "../lib/deadlineEngine";
+import { submissionsRouter } from "./submissions";
 
 export const requirementInstancesRouter = Router({ mergeParams: true });
+
+requirementInstancesRouter.use("/:instanceId/submissions", submissionsRouter);
 
 /** Applies the overdue/upcoming recompute (normally a scheduled job) and returns the fresh rows. */
 requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
@@ -37,6 +40,22 @@ requirementInstancesRouter.get("/", requireDealAccess, async (req, res) => {
   if (updates.length) await prisma.$transaction(updates);
 
   res.json(instances);
+});
+
+requirementInstancesRouter.get("/:instanceId", requireDealAccess, async (req, res) => {
+  const instance = await prisma.requirementInstance.findUnique({
+    where: { id: req.params.instanceId },
+    include: {
+      requirementDefinition: { include: { sources: true } },
+      responsibleParty: { select: { legalName: true, partyRole: true } },
+      submissions: {
+        orderBy: { submissionVersion: "desc" },
+        include: { documents: { include: { document: { include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } } } } } },
+      },
+    },
+  });
+  if (!instance || instance.dealId !== req.params.dealId) return res.status(404).json({ error: "Requirement instance not found" });
+  res.json(instance);
 });
 
 /**

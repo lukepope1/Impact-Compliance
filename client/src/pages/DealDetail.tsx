@@ -31,7 +31,9 @@ export default function DealDetail() {
         <Link to={`/impact/deals/${dealId}/audit`}>Audit log</Link>
       </div>
       <p style={{ color: "#666" }}>
-        Submission workflow and review queue land in Phase 4+ (see docs/PHASED_PLAN.md).
+        <Link to="/qalicb">Open the QALICB portal</Link> to submit against this deal's requirements
+        (dev-only: acts as the seeded QALICB admin user). Review queue and CDE portal land in Phase 5+
+        (see docs/PHASED_PLAN.md).
       </p>
     </main>
   );
