@@ -228,6 +228,26 @@ export interface TenantOccupantRow {
   currentEmployees: string | null;
 }
 
+export interface BenefitRecordRow {
+  id: string;
+  employeeClass: string;
+  benefitCode: string;
+  isOffered: boolean | null;
+  percentReceiving: string | null;
+}
+
+export interface ServiceOutcomeRow {
+  id: string;
+  serviceType: string | null;
+  serviceName: string;
+  description: string | null;
+  unitCount: string | null;
+  peopleServedBaseline: string | null;
+  peopleServedCurrent: string | null;
+  percentLowIncome: string | null;
+  outcomeNarrative: string | null;
+}
+
 export interface CbrPeriod {
   id: string;
   calendarYear: number;
@@ -235,6 +255,8 @@ export interface CbrPeriod {
   projectProfile: { annualGrossRevenue: string | null; projectDescription: string | null; butForStatement: string | null } | null;
   jobRecords: JobRecordRow[];
   tenantOccupants: TenantOccupantRow[];
+  benefitRecords: BenefitRecordRow[];
+  serviceOutcomes: ServiceOutcomeRow[];
 }
 
 export interface GoldenFieldRow {
@@ -434,6 +456,22 @@ export const api = {
     request<JobRecordRow>(`/deals/${dealId}/cbr/${year}/jobs`, { method: "POST", body: JSON.stringify(data) }),
   addTenant: (dealId: string, year: number, data: { organizationName: string; organizationType?: string; purposeGoodsServices?: string; squareFeet?: number; currentEmployees?: number }) =>
     request<TenantOccupantRow>(`/deals/${dealId}/cbr/${year}/tenants`, { method: "POST", body: JSON.stringify(data) }),
+  saveBenefit: (dealId: string, year: number, data: { employeeClass: string; benefitCode: string; isOffered?: boolean; percentReceiving?: number }) =>
+    request<BenefitRecordRow>(`/deals/${dealId}/cbr/${year}/benefits`, { method: "PUT", body: JSON.stringify(data) }),
+  addServiceOutcome: (
+    dealId: string,
+    year: number,
+    data: {
+      serviceType?: string;
+      serviceName: string;
+      description?: string;
+      unitCount?: number;
+      peopleServedBaseline?: number;
+      peopleServedCurrent?: number;
+      percentLowIncome?: number;
+      outcomeNarrative?: string;
+    }
+  ) => request<ServiceOutcomeRow>(`/deals/${dealId}/cbr/${year}/service-outcomes`, { method: "POST", body: JSON.stringify(data) }),
 
   getSnapshot: (dealId: string, year: number) => request<SharedOutcomeSnapshotDetail | null>(`/deals/${dealId}/snapshots/${year}`),
   generateSnapshot: (dealId: string, year: number) =>

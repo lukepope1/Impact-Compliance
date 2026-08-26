@@ -128,3 +128,27 @@ cbrRouter.put("/:year/benefits", requireDealAccess, requireRole(...EDITOR_ROLES)
 
   res.json(benefit);
 });
+
+const serviceOutcomeSchema = z.object({
+  serviceType: z.string().optional(),
+  serviceName: z.string().min(1),
+  description: z.string().optional(),
+  unitCount: z.number().optional(),
+  squareFeet: z.number().optional(),
+  peopleServedBaseline: z.number().optional(),
+  peopleServedCurrent: z.number().optional(),
+  percentLowIncome: z.number().optional(),
+  percentPeopleOfColor: z.number().optional(),
+  outcomeNarrative: z.string().optional(),
+  successIndicators: z.string().optional(),
+});
+
+cbrRouter.post("/:year/service-outcomes", requireDealAccess, requireRole(...EDITOR_ROLES), async (req, res) => {
+  const period = await getOrCreatePeriod(req.params.dealId, Number(req.params.year));
+  const parsed = serviceOutcomeSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const outcome = await prisma.serviceOutcome.create({ data: { cbrPeriodId: period.id, ...parsed.data } });
+  await recordAuditEvent(req, { dealId: req.params.dealId, objectType: "service_outcome", objectId: outcome.id, action: "create", afterData: outcome });
+  res.status(201).json(outcome);
+});
