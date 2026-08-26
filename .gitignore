@@ -7,4 +7,5 @@ build/
 *.log
 .DS_Store
 server/prisma/*.db
+server/.pgdata/
 *.tsbuildinfo

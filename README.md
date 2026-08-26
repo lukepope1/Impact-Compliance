@@ -18,12 +18,16 @@ See `docs/PHASED_PLAN.md` for the roadmap and what's built so far.
 
 ## Getting started
 
+See [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) for the full start/stop flow (embedded Postgres,
+no Docker or system install required). Quick version:
+
 ```bash
 npm run install:all
-cp server/.env.example server/.env   # fill in DATABASE_URL etc.
-npm run prisma:migrate
-npm run seed
-npm run dev
+cp server/.env.example server/.env
+cd server && npm run db:local        # separate terminal — leave running
+cd server && npm run prisma:migrate && npm run seed
+npm run dev                          # from repo root — starts API + client together
 ```
 
-Server runs on `:4100`, client dev server on `:5173` (proxies `/api` to the server).
+Server runs on `:4100`, client dev server on `:5173` (proxies `/api` to the server; Vite
+picks the next free port if 5173 is taken).
