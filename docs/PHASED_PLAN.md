@@ -585,6 +585,37 @@ and documented at the time:
   on the 2 with none; CDE saw "View source" only on the 6 CBR-sourced fields, correctly
   losing the 5 Deal-Setup links since that page doesn't exist for CDE users.
 
+- **Issues & Exceptions redesign to a "C-10" wireframe**: `IssuesAll.tsx` (shared between
+  Impact and CDE) rebuilt to match — a filter bar (Deal / Status / Due date / Search, all
+  real and functional against the actual `IssueStatus` enum, not just the two values the
+  mock showed), a `Due` and `Related item` column added to the table, and a click-to-select
+  `Selected issue` side panel (Owner / Visibility / Resolution / History).
+
+  `Related item` required extending the server's issue query (`issues.ts`) to include
+  `requirementInstance.requirementDefinition.title`, previously not selected — a small,
+  real addition, not fabricated. `Visibility` is shown as a static "Deal shared" rather
+  than a stored field, since that's the actual, real access model: an `Issue` has no
+  visibility concept of its own (unlike `IssueNote`, which does) — anyone with deal access
+  sees it, full stop, so the label states what's already true rather than implying a
+  setting that doesn't exist. `Owner` maps to `assignedToOrganization` (the only
+  "who owns this" data the schema actually populates) rather than the wireframe's
+  user-name style label — `assignedToUserId` exists on the model but the app never sets
+  it anywhere, so showing a fabricated name there would be worse than the honest org-level
+  answer.
+
+  `History` shows a real count of audit-log events for that specific issue, lazily fetched
+  per-deal only once a row on that deal is first selected — and, since the audit log
+  itself is Impact-only (`ImpactAuditAll.tsx`'s doc comment: "isn't shared with QALICB/CDE
+  portals"), the CDE portal correctly shows "Not visible to this portal" there instead of
+  either a fake count or a broken fetch.
+
+  Verified live on Millennium Holdings: created a real issue linked to the "Quarterly
+  Financial Statements" requirement instance with a due date, confirmed the table showed
+  the real related-item title and formatted due date, selected it and confirmed the panel
+  showed the real owner org, "Deal shared," and "1 event" (the create action) as Impact —
+  then confirmed the same row as the Enterprise Financial CDE reviewer correctly showed
+  "Not visible to this portal" for History instead.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

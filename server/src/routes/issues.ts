@@ -12,7 +12,10 @@ issuesRouter.use("/:issueId/notes", issueNotesRouter);
 issuesRouter.get("/", requireDealAccess, async (req, res) => {
   const issues = await prisma.issue.findMany({
     where: { dealId: req.params.dealId },
-    include: { assignedToOrganization: { select: { legalName: true } }, requirementInstance: { select: { id: true, dueDate: true } } },
+    include: {
+      assignedToOrganization: { select: { legalName: true } },
+      requirementInstance: { select: { id: true, dueDate: true, requirementDefinition: { select: { title: true } } } },
+    },
     orderBy: [{ status: "asc" }, { severity: "desc" }, { createdAt: "desc" }],
   });
   res.json(issues);

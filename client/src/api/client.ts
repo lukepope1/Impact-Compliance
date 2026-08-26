@@ -255,7 +255,7 @@ export interface IssueRow {
   dueDate: string | null;
   resolution: string | null;
   assignedToOrganization: { legalName: string } | null;
-  requirementInstance: { id: string; dueDate: string | null } | null;
+  requirementInstance: { id: string; dueDate: string | null; requirementDefinition: { title: string } } | null;
 }
 
 export interface JobRecordRow {
