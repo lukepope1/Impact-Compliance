@@ -36,7 +36,11 @@ import Login from "./auth/Login";
 export default function App() {
   return (
     <>
-      <header className="app-header">Impact Marketplace | NMTC Compliance</header>
+      <header className="app-header">
+        <img className="app-logo" src="/brand/logo-reversed.svg" alt="Impact Marketplace" />
+        <span className="app-header-divider" aria-hidden="true" />
+        <span className="app-header-product">NMTC Compliance</span>
+      </header>
       <Routes>
         <Route path="/" element={<Navigate to="/impact/deals" replace />} />
         <Route path="/login" element={<Login />} />

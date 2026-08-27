@@ -120,7 +120,7 @@ export default function Deadlines() {
             <th style={{ width: 32 }}>
               <input
                 type="checkbox"
-                style={{ width: "auto", accentColor: "var(--teal)", cursor: waivableInstances.length ? "pointer" : "default" }}
+                style={{ width: "auto", accentColor: "var(--brand)", cursor: waivableInstances.length ? "pointer" : "default" }}
                 checked={allWaivableSelected}
                 disabled={waivableInstances.length === 0}
                 onChange={toggleAll}
@@ -136,7 +136,7 @@ export default function Deadlines() {
                 {isWaivable(i.status) && (
                   <input
                     type="checkbox"
-                    style={{ width: "auto", accentColor: "var(--teal)", cursor: "pointer" }}
+                    style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
                     checked={selected.has(i.id)}
                     onChange={() => toggle(i.id)}
                   />

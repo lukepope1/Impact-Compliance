@@ -1020,6 +1020,44 @@ and documented at the time:
   `prisma generate`: stopping the API server *before* migrating (rather than after hitting
   the error) let migrate and generate both complete in one pass.
 
+- **Applied Impact Marketplace branding.** Palette sampled off impactmarketplace.com by
+  tallying the colors the live page actually computes with, rather than eyeballing a
+  screenshot: coral `#ee4e54`, its darker partner `#be3e43`, the orange `#ee8354` the logo
+  gradient runs into, ink `#1f2334`, slate `#475467`, warm off-white `#f8f7f4`. The
+  reversed (white) logo SVG and the favicon were downloaded into `client/public/brand/`
+  and the SVG checked for embedded `<script>`/event handlers before use — clean.
+
+  Renamed the design tokens (`--teal` → `--brand`, `--navy` → `--ink`, `--teal-light` →
+  `--accent-tint`) across 37 references, since a variable named `--teal` holding a coral
+  would mislead every future reader.
+
+  Two judgement calls worth knowing about, both verified with real measurements:
+
+  1. **The signature coral fails WCAG AA on text.** Measured 3.59:1 against white — under
+     the 4.5:1 required for body text and button labels. So `--brand` is the darker brand
+     red (5.30:1, passes) for anything carrying text, and the coral lives on as
+     `--brand-bright` for decorative use: the header's gradient rule, the active-nav
+     indicator, focus rings. Both are genuine brand colors off their own site, and the
+     coral still reads as the brand where it's actually seen.
+  2. **Red is already load-bearing in this app** — overdue rows, error alerts, danger
+     badges. So brand red owns *solid* fills and text, while tinted *backgrounds* that
+     signal trouble stay pink-red, and `--accent-tint` (selected rows, active nav,
+     `::selection`) is a warm neutral rather than a red wash. Without that split a selected
+     row and an overdue row would look the same.
+
+  Also swept out the cool-grey leftovers from the old palette (a stale teal button hover,
+  and the table-header / row-hover / neutral-badge greys) which clashed against the new
+  warm background.
+
+  Fonts: their site pairs Montserrat with Greycliff CF. Montserrat is on Google Fonts and
+  now carries the app; **Greycliff CF is a commercial licence and isn't bundled** — if
+  it's purchased, adding it to the font stack is the whole swap.
+
+  Verified live via computed styles: logo loads and renders in the header, primary buttons
+  compute `rgb(190,62,67)` on white at **5.3:1**, the active nav shows the warm neutral
+  tint with a coral border sitting distinctly apart from the pink danger badge beside it,
+  headings render in Montserrat at ink `#1f2334`, and the favicon/theme-color are wired up.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

@@ -1,17 +1,38 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap");
 
+/*
+ * Palette taken from impactmarketplace.com — sampled from the live site's computed styles
+ * rather than eyeballed, so these are the values the marketing site actually paints with.
+ * The logo's own gradient runs --brand -> --brand-alt.
+ *
+ * One deliberate departure: the brand red and this app's "problem" red are the same hue
+ * family, and here red is load-bearing — overdue rows, error alerts, danger badges. So
+ * the brand reds own *solid* surfaces and text (buttons, links, active indicators) while
+ * every tinted *background* that signals trouble stays in the pink-red family, and
+ * --accent-tint (selected rows, active nav, ::selection) is a warm neutral rather than a
+ * red wash. Without that split a selected row and an overdue row would read alike.
+ */
 :root {
-  --navy: #0f2a4a;
-  --navy-light: #16385f;
-  --teal: #1f7a8c;
-  --teal-light: #e5f2f4;
-  --bg: #f4f6f8;
+  --ink: #1f2334;
+  --ink-light: #2c3145;
+  /* Two brand reds, split by contrast rather than taste. The signature coral (#ee4e54)
+     only reaches 3.59:1 against white — under the 4.5:1 WCAG AA needs for body text and
+     button labels — so anything carrying text uses the darker red, which measures 5.30:1.
+     Both are real brand colors sampled off the live site; the coral survives wherever it
+     is decorative (the header rule, active indicators, focus rings), which is where it
+     actually reads as the brand anyway. */
+  --brand: #be3e43;
+  --brand-hover: #a3343a;
+  --brand-bright: #ee4e54;
+  --brand-alt: #ee8354;
+  --accent-tint: #efedE8;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --border: #dbe1e8;
-  --border-strong: #c3ccd6;
-  --text: #1a2027;
-  --text-muted: #5b6675;
-  --text-faint: #8b95a3;
+  --border: #e3e1dc;
+  --border-strong: #c9c6bf;
+  --text: #1f2334;
+  --text-muted: #475467;
+  --text-faint: #8a8f9c;
   --danger: #b3261e;
   --danger-bg: #fdecec;
   --success: #1a7a4c;
@@ -20,15 +41,19 @@
   --warning-bg: #fff6df;
   --info: #1f5fa8;
   --info-bg: #eaf2fb;
-  --surface-muted: #f6f8fb;
+  --surface-muted: #f7f6f3;
   --radius: 8px;
   --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgba(15, 42, 74, 0.06);
-  --shadow-md: 0 4px 16px rgba(15, 42, 74, 0.08);
+  --shadow-sm: 0 1px 2px rgba(31, 35, 52, 0.06);
+  --shadow-md: 0 4px 16px rgba(31, 35, 52, 0.1);
   /* Height of the sticky .portal-nav bar — the sidebar sticks directly beneath it, so
      both read from one value instead of drifting apart when the nav's padding changes. */
   --nav-h: 45px;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  /* impactmarketplace.com pairs Montserrat (body) with Greycliff CF (headings). Greycliff
+     is a commercial licence and isn't distributable here, so Montserrat carries both —
+     closest available match. If the licence is bought, adding it to this stack and to the
+     h1/h2/h3 rule is the whole swap. */
+  font-family: "Montserrat", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -44,7 +69,7 @@ body {
 
 h1, h2, h3 {
   font-weight: 600;
-  color: var(--navy);
+  color: var(--ink);
   margin: 0 0 4px;
   letter-spacing: -0.01em;
 }
@@ -59,7 +84,7 @@ main > h1 + p { margin-top: 0; color: var(--text-muted); }
 p { color: var(--text-muted); }
 
 a {
-  color: var(--teal);
+  color: var(--brand);
   text-decoration: none;
   font-weight: 500;
 }
@@ -68,13 +93,43 @@ a:hover { text-decoration: underline; }
 /* ---------- App shell ---------- */
 
 header.app-header {
-  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+  background: linear-gradient(135deg, var(--ink) 0%, var(--ink-light) 100%);
   color: white;
-  padding: 14px 24px;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.01em;
+  padding: 12px 24px;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* Picks up the coral -> orange gradient the logo mark itself uses, so the brand reads
+     even in the sliver of chrome that's always on screen. */
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, var(--brand-bright) 0%, var(--brand-alt) 100%) 1;
+}
+
+/* The supplied asset is the reversed (white) logo, which is why the header stays dark. */
+header.app-header .app-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+header.app-header .app-header-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.28);
+  flex-shrink: 0;
+}
+
+header.app-header .app-header-product {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+@media (max-width: 640px) {
+  header.app-header .app-logo { height: 26px; }
+  header.app-header .app-header-product { font-size: 12.5px; }
 }
 
 .portal-nav {
@@ -120,7 +175,7 @@ header.app-header {
   color: var(--text-muted);
   font-weight: 500;
 }
-.portal-nav-links a:hover { color: var(--teal); text-decoration: none; }
+.portal-nav-links a:hover { color: var(--brand); text-decoration: none; }
 
 .portal-nav .btn-logout {
   background: transparent;
@@ -183,7 +238,7 @@ main {
     border-bottom: 3px solid transparent;
     padding: 12px 16px;
   }
-  .portal-sidebar a.active { border-left: none; border-bottom-color: var(--teal); }
+  .portal-sidebar a.active { border-left: none; border-bottom-color: var(--brand-bright); }
   .portal-shell main { max-width: none; padding: 20px 18px 48px; }
 }
 
@@ -201,9 +256,9 @@ main {
   text-decoration: none;
 }
 .portal-sidebar a.active {
-  color: var(--navy);
-  background: var(--teal-light);
-  border-left-color: var(--teal);
+  color: var(--ink);
+  background: var(--accent-tint);
+  border-left-color: var(--brand-bright);
   font-weight: 600;
 }
 
@@ -255,7 +310,7 @@ th, td {
 
 th {
   color: var(--text-muted);
-  background: #f9fafb;
+  background: #faf9f6;
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -265,7 +320,7 @@ th {
 }
 
 tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover { background: #fafbfc; }
+tbody tr:hover { background: #fbfaf7; }
 
 /* Wraps a table that has outgrown the viewport so it scrolls sideways on its own instead
    of stretching the page layout. Tables here have grown to 8 columns in places. */
@@ -278,7 +333,7 @@ tbody tr:hover { background: #fafbfc; }
 /* Rows that act as a selector for a detail panel beside them. */
 tr.row-selectable { cursor: pointer; }
 tbody tr.is-selected,
-tbody tr.is-selected:hover { background: var(--teal-light); }
+tbody tr.is-selected:hover { background: var(--accent-tint); }
 
 /* A row whose subject needs attention (an overdue requirement, say) — a tint rather than
    red text, so the whole row reads as flagged without recoloring its content. */
@@ -307,7 +362,7 @@ table .cell-button {
 .cell-button:hover:not(:disabled),
 table .cell-button:hover:not(:disabled) {
   background: none;
-  color: var(--teal);
+  color: var(--brand);
   text-decoration: underline;
 }
 
@@ -326,16 +381,16 @@ button {
   font-weight: 600;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--teal);
-  background: var(--teal);
+  border: 1px solid var(--brand);
+  background: var(--brand);
   color: white;
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.05s ease;
 }
 
 button:hover:not(:disabled) {
-  background: #196a7a;
-  border-color: #196a7a;
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 
 button:active:not(:disabled) { transform: translateY(1px); }
@@ -350,7 +405,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -360,15 +415,15 @@ a:focus-visible {
 .portal-nav button:not(.btn-logout),
 table button {
   background: var(--surface);
-  color: var(--teal);
+  color: var(--brand);
   border: 1px solid var(--border-strong);
   padding: 6px 12px;
   font-size: 12.5px;
 }
 .portal-nav button:not(.btn-logout):hover:not(:disabled),
 table button:hover:not(:disabled) {
-  background: var(--teal-light);
-  border-color: var(--teal);
+  background: var(--accent-tint);
+  border-color: var(--brand);
 }
 
 /* A quieter alternative to the default primary button — used where several options sit
@@ -376,13 +431,13 @@ table button:hover:not(:disabled) {
    "the" primary action. */
 .btn-secondary {
   background: var(--surface);
-  color: var(--navy);
+  color: var(--ink);
   border: 1px solid var(--border-strong);
   padding: 10px 14px;
 }
 .btn-secondary:hover:not(:disabled) {
-  background: var(--teal-light);
-  border-color: var(--teal);
+  background: var(--accent-tint);
+  border-color: var(--brand);
 }
 
 /* ---------- Forms ---------- */
@@ -467,7 +522,7 @@ a.stat-card:hover,
 button.stat-card:hover:not(:disabled) {
   text-decoration: none;
   background: var(--surface);
-  border-color: var(--teal);
+  border-color: var(--brand);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
@@ -475,7 +530,7 @@ button.stat-card:hover:not(:disabled) {
 .stat-card .stat-value {
   font-size: 26px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--ink);
   line-height: 1.1;
 }
 .stat-card.stat-danger .stat-value { color: var(--danger); }
@@ -500,8 +555,8 @@ button.stat-card:hover:not(:disabled) {
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
 .badge-warning { background: var(--warning-bg); color: var(--warning); }
 .badge-success { background: var(--success-bg); color: var(--success); }
-.badge-neutral { background: #eef2f6; color: var(--text-muted); }
-.badge-navy { background: var(--teal-light); color: var(--navy); }
+.badge-neutral { background: #eeece7; color: var(--text-muted); }
+.badge-navy { background: var(--accent-tint); color: var(--ink); }
 .badge-info { background: var(--info-bg); color: var(--info); }
 
 /* Several screens stack badges under a stat value or list them in a row. */
@@ -677,7 +732,7 @@ button.stat-card:hover:not(:disabled) {
 /* ---------- Misc ---------- */
 
 code {
-  background: #eef2f6;
+  background: #eeece7;
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.92em;
@@ -685,4 +740,4 @@ code {
 
 strong { color: var(--text); }
 
-::selection { background: var(--teal-light); }
+::selection { background: var(--accent-tint); }

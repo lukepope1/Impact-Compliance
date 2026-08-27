@@ -83,7 +83,7 @@ export default function NotificationBell() {
             <div
               key={n.id}
               className="thread-item"
-              style={{ background: n.readAt ? undefined : "var(--teal-light)" }}
+              style={{ background: n.readAt ? undefined : "var(--accent-tint)" }}
             >
               {/* Marking read is a real button rather than a click handler on the wrapping
                   div, which no keyboard user could reach. An already-read item has no

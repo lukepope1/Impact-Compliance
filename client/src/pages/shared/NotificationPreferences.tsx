@@ -77,7 +77,7 @@ export default function NotificationPreferences() {
             <input
               type="radio"
               name="digest"
-              style={{ width: "auto", accentColor: "var(--teal)" }}
+              style={{ width: "auto", accentColor: "var(--brand)" }}
               checked={digestFrequency === "immediate"}
               disabled={savingDigest || digestFrequency === null}
               onChange={() => changeDigest("immediate")}
@@ -88,7 +88,7 @@ export default function NotificationPreferences() {
             <input
               type="radio"
               name="digest"
-              style={{ width: "auto", accentColor: "var(--teal)" }}
+              style={{ width: "auto", accentColor: "var(--brand)" }}
               checked={digestFrequency === "daily"}
               disabled={savingDigest || digestFrequency === null}
               onChange={() => changeDigest("daily")}
@@ -116,7 +116,7 @@ export default function NotificationPreferences() {
               <td>
                 <input
                   type="checkbox"
-                  style={{ width: "auto", accentColor: "var(--teal)", cursor: "pointer" }}
+                  style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
                   checked={r.inApp}
                   disabled={savingKey === `${r.eventKey}:in_app`}
                   onChange={() => toggle(r.eventKey, "in_app", r.inApp)}
@@ -125,7 +125,7 @@ export default function NotificationPreferences() {
               <td>
                 <input
                   type="checkbox"
-                  style={{ width: "auto", accentColor: "var(--teal)", cursor: "pointer" }}
+                  style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
                   checked={r.email}
                   disabled={savingKey === `${r.eventKey}:email`}
                   onChange={() => toggle(r.eventKey, "email", r.email)}

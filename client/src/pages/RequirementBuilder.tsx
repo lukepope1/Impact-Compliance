@@ -197,7 +197,7 @@ export default function RequirementBuilder() {
               <button onClick={() => generateInstances(def)}>
                 {def.cadence === "on_request" ? "Create instance for this request" : "Generate instances"}
               </button>
-              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "var(--teal)" }}>{generateResult[def.id]}</span>}
+              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "var(--brand)" }}>{generateResult[def.id]}</span>}
             </div>
           )}
         </div>
