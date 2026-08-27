@@ -61,8 +61,8 @@ export default function QalicbDashboard() {
       if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (dueFilter === "overdue" && !r.isOverdue) return false;
-      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) <= in7)) return false;
-      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) <= in30)) return false;
+      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in7)) return false;
+      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30)) return false;
       if (q && !r.requirementDefinition.title.toLowerCase().includes(q) && !r.dealCode.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -71,7 +71,14 @@ export default function QalicbDashboard() {
   const CLOSED_LIKE = ["submitted", "impact_review", "impact_approved", "cde_review", "cde_approved", "amis_ready", "exported_filed", "closed", "waived"];
   const openCount = rows?.filter((r) => !CLOSED_LIKE.includes(r.status)).length ?? 0;
   const overdueCount = rows?.filter((r) => r.isOverdue).length ?? 0;
-  const upcomingCount = rows?.filter((r) => r.status === "upcoming" || r.status === "not_due").length ?? 0;
+  // Genuinely date-based, not status-based — "upcoming"/"not_due" cover every future
+  // instance out to the end of the deal's compliance period (years away), so filtering on
+  // status alone way overcounted. Matches the filter bar's own "Within 30 days" logic:
+  // due soon, not already overdue (that's its own card), not already resolved/waived.
+  const now = new Date();
+  const in30 = new Date(now.getTime() + 30 * 86400000);
+  const upcomingCount =
+    rows?.filter((r) => !CLOSED_LIKE.includes(r.status) && r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30).length ?? 0;
   const returnedCount = rows?.filter((r) => r.status === "returned").length ?? 0;
   const approvedYtdCount =
     rows?.filter((r) => APPROVED_STATUSES.has(r.status) && new Date(r.updatedAt).getFullYear() === year).length ?? 0;

@@ -665,6 +665,26 @@ and documented at the time:
   review history and "—" for untouched future-dated ones, and the filter bar behaved
   identically to the Dashboard's (same filtering logic, dedicated page).
 
+- **Fixed two real bugs the user caught in the just-built QALICB Dashboard**: the "Due
+  within 30 days" stat card read `26`/`24`-style numbers that obviously didn't match the
+  visible table (mostly requirements due years out). Root cause: `upcomingCount` filtered
+  by `status === "upcoming" || "not_due"` — but `not_due` covers every future instance for
+  the entire multi-year compliance period, not ones actually due soon; it was never
+  date-filtered at all. Rewrote it to genuinely check `dueDate` against a real 30-day
+  window.
+
+  While verifying that fix, found the same window logic in the `dueFilter` used by both
+  `QalicbDashboard.tsx` and the just-added `QalicbComplianceTasks.tsx` had no lower bound
+  — `dueDate <= in30` matches *any* past due date too, including already-resolved ones
+  with a past due date (which aren't flagged `isOverdue` since they were handled). Added
+  a `dueDate >= now` check to both the `7_days` and `30_days` filter branches in both
+  files.
+
+  Verified live: stat card now reads `0` (correct — the next real, non-resolved due date
+  on this deal is over two months out), and selecting "Within 30 days" in the filter now
+  correctly returns zero rows too, instead of surfacing already-approved requirements from
+  earlier in the year.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

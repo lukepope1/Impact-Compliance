@@ -69,8 +69,8 @@ export default function QalicbComplianceTasks() {
       if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (dueFilter === "overdue" && !r.isOverdue) return false;
-      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) <= in7)) return false;
-      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) <= in30)) return false;
+      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in7)) return false;
+      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30)) return false;
       if (q && !r.requirementDefinition.title.toLowerCase().includes(q) && !r.dealCode.toLowerCase().includes(q)) return false;
       return true;
     });
