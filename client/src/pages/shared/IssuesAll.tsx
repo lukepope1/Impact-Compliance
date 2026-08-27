@@ -43,6 +43,11 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
     api.listAuditEvents(dealId).then((events) => setAuditByDeal((prev) => ({ ...prev, [dealId]: events }))).catch(() => {});
   }
 
+  function select(issue: Row) {
+    setSelected(issue);
+    ensureAuditLoaded(issue.dealId);
+  }
+
   const filtered = useMemo(() => {
     if (!rows) return rows;
     const q = search.trim().toLowerCase();
@@ -121,14 +126,28 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
             </thead>
             <tbody>
               {filtered?.map((i) => (
+                // The row stays clickable as a convenience for pointer users, but the
+                // real control is the .cell-button on the title — a tr can't take focus,
+                // so without it the detail panel was unreachable by keyboard entirely.
+                // Both call select(); it's idempotent, so the button's click bubbling to
+                // the row is harmless.
                 <tr
                   key={i.id}
-                  onClick={() => { setSelected(i); ensureAuditLoaded(i.dealId); }}
+                  onClick={() => select(i)}
                   className={`row-selectable${selected?.id === i.id ? " is-selected" : ""}`}
                 >
                   <td><SeverityBadge severity={i.severity} /></td>
                   <td>{i.dealName}</td>
-                  <td>{i.title}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="cell-button"
+                      aria-current={selected?.id === i.id ? "true" : undefined}
+                      onClick={() => select(i)}
+                    >
+                      {i.title}
+                    </button>
+                  </td>
                   <td>{i.requirementInstance ? i.requirementInstance.requirementDefinition.title : "—"}</td>
                   <td>{fmtShort(i.dueDate)}</td>
                   <td><IssueStatusBadge status={i.status} /></td>

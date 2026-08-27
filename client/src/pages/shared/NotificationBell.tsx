@@ -83,13 +83,23 @@ export default function NotificationBell() {
             <div
               key={n.id}
               className="thread-item"
-              style={{
-                background: n.readAt ? undefined : "var(--teal-light)",
-                cursor: n.readAt ? "default" : "pointer",
-              }}
-              onClick={() => !n.readAt && markRead(n.id)}
+              style={{ background: n.readAt ? undefined : "var(--teal-light)" }}
             >
-              <div style={{ fontSize: 13, fontWeight: n.readAt ? "normal" : "bold" }}>{n.subject}</div>
+              {/* Marking read is a real button rather than a click handler on the wrapping
+                  div, which no keyboard user could reach. An already-read item has no
+                  action left, so it renders as plain text instead of a dead control. */}
+              {n.readAt ? (
+                <div style={{ fontSize: 13 }}>{n.subject}</div>
+              ) : (
+                <button
+                  type="button"
+                  className="cell-button"
+                  style={{ fontSize: 13, fontWeight: "bold" }}
+                  onClick={() => markRead(n.id)}
+                >
+                  {n.subject}
+                </button>
+              )}
               <div className="muted" style={{ fontSize: 12 }}>{n.body}</div>
               <div className="muted" style={{ fontSize: 11 }}>
                 {n.deal ? `${n.deal.dealCode} · ` : ""}{fmt(n.createdAt)}

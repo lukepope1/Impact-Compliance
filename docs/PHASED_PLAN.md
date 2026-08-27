@@ -889,6 +889,40 @@ and documented at the time:
   renders "Document collection". Two HMR errors seen mid-sweep were transient
   concurrent-edit states — both pages were re-loaded afterward and render correctly.
 
+- **Made clickable rows keyboard-accessible, and made two fake-looking controls real.**
+
+  The row-selection pattern on the cross-deal Issues and Messages screens was a bare
+  `<tr onClick>`. Verified in the browser that this was genuinely unreachable, not just
+  theoretically wrong: the row took no `tabindex`, `.focus()` on it left `activeElement`
+  on `<body>`, and the only focusable elements in `<main>` were the three filter selects
+  and the search box — zero rows. Since the detail panel's own "Open on deal" link only
+  renders *after* a row is selected, a keyboard or screen-reader user had no route into
+  the panel at all.
+
+  Fixed with a real `<button>` inside the title cell (`.cell-button`, styled to render as
+  the cell's plain text so the table looks unchanged) rather than `tabindex`+`role="button"`
+  on the `<tr>` — that alternative is a smaller diff but overrides the row/cell semantics,
+  trading one accessibility problem for another. The row keeps its click handler as a
+  pointer convenience; both call the same idempotent `select()`. The selected row's button
+  carries `aria-current="true"`. `NotificationBell.tsx` had the same bug class (a
+  `<div onClick>` to mark read) and got the same treatment, with already-read items
+  rendering as plain text rather than a control that does nothing.
+
+  Verified by actually driving it: both rows now appear in the tab order as
+  `BUTTON.cell-button`, focus lands on them, activating one selects the row and populates
+  the `.field` panel, and the button computes to no border / transparent background /
+  inherited 13.5px font — i.e. visually identical to before.
+
+  Separately, the user spotted that the Community Benefits Overview's "Continue" and
+  "Review" stat-card pills are imperative verbs on elements that weren't clickable.
+  "Continue" is now a `<Link>` to the next unfinished CBR section (resolved from real
+  data — it currently points at `#tenants-occupants`, the genuinely empty one), and
+  "Review" is a `<button>` that filters the table to everything outstanding. Both drop
+  back to a plain `<div>` once there's no action left, rather than presenting a dead
+  control. The Review filter sets the visible Status dropdown to a new "Needs attention"
+  option instead of filtering invisibly, so it's clear why the table narrowed and how to
+  undo it — verified live going from 5 rows to the 1 outstanding section.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

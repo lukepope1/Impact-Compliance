@@ -106,6 +106,11 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
     }
   }
 
+  function select(thread: Row) {
+    setSelected(thread);
+    setReplyBody("");
+  }
+
   async function sendReply() {
     if (!selected || !replyBody.trim()) return;
     setBusy(true);
@@ -214,14 +219,28 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
             </thead>
             <tbody>
               {filtered?.map((r) => (
+                // The row stays clickable as a convenience for pointer users, but the
+                // real control is the .cell-button on the subject — a tr can't take focus,
+                // so without it the thread panel was unreachable by keyboard entirely.
+                // Both call select(); it's idempotent, so the button's click bubbling to
+                // the row is harmless.
                 <tr
                   key={r.id}
-                  onClick={() => { setSelected(r); setReplyBody(""); }}
+                  onClick={() => select(r)}
                   className={`row-selectable${selected?.id === r.id ? " is-selected" : ""}`}
                 >
                   <td>{relativeDay(r.createdAt)}</td>
                   <td>{r.fromOrganization.legalName}</td>
-                  <td>{r.subject ?? r.body}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="cell-button"
+                      aria-current={selected?.id === r.id ? "true" : undefined}
+                      onClick={() => select(r)}
+                    >
+                      {r.subject ?? r.body}
+                    </button>
+                  </td>
                   <td>{fmt(r.dueDate)}</td>
                   <td><span className={`badge ${STATUS_BADGE[r.status]}`}>{STATUS_LABEL[r.status] ?? r.status}</span></td>
                 </tr>

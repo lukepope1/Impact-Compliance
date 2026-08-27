@@ -285,6 +285,32 @@ tbody tr.is-selected:hover { background: var(--teal-light); }
 tbody tr.row-danger { background: var(--danger-bg); }
 tbody tr.row-danger:hover { background: #fbe3e3; }
 
+/* A real <button> that renders as the cell's own text. Rows that open a detail panel
+   used to be a bare `<tr onClick>`, which no keyboard or screen-reader user could reach —
+   a tr takes no focus and announces no role. Putting the control in a cell keeps the
+   table a table (unlike role="button" on the row, which destroys the row/cell semantics)
+   while giving the action a genuine focusable, Enter/Space-activatable element.
+   Needs to out-specify the generic `table button` rule above, hence the :not(:disabled). */
+.cell-button,
+table .cell-button {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.cell-button:hover:not(:disabled),
+table .cell-button:hover:not(:disabled) {
+  background: none;
+  color: var(--teal);
+  text-decoration: underline;
+}
+
 /* Table cells holding an internal identifier rather than prose. */
 .cell-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -423,16 +449,24 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   box-shadow: var(--shadow-sm);
 }
 
-/* A stat card that navigates somewhere — needs to look reachable, since an identical
-   non-clickable card usually sits right beside it. */
-a.stat-card {
+/* A stat card that navigates or filters — needs to look reachable, since an identical
+   non-clickable card usually sits right beside it. Covers both the <Link> and <button>
+   forms so a card that filters in place looks the same as one that navigates. */
+a.stat-card,
+button.stat-card {
   display: block;
+  width: 100%;
+  text-align: left;
   color: inherit;
+  font: inherit;
   font-weight: inherit;
+  cursor: pointer;
   transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
 }
-a.stat-card:hover {
+a.stat-card:hover,
+button.stat-card:hover:not(:disabled) {
   text-decoration: none;
+  background: var(--surface);
   border-color: var(--teal);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);

@@ -86,7 +86,7 @@ export default function QalicbCommunityBenefitsOverview() {
   const [error, setError] = useState<string | null>(null);
 
   const [dealFilter, setDealFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | SectionStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "needs_attention" | SectionStatus>("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -105,7 +105,13 @@ export default function QalicbCommunityBenefitsOverview() {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      // "needs_attention" spans every non-complete state rather than one of them, which
+      // is what the stat card of the same name counts.
+      if (statusFilter === "needs_attention") {
+        if (r.status === "complete") return false;
+      } else if (statusFilter !== "all" && r.status !== statusFilter) {
+        return false;
+      }
       if (q && !r.section.toLowerCase().includes(q) && !r.dealName.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -116,6 +122,10 @@ export default function QalicbCommunityBenefitsOverview() {
   const needsAttentionCount = rows?.filter((r) => r.status !== "complete").length ?? 0;
   const completionPercent = totalCount > 0 ? Math.round((completeCount / totalCount) * 100) : 0;
 
+  // Where "Continue" should pick up: the first section that still needs work. Undefined
+  // once everything is complete, in which case the card stops being a link.
+  const nextSection = rows?.find((r) => r.status !== "complete");
+
   return (
     <main>
       <h1>Community Benefits Overview</h1>
@@ -123,25 +133,41 @@ export default function QalicbCommunityBenefitsOverview() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      {/* "Continue" and "Review" are imperatives, so the cards carrying them have to
+          actually do something — Continue resumes at the next unfinished section, Review
+          narrows the table to everything still outstanding. Once a card has no action
+          left (CBR fully complete / nothing needing attention) it drops back to a plain
+          div rather than presenting a control that does nothing. */}
       <div className="stat-grid">
-        <div className={`stat-card${completionPercent < 100 ? " stat-warning" : ""}`}>
-          <div className="stat-value">{completionPercent}%</div>
-          <div className="stat-label">CBR completion</div>
-          <div className="badge-stack">
-            <span className={`badge ${completionPercent === 100 ? "badge-success" : "badge-warning"}`}>
-              {completionPercent === 100 ? "Complete" : "Continue"}
-            </span>
+        {completionPercent < 100 && nextSection ? (
+          <Link className="stat-card stat-warning" to={`/qalicb/deals/${nextSection.dealId}/cbr#${nextSection.anchor}`}>
+            <div className="stat-value">{completionPercent}%</div>
+            <div className="stat-label">CBR completion</div>
+            <div className="badge-stack"><span className="badge badge-warning">Continue →</span></div>
+          </Link>
+        ) : (
+          <div className="stat-card">
+            <div className="stat-value">{completionPercent}%</div>
+            <div className="stat-label">CBR completion</div>
+            <div className="badge-stack"><span className="badge badge-success">Complete</span></div>
           </div>
-        </div>
+        )}
         <div className="stat-card">
           <div className="stat-value">{completeCount} of {totalCount}</div>
           <div className="stat-label">Sections complete</div>
         </div>
-        <div className={`stat-card${needsAttentionCount > 0 ? " stat-warning" : ""}`}>
-          <div className="stat-value">{needsAttentionCount}</div>
-          <div className="stat-label">Needs attention</div>
-          {needsAttentionCount > 0 && <div className="badge-stack"><span className="badge badge-warning">Review</span></div>}
-        </div>
+        {needsAttentionCount > 0 ? (
+          <button type="button" className="stat-card stat-warning" onClick={() => setStatusFilter("needs_attention")}>
+            <div className="stat-value">{needsAttentionCount}</div>
+            <div className="stat-label">Needs attention</div>
+            <div className="badge-stack"><span className="badge badge-warning">Review</span></div>
+          </button>
+        ) : (
+          <div className="stat-card">
+            <div className="stat-value">{needsAttentionCount}</div>
+            <div className="stat-label">Needs attention</div>
+          </div>
+        )}
       </div>
 
       <div className="card filter-bar">
@@ -156,6 +182,7 @@ export default function QalicbCommunityBenefitsOverview() {
           Status
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
             <option value="all">All</option>
+            <option value="needs_attention">Needs attention</option>
             <option value="complete">Complete</option>
             <option value="in_progress">In progress</option>
             <option value="not_started">Not started</option>
