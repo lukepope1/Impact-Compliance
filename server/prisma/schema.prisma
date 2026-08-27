@@ -640,8 +640,47 @@ model Qlici {
   status             QliciStatus  @default(active)
   createdAt          DateTime     @default(now()) @map("created_at")
 
+  disbursements      Disbursement[]
+  structuredValues   StructuredValue[]
+
   @@unique([dealId, cdeParticipationId, qliciCode])
   @@map("qlicis")
+}
+
+// A draw of QEI proceeds into a QLICI note. This is the fourth object in an AMIS TLR
+// upload (tlr_disbursement__c) and had no representation in the platform at all, so those
+// eight fields previously had nowhere to live.
+//
+// It hangs off the QLICI rather than the deal because that is how AMIS joins the two
+// sheets: the disbursement's "Originator Transaction ID" is the note's, which is why that
+// column isn't stored here — it would be a second, driftable copy of qlici.qliciCode.
+//
+// One note can draw from several QEIs. The sample workbook has 14 disbursements citing
+// five distinct QEI names, which is why qeiName lives here per-draw rather than on
+// CdeParticipation — that model carries a single qeiAmount and cannot express the split.
+// It is a plain AMIS identifier string ("QEI00014512") and not a relation, because the
+// platform has no QEI entity, and inventing one to satisfy a report would claim far more
+// modelling than a TLR actually requires.
+//
+// The remaining two TLR columns are deliberately absent. "Result" and "Record Type of New
+// Record" are transport artifacts of one upload attempt, not facts about the disbursement,
+// so they belong to export lineage rather than here.
+model Disbursement {
+  id               String    @id @default(uuid())
+  qliciId          String    @map("qlici_id")
+  qlici            Qlici     @relation(fields: [qliciId], references: [id], onDelete: Cascade)
+  qeiName          String?   @map("qei_name")
+  disbursementDate DateTime? @map("disbursement_date") @db.Date
+  sourceAmount     Decimal?  @map("source_amount") @db.Decimal(18, 2)
+  isRevolving      Boolean   @default(false) @map("is_revolving")
+  // Assigned by AMIS when the record lands, so it is blank in an export we generate and
+  // populated in one we download. Keeping it is what makes a later upload an update of an
+  // existing record rather than a duplicate insert.
+  amisNumber       String?   @map("amis_number")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([qliciId])
+  @@map("disbursements")
 }
 
 // ---------- Evidence & Data ----------
@@ -875,6 +914,17 @@ model StructuredValue {
   deal                     Deal              @relation(fields: [dealId], references: [id], onDelete: Cascade)
   fieldDefinitionId        String            @map("field_definition_id")
   fieldDefinition          FieldDefinition   @relation(fields: [fieldDefinitionId], references: [id])
+  // Which QLICI this value describes, for the note-level fields of a TLR — 61 of its 205
+  // columns are reported once per note, not once per deal. Null means the value is
+  // deal-level, which is every value written before this existed and remains the common
+  // case, so the column is nullable rather than a second required scope.
+  //
+  // dealId stays required and authoritative even when qliciId is set, so that deal-scoped
+  // access checks and queries keep working unchanged. That does mean the two could
+  // disagree, which no constraint here can prevent — whatever writes a note-level value
+  // must confirm the QLICI belongs to dealId first.
+  qliciId                  String?           @map("qlici_id")
+  qlici                    Qlici?            @relation(fields: [qliciId], references: [id], onDelete: Cascade)
   reportingPartyId         String?           @map("reporting_party_id")
   reportingParty           DealParty?        @relation(fields: [reportingPartyId], references: [id])
   reportingPeriodStart     DateTime?         @map("reporting_period_start") @db.Date
@@ -905,6 +955,7 @@ model StructuredValue {
   exportFieldLineage ExportFieldLineage[]
 
   @@index([dealId, fieldDefinitionId, reportingPeriodEnd])
+  @@index([qliciId, fieldDefinitionId, reportingPeriodEnd])
   @@map("structured_values")
 }
 
