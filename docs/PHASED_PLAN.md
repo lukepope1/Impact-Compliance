@@ -963,6 +963,40 @@ and documented at the time:
   one and defaults its composer to `cde_private`. The two probe threads created during
   this testing were deleted afterward so the demo data stays realistic.
 
+- **Renamed the message "SLA" field and made message threads actually notify.** The field
+  was labelled "SLA", which implies an enforced service-level agreement; in practice it
+  was one number that set the thread's due date and nothing else — no sweep, escalation,
+  or alert fired when it lapsed. Relabelled to "Response due in (days)" (and the detail
+  panel to "Response due in"), so the label promises what the field delivers.
+
+  Then closed the more useful half of the gap: a thread now notifies the people who can
+  see it. Added `message_received` and `message_replied` to the notification catalog in
+  `notificationPreferences.ts` (so both appear as real per-channel toggles on the
+  preferences screen, not silent always-on events), and wired `notifyThreadAudience()`
+  into the create and reply routes. No migration was needed — `Notification.notificationType`
+  is a free-form string and both of its FKs are optional.
+
+  The audience mapping deliberately mirrors `canSeeMessage()` rather than blanketing the
+  deal: notifying someone about a thread they then can't open would be worse than staying
+  quiet. Only the *acting user* is excluded, not their whole org, so a colleague still
+  learns a request landed. The reply notification reads the root thread's visibility
+  rather than the reply's own copy, so an audience can't drift from its thread. The
+  response due date is appended to the notification body, which is the point of the
+  rename — the deadline gets called out where someone will actually see it.
+
+  Verified live by counting each role's notifications across a real send and reply:
+  Impact sent a QALICB-only request and QALICB went 3 → 4 while the CDE stayed at 2
+  (correctly excluded from a private thread) and Impact stayed at 6 (senders aren't told
+  about their own message); the QALICB then replied and Impact went 6 → 7 with the CDE
+  still at 2. Bodies read "Impact Marketplace LLC sent a request: … A response is due by
+  2026-09-01." Confirmed both new toggles render on the preferences screen and that no
+  "SLA" text survives anywhere on the Messages page.
+
+  Still open: nothing fires when a response date actually *passes*. Requirement instances
+  get swept and flipped to overdue automatically (`deadlineSweep.ts`); message threads
+  don't, so an overdue thread is only visible via the Due-date filter. That would be the
+  next step if the response window is meant to drive behavior rather than set expectations.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

@@ -25,6 +25,16 @@ export const NOTIFICATION_EVENTS = [
     description: "Impact approved a submission and it's now awaiting your CDE's review.",
   },
   {
+    key: "message_received",
+    label: "A new request or message for me",
+    description: "Someone started a message thread on a deal, addressed to an audience that includes you.",
+  },
+  {
+    key: "message_replied",
+    label: "Someone replied on a message thread",
+    description: "A thread you can see got a new reply.",
+  },
+  {
     key: "deadline_upcoming",
     label: "A deadline is coming up",
     description: "A requirement instance just crossed into the 30-day due-soon window.",

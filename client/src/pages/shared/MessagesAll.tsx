@@ -172,7 +172,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
   return (
     <main>
       <h1>Messages & Lender Requests</h1>
-      <p>Requests tied to a requirement use the configured response SLA.</p>
+      <p>Set a response window when you send a request; everyone who can see the thread is notified.</p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
@@ -186,7 +186,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
             <input placeholder="Subject" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />
             <textarea placeholder="Message" rows={3} value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />
             <div className="btn-row">
-              <label>SLA (days)
+              <label>Response due in (days)
                 <input type="number" style={{ width: 60 }} value={draft.slaDays} onChange={(e) => setDraft({ ...draft, slaDays: e.target.value })} />
               </label>
               <label>Visible to
@@ -289,8 +289,8 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                 <div className="field-value">{selected.requirementInstance ? selected.requirementInstance.requirementDefinition.title : "—"}</div>
               </div>
               <div className="field">
-                <div className="field-label">SLA</div>
-                <div className="field-value">{selected.slaDays ? `${selected.slaDays} calendar days after request` : "—"}</div>
+                <div className="field-label">Response due in</div>
+                <div className="field-value">{selected.slaDays ? `${selected.slaDays} calendar days after the request` : "—"}</div>
               </div>
               <div className="field">
                 <div className="field-label">Visibility</div>
