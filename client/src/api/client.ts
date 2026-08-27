@@ -190,6 +190,7 @@ export interface RequirementInstance {
   dueDate: string | null;
   status: string;
   isOverdue: boolean;
+  createdAt: string;
   updatedAt: string;
   requirementDefinition: { title: string; category: string; severity: string };
   responsibleParty: { legalName: string; partyRole: string } | null;

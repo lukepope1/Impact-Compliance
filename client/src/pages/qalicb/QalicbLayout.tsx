@@ -5,6 +5,7 @@ import NotificationBell from "../shared/NotificationBell";
 
 const NAV_ITEMS = [
   { to: "/qalicb", label: "Dashboard", end: true },
+  { to: "/qalicb/tasks", label: "Compliance Tasks" },
   { to: "/qalicb/cbr", label: "Community Benefits Report" },
 ];
 

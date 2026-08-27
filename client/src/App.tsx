@@ -10,6 +10,7 @@ import Deadlines from "./pages/Deadlines";
 import NewDeal from "./pages/NewDeal";
 import QalicbLayout from "./pages/qalicb/QalicbLayout";
 import QalicbDashboard from "./pages/qalicb/QalicbDashboard";
+import QalicbComplianceTasks from "./pages/qalicb/QalicbComplianceTasks";
 import RequirementWorkspace from "./pages/qalicb/RequirementWorkspace";
 import CdeLayout from "./pages/cde/CdeLayout";
 import CdePortfolio from "./pages/cde/CdePortfolio";
@@ -69,6 +70,7 @@ export default function App() {
 
         <Route path="/qalicb" element={<QalicbLayout />}>
           <Route index element={<QalicbDashboard />} />
+          <Route path="tasks" element={<QalicbComplianceTasks />} />
           <Route path="cbr" element={<QalicbCbrRedirect />} />
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />

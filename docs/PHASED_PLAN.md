@@ -644,6 +644,27 @@ and documented at the time:
   filtering by "Overdue" correctly narrowed the table to exactly the 2 rows the stat card
   counted.
 
+- **New "Compliance Tasks" page, matching a "Q-02" wireframe**: a third QALICB sidebar
+  item and route (`/qalicb/tasks`) — a dedicated, filterable version of the requirement
+  task list the Dashboard already shows, without the stat cards, plus a `Last activity`
+  column the Dashboard doesn't have. Kept the existing `Action` link column alongside it
+  rather than dropping it to pixel-match the mock — a real "Start/Continue/Revise" link is
+  more useful than matching column-for-column, and nothing about the mock suggests it was
+  deliberately excluded rather than just not drawn.
+
+  `Last activity` reuses the same `relativeDay()` shape (`Today`/`Yesterday`/`N days
+  ago`/short date) the Review Queue redesign already established, applied to `updatedAt`
+  — but only when the instance has actually changed since creation
+  (`updatedAt !== createdAt`); otherwise shown as `—`, since an instance nobody has
+  touched yet has no real "last activity" to report, and showing its creation timestamp
+  as if it were activity would overstate what happened. `createdAt` was added to the
+  `RequirementInstance` client type to support this — the server was already returning it
+  (an unfiltered `findMany` includes every scalar field), just not declared client-side.
+
+  Verified live: real per-row `Last activity` correctly showed "Today" for instances with
+  review history and "—" for untouched future-dated ones, and the filter bar behaved
+  identically to the Dashboard's (same filtering logic, dedicated page).
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
