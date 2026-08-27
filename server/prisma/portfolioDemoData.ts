@@ -86,14 +86,15 @@ const SPECS: DealDemoSpec[] = [
     targetSource: "Allocation agreement §4.2 (community benefits schedule)",
   },
   {
-    // Millennium already has real seeded CBR actuals (65 created / 18 retained / 150
-    // served), so this only adds the commitments to measure them against. No construction
-    // or LIC target: its seeded job records carry neither, and committing to a measure the
-    // deal never reports would show a permanent 0%.
+    // Millennium already has real seeded CBR actuals (65 created / 18 retained / 1
+    // construction / 150 served), so this only adds the commitments to measure them
+    // against. No LIC/LIP or square-feet target: its seeded job and service records carry
+    // neither, and committing to a measure the deal never reports would show a permanent
+    // 0% rather than an honest gap.
     dealCode: "MILL-2025",
     jobs: [],
     services: [],
-    targets: { permanent_jobs: 70, retained_jobs: 20, people_served: 175 },
+    targets: { permanent_jobs: 70, retained_jobs: 20, construction_jobs: 4, people_served: 175 },
     targetSource: "QLICI loan agreement §7.3 (projected community impact)",
   },
 ];

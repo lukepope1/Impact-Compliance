@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { PortfolioSummary } from "../../api/client";
 import { formatNumber } from "../../utils/format";
+import { IMPACT_METRIC_LABEL } from "../../utils/impactMetrics";
 
 /**
  * The three analytic panels under the portfolio deal table, plus the community-impact
@@ -176,15 +177,6 @@ function AmisReadiness({ amis, year }: { amis: PortfolioSummary["amis"]; year: n
   );
 }
 
-const METRIC_LABEL: Record<string, string> = {
-  permanent_jobs: "Permanent jobs",
-  retained_jobs: "Retained jobs",
-  construction_jobs: "Construction jobs",
-  lmi_jobs: "LIC/LIP-accessible jobs",
-  people_served: "People served",
-  square_feet: "Square feet",
-};
-
 function achievementBadge(pct: number | null) {
   if (pct === null) return "badge-neutral";
   if (pct >= 100) return "badge-success";
@@ -215,7 +207,7 @@ function CommunityImpact({ impact, year }: { impact: PortfolioSummary["impact"];
           <tbody>
             {impact.map((row) => (
               <tr key={row.metric}>
-                <td>{METRIC_LABEL[row.metric] ?? row.metric}</td>
+                <td>{IMPACT_METRIC_LABEL[row.metric] ?? row.metric}</td>
                 <td>{formatNumber(row.committed)}</td>
                 <td>{formatNumber(row.actual)}</td>
                 <td><span className={`badge ${achievementBadge(row.achievementPercent)}`}>{row.achievementPercent === null ? "—" : `${row.achievementPercent}%`}</span></td>

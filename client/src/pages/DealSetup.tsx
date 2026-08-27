@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type CdeParticipation, type Deal, type DealParty, type Organization, type ProjectAddress } from "../api/client";
 import { formatCurrency, humanize } from "../utils/format";
+import ImpactCommitments from "./ImpactCommitments";
 
 const PARTY_ROLES = [
   "borrower",
@@ -195,6 +196,8 @@ export default function DealSetup() {
           </div>
         </form>
       </div>
+
+      {dealId && <ImpactCommitments dealId={dealId} />}
 
       <div className="card">
         <h2>Parties & CDEs</h2>

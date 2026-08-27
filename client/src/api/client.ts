@@ -335,6 +335,13 @@ export interface CbrPeriod {
   serviceOutcomes: ServiceOutcomeRow[];
 }
 
+export interface ImpactTargetRow {
+  id: string;
+  metric: string;
+  committedValue: string;
+  sourceNote: string | null;
+}
+
 export interface PortfolioSummary {
   year: number;
   deals: {
@@ -618,6 +625,12 @@ export const api = {
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
 
   getPortfolioSummary: (year: number) => request<PortfolioSummary>(`/portfolio/summary?year=${year}`),
+
+  listImpactTargets: (dealId: string) => request<ImpactTargetRow[]>(`/deals/${dealId}/impact-targets`),
+  saveImpactTargets: (
+    dealId: string,
+    targets: { metric: string; committedValue: number | null; sourceNote?: string }[]
+  ) => request<ImpactTargetRow[]>(`/deals/${dealId}/impact-targets`, { method: "PUT", body: JSON.stringify({ targets }) }),
 
   listMessages: (dealId: string) => request<MessageRow[]>(`/deals/${dealId}/messages`),
   createMessage: (
