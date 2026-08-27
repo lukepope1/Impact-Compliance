@@ -616,6 +616,12 @@ and documented at the time:
   then confirmed the same row as the Enterprise Financial CDE reviewer correctly showed
   "Not visible to this portal" for History instead.
 
+- **AMIS Readiness header context line**: `AmisCenter.tsx` had no indication anywhere on
+  the page of which deal (or which QALICB) its readiness table belonged to — easy to lose
+  track of when navigating between deals. Added the same deal-name + borrower-party
+  lookup used elsewhere (`CdeDealOverview.tsx`) as a subtitle line under the page title.
+  Verified live: shows "Millennium Holdings · Millennium Holdings LLC".
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

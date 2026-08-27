@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
+import { api, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
 
 // goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
@@ -49,6 +49,8 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
   const year = new Date().getFullYear();
   const [readiness, setReadiness] = useState<GoldenFieldRow[] | null>(null);
   const [exports, setExports] = useState<ExportBatchRow[] | null>(null);
+  const [deal, setDeal] = useState<Deal | null>(null);
+  const [parties, setParties] = useState<DealParty[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -56,6 +58,8 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
     if (!dealId) return;
     api.getAmisReadiness(dealId, year).then(setReadiness).catch((e) => setError(String(e.message ?? e)));
     api.listAmisExports(dealId).then(setExports).catch((e) => setError(String(e.message ?? e)));
+    api.getDeal(dealId).then(setDeal).catch(() => setDeal(null));
+    api.listParties(dealId).then(setParties).catch(() => setParties([]));
   }
 
   useEffect(refresh, [dealId]);
@@ -86,9 +90,21 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
   const readyCount = readiness?.filter((r) => r.status === "ready").length ?? 0;
   const missingCount = readiness?.filter((r) => r.status === "missing").length ?? 0;
 
+  // "Which QALICB is this" — the deal's borrower/operating-company party, same lookup
+  // used on the CDE Deal Overview page. Deals aren't 1:1 with a single QALICB org in the
+  // schema (a party is just a labeled row), so this is the same best-real-answer the rest
+  // of the app already gives, not a new concept.
+  const borrower = parties?.find((p) => p.partyRole === "qalicb") ?? parties?.find((p) => p.partyRole === "borrower");
+
   return (
     <main>
       <h1>AMIS Readiness & Export Center</h1>
+      {deal && (
+        <p>
+          {deal.legalName}
+          {borrower ? ` · ${borrower.legalName}` : ""}
+        </p>
+      )}
       <p>Controlled files only. Phase 1 does not automatically certify or submit in AMIS.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
