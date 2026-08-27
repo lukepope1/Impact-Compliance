@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, type AuditEventRow, type Deal, type IssueRow } from "../../api/client";
 import { SeverityBadge, IssueStatusBadge } from "./StatusBadge";
 
@@ -18,8 +18,19 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Row | null>(null);
 
+  // ?severity=high arrives from the portfolio dashboard's "Material issues" segment, which
+  // counts deals carrying a high or critical open issue. Seeding the dropdown from it
+  // keeps the narrowing visible and reversible instead of silently filtering.
+  const [searchParams] = useSearchParams();
+  const severityParam = searchParams.get("severity");
+
   const [dealFilter, setDealFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState(
+    severityParam === "high" || severityParam === "critical" || severityParam === "normal" || severityParam === "low"
+      ? severityParam
+      : "all"
+  );
   const [dueFilter, setDueFilter] = useState<(typeof DUE_FILTERS)[number]>("all");
   const [search, setSearch] = useState("");
 
@@ -58,13 +69,17 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
     return rows.filter((r) => {
       if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      // "high" from the dashboard means material — high *or* critical, matching how the
+      // server buckets a deal into the materialIssues segment.
+      if (severityFilter === "high" && !(r.severity === "high" || r.severity === "critical")) return false;
+      if (severityFilter !== "all" && severityFilter !== "high" && r.severity !== severityFilter) return false;
       if (dueFilter === "overdue" && !(r.dueDate && r.status !== "resolved" && new Date(r.dueDate) < now)) return false;
       if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in7)) return false;
       if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30)) return false;
       if (q && !r.dealName.toLowerCase().includes(q) && !r.title.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, dealFilter, statusFilter, dueFilter, search]);
+  }, [rows, dealFilter, statusFilter, severityFilter, dueFilter, search]);
 
   const open = rows?.filter((r) => r.status !== "resolved") ?? [];
   const resolved = rows?.filter((r) => r.status === "resolved") ?? [];
@@ -100,6 +115,16 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
             <option value="waiting_external">Waiting external</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
+          </select>
+        </label>
+        <label>
+          Severity
+          <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="high">Material (high or critical)</option>
+            <option value="critical">Critical</option>
+            <option value="normal">Normal</option>
+            <option value="low">Low</option>
           </select>
         </label>
         <label>

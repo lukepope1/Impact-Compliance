@@ -256,6 +256,30 @@ enum CommentVisibility {
   cde_private
 }
 
+// The impact measures a deal commits to at closing and reports against afterward. Each
+// one maps to an actual this app already collects on the CBR, so "committed vs actual"
+// compares like with like:
+//   permanent_jobs    <- JobRecord.fteCount where jobStatus = created
+//   retained_jobs     <- JobRecord.fteCount where jobStatus = retained
+//   construction_jobs <- JobRecord.fteCount where jobStatus = construction
+//   lmi_jobs          <- JobRecord.fteCount where accessibleToLicLip
+//   people_served     <- ServiceOutcome.peopleServedCurrent
+//   square_feet       <- ServiceOutcome.squareFeet + TenantOccupant.squareFeet
+//
+// Deliberately no "quality jobs" member: it's a real NMTC concept but has no agreed
+// definition in this system (a wage floor? benefits threshold? both?), and the fields that
+// would feed it — hourlyWage, benefitsBurdenPercent, employeesEligibleHealthcare — are
+// collected without any threshold to test them against. Adding the member before the
+// definition exists would mean computing an actual nobody could defend.
+enum ImpactMetric {
+  permanent_jobs
+  retained_jobs
+  construction_jobs
+  lmi_jobs
+  people_served
+  square_feet
+}
+
 enum MessageVisibility {
   qalicb_shared
   deal_shared
@@ -490,6 +514,7 @@ model Deal {
   requirementInstances   RequirementInstance[]
   comments               Comment[]
   messages               Message[]
+  impactTargets          ImpactTarget[]
   issues                 Issue[]
   issueNotes             IssueNote[]
   cbrReportingPeriods    CbrReportingPeriod[]
@@ -958,6 +983,28 @@ model Message {
 
   @@index([dealId, parentMessageId, createdAt])
   @@map("messages")
+}
+
+// What a deal committed to deliver, per measure — the "487 projected" half of a board
+// report. Set once from the allocation agreement / QEI application rather than reported
+// periodically, which is why it hangs off the deal and not off a CBR period: the
+// commitment doesn't change year to year, only the actuals reported against it do.
+//
+// sourceNote records where the figure came from, matching how RequirementSource makes
+// every requirement traceable to a document and section — a committed number that can't
+// be traced back is a number nobody will defend in front of a board.
+model ImpactTarget {
+  id             String       @id @default(uuid())
+  dealId         String       @map("deal_id")
+  deal           Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  metric         ImpactMetric
+  committedValue Decimal      @map("committed_value") @db.Decimal(18, 2)
+  sourceNote     String?      @map("source_note")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([dealId, metric])
+  @@map("impact_targets")
 }
 
 model Issue {

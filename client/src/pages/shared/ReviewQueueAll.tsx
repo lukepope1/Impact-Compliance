@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, type Deal, type RequirementInstance } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -32,8 +32,30 @@ function periodLabel(startIso: string | null, endIso: string | null): string {
   return `CY ${year}`;
 }
 
-const DUE_FILTERS = ["all", "overdue", "7_days", "30_days"] as const;
+// The 0_30 / 31_60 / 61_90 / 90_plus buckets exist so the portfolio dashboard's deadline
+// chart can hand a bucket straight here via ?due= — clicking a bar has to land on exactly
+// the rows that bar counted, otherwise the chart is decoration.
+const DUE_FILTERS = ["all", "overdue", "7_days", "30_days", "0_30", "31_60", "61_90", "90_plus"] as const;
 const PRIORITY_FILTERS = ["all", "high", "normal", "low"] as const;
+
+const DUE_FILTER_LABEL: Record<string, string> = {
+  all: "All",
+  overdue: "Overdue",
+  "7_days": "Within 7 days",
+  "30_days": "Within 30 days",
+  "0_30": "Due in 0–30 days",
+  "31_60": "Due in 31–60 days",
+  "61_90": "Due in 61–90 days",
+  "90_plus": "Due beyond 90 days",
+};
+
+/** Day-offset window per bucket, mirroring DEADLINE_BUCKETS in routes/portfolio.ts. */
+const DUE_BUCKET_RANGE: Record<string, [number, number]> = {
+  "0_30": [0, 30],
+  "31_60": [31, 60],
+  "61_90": [61, 90],
+  "90_plus": [91, Number.POSITIVE_INFINITY],
+};
 
 type Row = RequirementInstance & { dealId: string; dealName: string };
 
@@ -43,9 +65,18 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Seeded from ?due= so an arriving link (the portfolio deadline chart, the health donut)
+  // opens already narrowed to what was clicked, with the dropdown reflecting it so the
+  // filter is visible and reversible rather than a hidden state the user can't undo.
+  const [searchParams] = useSearchParams();
+  const dueParam = searchParams.get("due");
+  const initialDue = (DUE_FILTERS as readonly string[]).includes(dueParam ?? "")
+    ? (dueParam as (typeof DUE_FILTERS)[number])
+    : "all";
+
   const [dealFilter, setDealFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState<(typeof PRIORITY_FILTERS)[number]>("all");
-  const [dueFilter, setDueFilter] = useState<(typeof DUE_FILTERS)[number]>("all");
+  const [dueFilter, setDueFilter] = useState<(typeof DUE_FILTERS)[number]>(initialDue);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -75,6 +106,12 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
       if (dueFilter === "overdue" && !r.isOverdue) return false;
       if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in7)) return false;
       if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30)) return false;
+      const bucket = DUE_BUCKET_RANGE[dueFilter];
+      if (bucket) {
+        if (!r.dueDate) return false;
+        const days = Math.floor((new Date(r.dueDate).getTime() - now.getTime()) / 86400000);
+        if (days < bucket[0] || days > bucket[1]) return false;
+      }
       if (q && !r.dealName.toLowerCase().includes(q) && !r.requirementDefinition.title.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -117,10 +154,9 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
         <label>
           Due date
           <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value as typeof dueFilter)}>
-            <option value="all">All</option>
-            <option value="overdue">Overdue</option>
-            <option value="7_days">Within 7 days</option>
-            <option value="30_days">Within 30 days</option>
+            {DUE_FILTERS.map((f) => (
+              <option key={f} value={f}>{DUE_FILTER_LABEL[f] ?? f}</option>
+            ))}
           </select>
         </label>
         <label className="filter-search">

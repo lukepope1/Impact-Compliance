@@ -335,6 +335,37 @@ export interface CbrPeriod {
   serviceOutcomes: ServiceOutcomeRow[];
 }
 
+export interface PortfolioSummary {
+  year: number;
+  deals: {
+    id: string;
+    dealCode: string;
+    legalName: string;
+    status: string;
+    overdueCount: number;
+    dueSoonCount: number;
+    materialIssueCount: number;
+    healthBucket: "current" | "dueSoon" | "overdue" | "materialIssues";
+  }[];
+  totals: { assignedDeals: number; originalQliciPrincipal: number; outstandingComplianceItems: number };
+  health: { current: number; dueSoon: number; overdue: number; materialIssues: number };
+  deadlines: { key: string; label: string; count: number }[];
+  amis: {
+    ready: number;
+    incomplete: number;
+    notStarted: number;
+    readinessPercent: number;
+    missingByCategory: { category: string; count: number }[];
+  };
+  impact: {
+    metric: string;
+    committed: number;
+    actual: number;
+    achievementPercent: number | null;
+    dealsCommitted: number;
+  }[];
+}
+
 export interface GoldenFieldRow {
   fieldCode: string;
   label: string;
@@ -585,6 +616,8 @@ export const api = {
   ) => request<IssueRow>(`/deals/${dealId}/issues`, { method: "POST", body: JSON.stringify(data) }),
   resolveIssue: (dealId: string, issueId: string, resolution: string) =>
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
+
+  getPortfolioSummary: (year: number) => request<PortfolioSummary>(`/portfolio/summary?year=${year}`),
 
   listMessages: (dealId: string) => request<MessageRow[]>(`/deals/${dealId}/messages`),
   createMessage: (

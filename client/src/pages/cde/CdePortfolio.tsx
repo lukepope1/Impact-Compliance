@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Deal } from "../../api/client";
+import { api, type Deal, type PortfolioSummary } from "../../api/client";
+import { formatCurrency } from "../../utils/format";
+import PortfolioPanels from "./PortfolioPanels";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
@@ -34,12 +36,17 @@ const DUE_FILTERS = ["all", "30_days", "90_days", "overdue"] as const;
 export default function CdePortfolio() {
   const year = new Date().getFullYear();
   const [rows, setRows] = useState<DealRow[] | null>(null);
+  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [dealFilter, setDealFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("all");
   const [dueFilter, setDueFilter] = useState<(typeof DUE_FILTERS)[number]>("all");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    api.getPortfolioSummary(year).then(setSummary).catch((e) => setError(String(e.message ?? e)));
+  }, [year]);
 
   useEffect(() => {
     api
@@ -103,10 +110,13 @@ export default function CdePortfolio() {
     });
   }, [rows, dealFilter, statusFilter, dueFilter, search]);
 
-  const assignedDeals = rows?.length ?? 0;
-  const currentCount = rows?.filter((r) => r.overdueCount === 0 && r.returnedCount === 0).length ?? 0;
-  const lateReturnedCount = rows?.filter((r) => r.overdueCount > 0 || r.returnedCount > 0).length ?? 0;
-  const amisReadyCount = rows?.filter((r) => r.amisTotal > 0 && r.amisReady === r.amisTotal).length ?? 0;
+  // The stat row reads from the portfolio summary rather than the per-deal rows above it,
+  // so the headline figures and the panels below can never disagree — both come from one
+  // server-side aggregation.
+  const totalDeals = summary?.totals.assignedDeals ?? 0;
+  const currentPercent = totalDeals > 0 ? Math.round(((summary?.health.current ?? 0) / totalDeals) * 100) : 0;
+  const needAttention = (summary?.health.overdue ?? 0) + (summary?.health.materialIssues ?? 0);
+  const amisReadyPercent = totalDeals > 0 ? Math.round(((summary?.amis.ready ?? 0) / totalDeals) * 100) : 0;
 
   return (
     <main>
@@ -117,24 +127,34 @@ export default function CdePortfolio() {
 
       <div className="stat-grid">
         <div className="stat-card">
-          <div className="stat-value">{assignedDeals}</div>
+          <div className="stat-value">{totalDeals}</div>
           <div className="stat-label">Assigned deals</div>
-          <div className="badge-stack"><span className="badge badge-navy">Portfolio</span></div>
+          <div className="badge-stack">
+            <span className="badge badge-navy">{formatCurrency(summary?.totals.originalQliciPrincipal ?? 0)} original QLICIs</span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{currentCount}</div>
+          <div className="stat-value">{summary?.health.current ?? 0}</div>
           <div className="stat-label">Current</div>
-          <div className="badge-stack"><span className="badge badge-success">On track</span></div>
+          <div className="badge-stack">
+            <span className={`badge ${currentPercent === 100 ? "badge-success" : "badge-neutral"}`}>{currentPercent}% of portfolio</span>
+          </div>
         </div>
-        <div className={`stat-card${lateReturnedCount > 0 ? " stat-danger" : ""}`}>
-          <div className="stat-value">{lateReturnedCount}</div>
-          <div className="stat-label">Late / returned</div>
-          <div className="badge-stack"><span className="badge badge-danger">Attention</span></div>
+        <div className={`stat-card${needAttention > 0 ? " stat-danger" : ""}`}>
+          <div className="stat-value">{needAttention}</div>
+          <div className="stat-label">Need attention</div>
+          <div className="badge-stack">
+            <span className={`badge ${summary?.totals.outstandingComplianceItems ? "badge-danger" : "badge-neutral"}`}>
+              {summary?.totals.outstandingComplianceItems ?? 0} outstanding items
+            </span>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{amisReadyCount}</div>
+          <div className="stat-value">{summary?.amis.ready ?? 0}</div>
           <div className="stat-label">AMIS ready</div>
-          <div className="badge-stack"><span className="badge badge-navy">This cycle</span></div>
+          <div className="badge-stack">
+            <span className={`badge ${amisReadyPercent === 100 ? "badge-success" : "badge-neutral"}`}>{amisReadyPercent}% of portfolio</span>
+          </div>
         </div>
       </div>
 
@@ -177,15 +197,29 @@ export default function CdePortfolio() {
         </thead>
         <tbody>
           {filtered?.map((r) => {
+            // Read the deal's bucket from the same server-side classification the health
+            // donut below uses. Computing it locally from overdue/returned counts alone
+            // made this column disagree with that panel: a deal with a high-severity open
+            // issue but nothing overdue showed "Current" here while the donut counted it
+            // under Material issues. Two panels on one screen contradicting each other
+            // about the same deal is worse than either label on its own.
+            const bucket = summary?.deals.find((d) => d.id === r.deal.id)?.healthBucket;
             const complianceLabel =
-              r.overdueCount > 0
-                ? `${r.overdueCount} overdue`
-                : r.returnedCount > 0
-                  ? `${r.returnedCount} returned`
-                  : r.upcomingCount > 0
-                    ? `${r.upcomingCount} upcoming`
-                    : "Current";
-            const complianceBadge = r.overdueCount > 0 || r.returnedCount > 0 ? "badge-danger" : r.upcomingCount > 0 ? "badge-warning" : "badge-success";
+              bucket === "materialIssues"
+                ? "Material issue"
+                : r.overdueCount > 0
+                  ? `${r.overdueCount} overdue`
+                  : r.returnedCount > 0
+                    ? `${r.returnedCount} returned`
+                    : bucket === "dueSoon"
+                      ? "Due soon"
+                      : "Current";
+            const complianceBadge =
+              bucket === "materialIssues" || r.overdueCount > 0 || r.returnedCount > 0
+                ? "badge-danger"
+                : bucket === "dueSoon"
+                  ? "badge-warning"
+                  : "badge-success";
             return (
               <tr key={r.deal.id}>
                 <td><Link to={`/cde/deals/${r.deal.id}`}>{r.deal.legalName}</Link></td>
@@ -210,6 +244,8 @@ export default function CdePortfolio() {
         </tbody>
         </table>
       </div>
+
+      {summary && <PortfolioPanels summary={summary} />}
     </main>
   );
 }

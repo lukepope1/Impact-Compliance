@@ -20,6 +20,29 @@ export interface GoldenField {
   source: string;
 }
 
+/**
+ * Groups the golden fields into the buckets a CDE would chase up, so a portfolio view can
+ * say "8 job fields missing" instead of listing 13 field codes. Derived from where each
+ * field actually comes from (the `source` strings below), not invented categories —
+ * chasing "Jobs" means going back to the QALICB's CBR jobs section, which is a different
+ * conversation from chasing a missing project address.
+ */
+export const AMIS_FIELD_CATEGORY: Record<string, string> = {
+  jobs_created_actual: "Jobs",
+  jobs_retained_actual: "Jobs",
+  jobs_construction_actual: "Jobs",
+  tenant_count: "Community impacts",
+  annual_gross_revenue: "QALICB financial data",
+  annual_net_operating_income: "QALICB financial data",
+  project_census_tract: "Addresses / geocoding",
+  project_city_state: "Addresses / geocoding",
+  multi_cde_project_number: "Deal & CDE data",
+  project_closing_date: "Deal & CDE data",
+  total_qei_amount: "Deal & CDE data",
+  total_qlici_original_principal: "Deal & CDE data",
+  lead_cde_allocation_control_number: "Deal & CDE data",
+};
+
 function sumDecimal(values: (import("@prisma/client").Prisma.Decimal | null)[]): number | null {
   const nums = values.filter((v): v is import("@prisma/client").Prisma.Decimal => v !== null).map((v) => Number(v));
   return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) : null;

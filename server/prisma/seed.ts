@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedAdditionalQalicbs } from "./additionalQalicbs";
+import { seedPortfolioDemoData } from "./portfolioDemoData";
 
 const prisma = new PrismaClient();
 
@@ -163,6 +164,12 @@ async function main() {
     enterpriseCdeId: enterpriseCde.id,
     complianceManagerId: complianceManager.id,
   });
+
+  // Gives Riverside and Harbor QLICIs, jobs, services and impact commitments, so the CDE
+  // portfolio dashboard aggregates across three real deals rather than one plus two
+  // columns of zeros.
+  const portfolio = await seedPortfolioDemoData(prisma);
+  portfolio.forEach((line) => console.log(`  portfolio demo data — ${line}`));
 
   console.log("Seeded:", { deals: 3, organizations: 7, users: 5 });
   console.log(`Demo login password for all seeded users: ${DEV_PASSWORD}`);

@@ -1058,6 +1058,61 @@ and documented at the time:
   tint with a coral border sitting distinctly apart from the pink danger badge beside it,
   headings render in Montserrat at ink `#1f2334`, and the favicon/theme-color are wired up.
 
+- **Rebuilt the CDE portfolio dashboard as a management view.** Reworked stat cards
+  (deals + original QLICIs, current + % of portfolio, need-attention + outstanding items,
+  AMIS ready + % of portfolio) and three analytic panels under the deal table — compliance
+  health donut, next-90-days deadline bars, AMIS readiness with missing fields by
+  category — plus a portfolio community-impact roll-up.
+
+  **New `ImpactTarget` model + migration.** Checked first whether committed figures
+  existed anywhere: they didn't — every impact number in the schema is an actual
+  (`fteCount`, `peopleServedCurrent`, `squareFeet`), and the sole `target`-named field is
+  an unrelated date. So committed/achievement genuinely needed new data. Each metric maps
+  to an actual the CBR already collects, documented in the enum, so committed and actual
+  compare like with like. Deliberately no `quality_jobs` member: it's a real NMTC concept
+  with no agreed definition here — the fields that would feed it (wage, benefits burden,
+  healthcare eligibility) are collected with no threshold to test against, so computing it
+  would produce a number nobody could defend.
+
+  **New `GET /api/portfolio/summary`.** Server-side aggregation rather than the existing
+  fan-out pattern: the old dashboards make 4–5 per-deal calls each and aggregate in the
+  browser, already 15 round trips at three deals and worse per deal added. Scoped exactly
+  like `GET /deals`.
+
+  Three judgement calls in the aggregation:
+  - **Health is counted per deal, not per item**, per the brief — "5 overdue items" doesn't
+    tell a CDE whether that's one struggling QALICB or five. Buckets are worst-first
+    (material issues > overdue > due soon > current) so they stay mutually exclusive and
+    sum to the deal count.
+  - **A measure only counts deals that committed to it**, on both sides. Summing every
+    deal's actual against only the committing deals' totals would inflate achievement with
+    impact nobody promised.
+  - **Settled statuses are excluded from deadline buckets** — an approved instance has a
+    past due date but nobody owes anything, so it must not appear in "what's coming up".
+
+  **Every figure routes somewhere**, per the brief's principle that a chart exists to reach
+  the underlying records. Segments hand a filter to the destination via query params
+  (`?due=61_90`, `?severity=high`, `?category=Jobs`), and the destination seeds its
+  *visible* dropdown from it so the narrowing is reversible rather than hidden state.
+  Zero-count segments are deliberately unlinked — routing someone to an empty list is
+  worse than not offering. This meant reworking `AmisAll` from a per-deal "n/13 ready"
+  count into a field-level list, since the old page couldn't answer "which 8 job fields".
+
+  **Fixed a contradiction the rebuild exposed**: the deal table computed its Compliance
+  column locally from overdue/returned counts, so a deal with a high-severity open issue
+  but nothing overdue read "Current" there while the donut below counted it under Material
+  issues. The column now reads the same server-side classification.
+
+  Seeded realistic portfolio data (`prisma/portfolioDemoData.ts`, idempotent, wired into
+  `npm run seed`) because only Millennium had QLICIs or CBR data — every roll-up was one
+  deal plus two columns of zeros. Figures are invented but plausible, with deliberately
+  mixed performance so achievement shows both over- and under-delivery.
+
+  Verified live as the CDE: $22.6M QLICIs across 3 deals, health 2 overdue / 1 material
+  issue / 0 current, AMIS 69% with 12 missing fields grouped into 3 categories, and impact
+  at 87–112% across six measures. Click-through checked end to end — "QALICB financial
+  data — 4" lands on exactly those 4 missing fields with both dropdowns visibly set.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
