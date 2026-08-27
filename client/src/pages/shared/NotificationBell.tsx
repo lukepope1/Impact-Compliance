@@ -78,21 +78,20 @@ export default function NotificationBell() {
               </Link>
             </span>
           </div>
-          {notifications && notifications.length === 0 && <p style={{ color: "#666" }}>Nothing yet.</p>}
+          {notifications && notifications.length === 0 && <p className="empty-state">Nothing yet.</p>}
           {notifications?.map((n) => (
             <div
               key={n.id}
+              className="thread-item"
               style={{
-                padding: "8px 0",
-                borderBottom: "1px solid #eee",
-                background: n.readAt ? undefined : "#eef6f8",
+                background: n.readAt ? undefined : "var(--teal-light)",
                 cursor: n.readAt ? "default" : "pointer",
               }}
               onClick={() => !n.readAt && markRead(n.id)}
             >
               <div style={{ fontSize: 13, fontWeight: n.readAt ? "normal" : "bold" }}>{n.subject}</div>
-              <div style={{ fontSize: 12, color: "#666" }}>{n.body}</div>
-              <div style={{ fontSize: 11, color: "#999" }}>
+              <div className="muted" style={{ fontSize: 12 }}>{n.body}</div>
+              <div className="muted" style={{ fontSize: 11 }}>
                 {n.deal ? `${n.deal.dealCode} · ` : ""}{fmt(n.createdAt)}
               </div>
             </div>

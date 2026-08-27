@@ -76,8 +76,8 @@ export default function CdeDealOverview() {
       .catch(() => setPrivateNoteCount(0));
   }, [dealId, issues]);
 
-  if (error) return <main><div className="card" style={{ color: "#b00" }}>{error}</div></main>;
-  if (!deal) return <main>Loading…</main>;
+  if (error) return <main><div className="alert alert-error">{error}</div></main>;
+  if (!deal) return <main><p className="muted is-loading">Loading…</p></main>;
 
   const myOrgId = user?.memberships[0]?.organizationId;
   const myParticipation = participations?.find((p) => p.cdeOrganization.id === myOrgId);
@@ -120,32 +120,38 @@ export default function CdeDealOverview() {
         <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-label" style={{ marginBottom: 6 }}>Compliance status</div>
           <div className="stat-value" style={{ fontSize: 20 }}>{complianceLabel}</div>
-          {upcomingCount > 0 && <span className="badge badge-warning" style={{ marginTop: 6 }}>{upcomingCount} upcoming</span>}
-          {overdueCount > 0 && <span className="badge badge-danger" style={{ marginTop: 6 }}>{overdueCount} overdue</span>}
+          {(upcomingCount > 0 || overdueCount > 0) && (
+            <div className="badge-stack">
+              {upcomingCount > 0 && <span className="badge badge-warning">{upcomingCount} upcoming</span>}
+              {overdueCount > 0 && <span className="badge badge-danger">{overdueCount} overdue</span>}
+            </div>
+          )}
         </div>
         <div className="stat-card">
           <div className="stat-label" style={{ marginBottom: 6 }}>Open exceptions</div>
           <div className="stat-value">{openIssues.length}</div>
           {mostRecentIssue && (
-            <span className={`badge ${mostRecentIssue.status === "resolved" ? "badge-success" : "badge-warning"}`} style={{ marginTop: 6 }}>
-              {mostRecentIssue.title.length > 28 ? `${mostRecentIssue.title.slice(0, 28)}…` : mostRecentIssue.title}
-            </span>
+            <div className="badge-stack">
+              <span className={`badge ${mostRecentIssue.status === "resolved" ? "badge-success" : "badge-warning"}`}>
+                {mostRecentIssue.title.length > 28 ? `${mostRecentIssue.title.slice(0, 28)}…` : mostRecentIssue.title}
+              </span>
+            </div>
           )}
         </div>
-        <Link to={`/cde/deals/${dealId}/cbr`} className="stat-card" style={{ display: "block", color: "inherit", textDecoration: "none" }}>
+        <Link to={`/cde/deals/${dealId}/cbr`} className="stat-card">
           <div className="stat-label" style={{ marginBottom: 6 }}>CBR progress</div>
           <div className="stat-value">{cbrPercent}%</div>
-          <span className="badge badge-navy" style={{ marginTop: 6 }}>CY {year}</span>
+          <div className="badge-stack"><span className="badge badge-navy">CY {year}</span></div>
         </Link>
         <div className={`stat-card${amisMissing > 0 ? " stat-warning" : ""}`}>
           <div className="stat-label" style={{ marginBottom: 6 }}>AMIS readiness</div>
           <div className="stat-value">{amisReady} / {amisTotal}</div>
-          {amisMissing > 0 && <span className="badge badge-warning" style={{ marginTop: 6 }}>{amisMissing} missing</span>}
+          {amisMissing > 0 && <div className="badge-stack"><span className="badge badge-warning">{amisMissing} missing</span></div>}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 0 }}>
+      <div className="split">
+        <div className="split-main">
           <table>
             <thead>
               <tr><th>Requirement</th><th>Entity / period</th><th>Due</th><th>Impact</th><th>CDE</th></tr>
@@ -166,44 +172,44 @@ export default function CdeDealOverview() {
                   </td>
                 </tr>
               ))}
-              {instances && instances.length === 0 && <tr><td colSpan={5}>No requirement instances yet.</td></tr>}
-              {!instances && <tr><td colSpan={5}>Loading…</td></tr>}
+              {instances && instances.length === 0 && <tr><td colSpan={5} className="state-cell">No requirement instances yet.</td></tr>}
+              {!instances && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
             </tbody>
           </table>
         </div>
 
-        <div className="card" style={{ flex: 1, minWidth: 260 }}>
+        <div className="card split-aside">
           <h2>CDE-specific deal data</h2>
 
           {myQlicis.length > 0 ? (
             myQlicis.map((q) => (
-              <div key={q.id} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{q.qliciCode}{q.noteClass ? ` (Note ${q.noteClass})` : ""}</div>
-                <div style={{ fontWeight: 600 }}>{formatCurrency(q.originalPrincipal)}</div>
+              <div key={q.id} className="field">
+                <div className="field-label">{q.qliciCode}{q.noteClass ? ` (Note ${q.noteClass})` : ""}</div>
+                <div className="field-value" style={{ fontWeight: 600 }}>{formatCurrency(q.originalPrincipal)}</div>
               </div>
             ))
           ) : (
-            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 0 }}>No QLICI records on this deal yet.</p>
+            <p className="muted text-sm" style={{ marginTop: 0 }}>No QLICI records on this deal yet.</p>
           )}
 
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Allocation control no.</div>
-            <div>{myParticipation?.allocationControlNumber ?? "—"}</div>
+          <div className="field">
+            <div className="field-label">Allocation control no.</div>
+            <div className="field-value">{myParticipation?.allocationControlNumber ?? "—"}</div>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Private notes</div>
-            <div>{privateNoteCount === null ? "…" : `${privateNoteCount} note${privateNoteCount === 1 ? "" : "s"}`}</div>
+          <div className="field">
+            <div className="field-label">Private notes</div>
+            <div className="field-value">{privateNoteCount === null ? "…" : `${privateNoteCount} note${privateNoteCount === 1 ? "" : "s"}`}</div>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Borrower</div>
-            <div>{borrower?.legalName ?? "—"}</div>
+          <div className="field">
+            <div className="field-label">Borrower</div>
+            <div className="field-value">{borrower?.legalName ?? "—"}</div>
           </div>
 
-          <div>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Shared project outcomes</div>
-            <Link to={`/cde/deals/${dealId}/snapshot`}>View Multi-CDE snapshot</Link>
+          <div className="field">
+            <div className="field-label">Shared project outcomes</div>
+            <div className="field-value"><Link to={`/cde/deals/${dealId}/snapshot`}>View Multi-CDE snapshot</Link></div>
           </div>
         </div>
       </div>

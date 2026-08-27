@@ -81,7 +81,7 @@ export default function QalicbComplianceTasks() {
       <h1>Compliance Tasks</h1>
       <p>Tasks are generated from the deal-specific requirement register.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card filter-bar">
         <label>
@@ -118,13 +118,14 @@ export default function QalicbComplianceTasks() {
         </label>
       </div>
 
-      <table>
+      <div className="table-wrap">
+        <table>
         <thead>
           <tr><th>Due</th><th>Requirement</th><th>Reporting party / period</th><th>Status</th><th>Last activity</th><th></th></tr>
         </thead>
         <tbody>
           {filtered?.map((r) => (
-            <tr key={r.id} style={r.isOverdue ? { background: "#fdecec" } : undefined}>
+            <tr key={r.id} className={r.isOverdue ? "row-danger" : undefined}>
               <td>{fmt(r.dueDate)}</td>
               <td>{r.requirementDefinition.title}</td>
               <td>{r.responsibleParty ? r.responsibleParty.legalName : "Deal-level"} · {fmt(r.reportingPeriodEnd)}</td>
@@ -134,11 +135,12 @@ export default function QalicbComplianceTasks() {
             </tr>
           ))}
           {filtered && filtered.length === 0 && (
-            <tr><td colSpan={6}>{rows && rows.length > 0 ? "No tasks match this filter." : "No tasks yet."}</td></tr>
+            <tr><td colSpan={6} className="state-cell">{rows && rows.length > 0 ? "No tasks match this filter." : "No tasks yet."}</td></tr>
           )}
-          {!rows && !error && <tr><td colSpan={6}>Loading…</td></tr>}
+          {!rows && !error && <tr><td colSpan={6} className="state-cell">Loading…</td></tr>}
         </tbody>
-      </table>
+        </table>
+      </div>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { api, type CbrPeriod } from "../../api/client";
-import { formatCurrency, formatNumber } from "../../utils/format";
+import { formatCurrency, formatNumber, humanize } from "../../utils/format";
 
 const BENEFIT_CODES = [
   { code: "paid_holidays", label: "Paid holidays" },
@@ -140,16 +140,16 @@ export default function CommunityBenefits() {
     }
   }
 
-  if (!period) return <main>{error ? <div className="card">{error}</div> : "Loading…"}</main>;
+  if (!period) return <main>{error ? <div className="alert alert-error">{error}</div> : <p className="muted is-loading">Loading…</p>}</main>;
 
   const totalJobsCreated = period.jobRecords.filter((j) => j.jobStatus === "created").reduce((s, j) => s + Number(j.fteCount), 0);
 
   return (
     <main>
       <h1>Community Benefits Report — CY {year}</h1>
-      <p>Status: {period.status}</p>
+      <p>Status: {humanize(period.status)}</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <form id="project-profile" className="card" onSubmit={saveProfile} style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>Project Profile</h2>
@@ -161,7 +161,7 @@ export default function CommunityBenefits() {
         </label>
         <button type="submit">Save</button>
         {period.projectProfile?.annualGrossRevenue && (
-          <span style={{ color: "#666" }}>Saved: {formatCurrency(period.projectProfile.annualGrossRevenue)}</span>
+          <span className="muted">Saved: {formatCurrency(period.projectProfile.annualGrossRevenue)}</span>
         )}
       </form>
 
@@ -170,8 +170,8 @@ export default function CommunityBenefits() {
         <table>
           <thead><tr><th>Title</th><th>FTE</th><th>Status</th></tr></thead>
           <tbody>
-            {period.jobRecords.map((j) => <tr key={j.id}><td>{j.jobTitle}</td><td>{formatNumber(j.fteCount)}</td><td>{j.jobStatus}</td></tr>)}
-            {period.jobRecords.length === 0 && <tr><td colSpan={3}>No jobs recorded yet.</td></tr>}
+            {period.jobRecords.map((j) => <tr key={j.id}><td>{j.jobTitle}</td><td>{formatNumber(j.fteCount)}</td><td>{humanize(j.jobStatus)}</td></tr>)}
+            {period.jobRecords.length === 0 && <tr><td className="state-cell" colSpan={3}>No jobs recorded yet.</td></tr>}
           </tbody>
         </table>
         <form onSubmit={addJob} style={{ marginTop: 8, display: "flex", gap: 8 }}>
@@ -188,7 +188,7 @@ export default function CommunityBenefits() {
 
       <div id="job-benefits" className="card">
         <h2>Job Benefits</h2>
-        <p style={{ color: "#666", marginTop: 0 }}>Benefit rows can roll forward from a prior year and just need reconfirming.</p>
+        <p className="muted" style={{ marginTop: 0 }}>Benefit rows can roll forward from a prior year and just need reconfirming.</p>
         <table>
           <thead>
             <tr>
@@ -237,7 +237,7 @@ export default function CommunityBenefits() {
           <thead><tr><th>Organization</th><th>Purpose</th></tr></thead>
           <tbody>
             {period.tenantOccupants.map((t) => <tr key={t.id}><td>{t.organizationName}</td><td>{t.purposeGoodsServices}</td></tr>)}
-            {period.tenantOccupants.length === 0 && <tr><td colSpan={2}>No tenants recorded yet.</td></tr>}
+            {period.tenantOccupants.length === 0 && <tr><td className="state-cell" colSpan={2}>No tenants recorded yet.</td></tr>}
           </tbody>
         </table>
         <form onSubmit={addTenant} style={{ marginTop: 8, display: "flex", gap: 8 }}>
@@ -249,7 +249,7 @@ export default function CommunityBenefits() {
 
       <div id="commercial-services" className="card">
         <h2>Commercial / Community Services</h2>
-        <p style={{ color: "#666", marginTop: 0 }}>Goods/services provided to low-income communities, and the outcomes they produce.</p>
+        <p className="muted" style={{ marginTop: 0 }}>Goods/services provided to low-income communities, and the outcomes they produce.</p>
         <table>
           <thead><tr><th>Service</th><th>Type</th><th>People served (current)</th><th>Outcome narrative</th></tr></thead>
           <tbody>
@@ -261,7 +261,7 @@ export default function CommunityBenefits() {
                 <td>{s.outcomeNarrative ?? "—"}</td>
               </tr>
             ))}
-            {period.serviceOutcomes.length === 0 && <tr><td colSpan={4}>No services recorded yet.</td></tr>}
+            {period.serviceOutcomes.length === 0 && <tr><td className="state-cell" colSpan={4}>No services recorded yet.</td></tr>}
           </tbody>
         </table>
         <form onSubmit={addOutcome} style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

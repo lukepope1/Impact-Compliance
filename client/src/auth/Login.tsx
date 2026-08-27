@@ -63,11 +63,11 @@ export default function Login() {
   return (
     <main style={{ maxWidth: 420, marginTop: 40 }}>
       <h1>Sign in</h1>
-      <p style={{ marginTop: 0 }}>NMTC Compliance Platform</p>
+      <p className="muted" style={{ marginTop: 0 }}>NMTC Compliance Platform</p>
 
-      {error && <div className="card" style={{ color: "var(--danger)", background: "var(--danger-bg)", borderColor: "var(--danger)" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      <form className="card" onSubmit={(e) => submit(e)} style={{ display: "grid", gap: 14 }}>
+      <form className="card form-stack" onSubmit={(e) => submit(e)}>
         <label>Email
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
@@ -78,7 +78,7 @@ export default function Login() {
       </form>
 
       <div className="card">
-        <p style={{ marginTop: 0, fontSize: 12.5 }}>
+        <p className="muted text-sm" style={{ marginTop: 0 }}>
           Dev demo accounts (password <code>{DEMO_PASSWORD}</code> for all — real login, not a header switch):
         </p>
         <div style={{ display: "grid", gap: 8 }}>

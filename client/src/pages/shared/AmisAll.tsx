@@ -34,7 +34,7 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
       <h1>AMIS Readiness</h1>
       <p>Field readiness for CY {year}, across every deal in your portfolio.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <table>
         <thead>
@@ -52,8 +52,8 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
               <td><Link to={`/${portal}/deals/${r.deal.id}/amis`}>Open</Link></td>
             </tr>
           ))}
-          {rows && rows.length === 0 && <tr><td colSpan={3}>No deals assigned.</td></tr>}
-          {!rows && !error && <tr><td colSpan={3}>Loading…</td></tr>}
+          {rows && rows.length === 0 && <tr><td className="state-cell" colSpan={3}>No deals assigned.</td></tr>}
+          {!rows && !error && <tr><td className="state-cell" colSpan={3}>Loading…</td></tr>}
         </tbody>
       </table>
     </main>

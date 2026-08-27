@@ -17,8 +17,8 @@ export default function QalicbCbrRedirect() {
     api.listDeals().then(setDeals).catch((e) => setError(String(e.message ?? e)));
   }, []);
 
-  if (error) return <main><div className="card" style={{ color: "#b00" }}>{error}</div></main>;
-  if (!deals) return <main>Loading…</main>;
+  if (error) return <main><div className="alert alert-error">{error}</div></main>;
+  if (!deals) return <main><p className="muted is-loading">Loading…</p></main>;
   if (deals.length === 0) return <main><p>No deals assigned yet.</p></main>;
 
   return <Navigate to={`/qalicb/deals/${deals[0].id}/cbr`} replace />;

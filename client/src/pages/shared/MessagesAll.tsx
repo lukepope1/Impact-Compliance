@@ -148,18 +148,18 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
       <h1>Messages & Lender Requests</h1>
       <p>Requests tied to a requirement use the configured response SLA.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <button onClick={() => setComposing(!composing)}>{composing ? "Cancel" : "+ New request"}</button>
         {composing && (
-          <form onSubmit={sendRequest} style={{ marginTop: 12, display: "grid", gap: 8, maxWidth: 520 }}>
+          <form onSubmit={sendRequest} className="form-stack form-stack--narrow" style={{ marginTop: 12 }}>
             <select value={draft.dealId} onChange={(e) => setDraft({ ...draft, dealId: e.target.value })}>
               {deals?.map((d) => <option key={d.id} value={d.id}>{d.legalName}</option>)}
             </select>
             <input placeholder="Subject" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />
             <textarea placeholder="Message" rows={3} value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="btn-row">
               <label>SLA (days)
                 <input type="number" style={{ width: 60 }} value={draft.slaDays} onChange={(e) => setDraft({ ...draft, slaDays: e.target.value })} />
               </label>
@@ -206,8 +206,8 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 0 }}>
+      <div className="split">
+        <div className="split-main">
           <table>
             <thead>
               <tr><th>Received</th><th>From</th><th>Request / message</th><th>Due</th><th>Status</th></tr>
@@ -217,7 +217,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                 <tr
                   key={r.id}
                   onClick={() => { setSelected(r); setReplyBody(""); }}
-                  style={{ cursor: "pointer", background: selected?.id === r.id ? "var(--surface-selected, #eef3fb)" : undefined }}
+                  className={`row-selectable${selected?.id === r.id ? " is-selected" : ""}`}
                 >
                   <td>{relativeDay(r.createdAt)}</td>
                   <td>{r.fromOrganization.legalName}</td>
@@ -227,43 +227,47 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                 </tr>
               ))}
               {filtered && filtered.length === 0 && (
-                <tr><td colSpan={5}>{rows && rows.length > 0 ? "No requests match this filter." : "No requests yet."}</td></tr>
+                <tr><td className="state-cell" colSpan={5}>{rows && rows.length > 0 ? "No requests match this filter." : "No requests yet."}</td></tr>
               )}
-              {!rows && !error && <tr><td colSpan={5}>Loading…</td></tr>}
+              {!rows && !error && <tr><td className="state-cell" colSpan={5}>Loading…</td></tr>}
             </tbody>
           </table>
         </div>
 
-        <div className="card" style={{ flex: 1, minWidth: 280 }}>
+        <div className="card split-aside">
           <h2>Selected request</h2>
-          {!selected && <p style={{ color: "var(--text-muted)" }}>Click a row to see its details.</p>}
+          {!selected && <p className="muted">Click a row to see its details.</p>}
           {selected && (
             <>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Requirement</div>
-                <div>{selected.requirementInstance ? selected.requirementInstance.requirementDefinition.title : "—"}</div>
+              <div className="field">
+                <div className="field-label">Requirement</div>
+                <div className="field-value">{selected.requirementInstance ? selected.requirementInstance.requirementDefinition.title : "—"}</div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>SLA</div>
-                <div>{selected.slaDays ? `${selected.slaDays} calendar days after request` : "—"}</div>
+              <div className="field">
+                <div className="field-label">SLA</div>
+                <div className="field-value">{selected.slaDays ? `${selected.slaDays} calendar days after request` : "—"}</div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Visibility</div>
-                <div>{VISIBILITY_LABEL[selected.visibility] ?? selected.visibility}</div>
+              <div className="field">
+                <div className="field-label">Visibility</div>
+                <div className="field-value">{VISIBILITY_LABEL[selected.visibility] ?? selected.visibility}</div>
               </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 4 }}>Thread</div>
-                <div style={{ padding: "6px 0", borderBottom: "1px solid #eee" }}>
-                  <strong>{selected.fromOrganization.legalName}</strong>
-                  <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>{new Date(selected.createdAt).toLocaleString()}</span>
-                  <p style={{ margin: "4px 0 0" }}>{selected.body}</p>
+              <div className="field">
+                <div className="field-label">Thread</div>
+                <div className="thread-item">
+                  <div className="thread-meta">
+                    <strong>{selected.fromOrganization.legalName}</strong>
+                    <span style={{ marginLeft: 8 }}>{new Date(selected.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p className="thread-body">{selected.body}</p>
                 </div>
                 {selected.replies.map((rep) => (
-                  <div key={rep.id} style={{ padding: "6px 0", borderBottom: "1px solid #eee" }}>
-                    <strong>{rep.fromOrganization.legalName}</strong>
-                    <span style={{ color: "var(--text-muted)", marginLeft: 8 }}>{new Date(rep.createdAt).toLocaleString()}</span>
-                    <p style={{ margin: "4px 0 0" }}>{rep.body}</p>
+                  <div key={rep.id} className="thread-item">
+                    <div className="thread-meta">
+                      <strong>{rep.fromOrganization.legalName}</strong>
+                      <span style={{ marginLeft: 8 }}>{new Date(rep.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="thread-body">{rep.body}</p>
                   </div>
                 ))}
               </div>
@@ -271,7 +275,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
               {selected.status !== "closed" && (
                 <div>
                   <textarea placeholder="Respond…" rows={3} style={{ width: "100%", marginBottom: 8 }} value={replyBody} onChange={(e) => setReplyBody(e.target.value)} />
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className="btn-row">
                     <button onClick={sendReply} disabled={busy || !replyBody.trim()}>Open task and respond</button>
                     {canClose && <button onClick={closeThread} disabled={busy}>Close thread</button>}
                   </div>

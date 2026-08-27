@@ -18,10 +18,16 @@
   --success-bg: #e9f7ef;
   --warning: #9a6700;
   --warning-bg: #fff6df;
+  --info: #1f5fa8;
+  --info-bg: #eaf2fb;
+  --surface-muted: #f6f8fb;
   --radius: 8px;
   --radius-sm: 6px;
   --shadow-sm: 0 1px 2px rgba(15, 42, 74, 0.06);
   --shadow-md: 0 4px 16px rgba(15, 42, 74, 0.08);
+  /* Height of the sticky .portal-nav bar — the sidebar sticks directly beneath it, so
+     both read from one value instead of drifting apart when the nav's padding changes. */
+  --nav-h: 45px;
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -88,10 +94,26 @@ header.app-header {
 
 .portal-nav strong { color: var(--text); font-weight: 600; }
 
+/* Portal name on top, org + signed-in email beneath it — the identity a reviewer needs
+   to keep straight when the same screens render differently per portal. */
+.portal-nav-identity {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+  min-width: 0;
+}
+.portal-nav-identity .muted {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .portal-nav-links {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .portal-nav-links a {
@@ -115,19 +137,19 @@ main {
   margin: 0 auto;
 }
 
-/* A portal that opts into a persistent left sidebar (currently just the CDE portal)
-   wraps its <Outlet/> in .portal-shell; inside that, main no longer self-centers with a
-   max-width, since the sidebar already constrains the layout. */
+/* A portal with a persistent left sidebar wraps its <Outlet/> in .portal-shell. Inside
+   it, main stops self-centering on the viewport (the sidebar already offsets the layout)
+   but keeps a max-width so text lines don't stretch to arm's length on a wide monitor. */
 .portal-shell {
   display: flex;
   align-items: flex-start;
 }
 
 .portal-shell main {
-  max-width: none;
   margin: 0;
   flex: 1;
   min-width: 0;
+  max-width: 1240px;
 }
 
 .portal-sidebar {
@@ -136,9 +158,33 @@ main {
   background: var(--surface);
   border-right: 1px solid var(--border);
   padding: 20px 0;
-  min-height: calc(100vh - 96px);
+  min-height: calc(100vh - var(--nav-h));
   position: sticky;
-  top: 96px;
+  top: var(--nav-h);
+}
+
+/* Below this the sidebar stops being a useful column — it becomes a horizontal strip of
+   links above the content so narrow windows aren't left with a squeezed main area. */
+@media (max-width: 820px) {
+  .portal-shell { flex-direction: column; }
+  .portal-sidebar {
+    width: 100%;
+    min-height: 0;
+    position: static;
+    display: flex;
+    overflow-x: auto;
+    padding: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .portal-sidebar a {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 16px;
+  }
+  .portal-sidebar a.active { border-left: none; border-bottom-color: var(--teal); }
+  .portal-shell main { max-width: none; padding: 20px 18px 48px; }
 }
 
 .portal-sidebar a {
@@ -172,6 +218,20 @@ main {
   box-shadow: var(--shadow-sm);
 }
 
+/* A card's own heading shouldn't add space above the padding that already frames it. */
+.card > h2:first-child,
+.card > h3:first-child { margin-top: 0; }
+.card > p:last-child,
+.card > table:last-child { margin-bottom: 0; }
+
+/* A table sitting inside a card supplies its own frame, which would double up. */
+.card > table,
+.card > .table-wrap > table {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 /* ---------- Tables ---------- */
 
 table {
@@ -190,6 +250,7 @@ th, td {
   padding: 11px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 13.5px;
+  vertical-align: top;
 }
 
 th {
@@ -199,10 +260,37 @@ th {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: #fafbfc; }
+
+/* Wraps a table that has outgrown the viewport so it scrolls sideways on its own instead
+   of stretching the page layout. Tables here have grown to 8 columns in places. */
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 18px;
+}
+.table-wrap > table { margin-bottom: 0; }
+
+/* Rows that act as a selector for a detail panel beside them. */
+tr.row-selectable { cursor: pointer; }
+tbody tr.is-selected,
+tbody tr.is-selected:hover { background: var(--teal-light); }
+
+/* A row whose subject needs attention (an overdue requirement, say) — a tint rather than
+   red text, so the whole row reads as flagged without recoloring its content. */
+tbody tr.row-danger { background: var(--danger-bg); }
+tbody tr.row-danger:hover { background: #fbe3e3; }
+
+/* Table cells holding an internal identifier rather than prose. */
+.cell-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
 
 /* ---------- Buttons ---------- */
 
@@ -335,6 +423,21 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
   box-shadow: var(--shadow-sm);
 }
 
+/* A stat card that navigates somewhere — needs to look reachable, since an identical
+   non-clickable card usually sits right beside it. */
+a.stat-card {
+  display: block;
+  color: inherit;
+  font-weight: inherit;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
+}
+a.stat-card:hover {
+  text-decoration: none;
+  border-color: var(--teal);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
 .stat-card .stat-value {
   font-size: 26px;
   font-weight: 700;
@@ -365,6 +468,177 @@ input::placeholder, textarea::placeholder { color: var(--text-faint); }
 .badge-success { background: var(--success-bg); color: var(--success); }
 .badge-neutral { background: #eef2f6; color: var(--text-muted); }
 .badge-navy { background: var(--teal-light); color: var(--navy); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+
+/* Several screens stack badges under a stat value or list them in a row. */
+.badge-stack {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+/* ---------- Alerts ---------- */
+
+/* Replaces the ad-hoc `<div className="card" style={{color:"#b00"}}>` error banner that
+   had spread across ~27 screens, where the message read as plain red text on a white
+   card with nothing marking it as an alert. */
+.alert {
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  margin-bottom: 18px;
+  font-size: 13.5px;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+}
+.alert-error {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: #7d1a15;
+}
+.alert-warning {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  color: #6d4a00;
+}
+.alert-info {
+  background: var(--info-bg);
+  border-color: var(--info);
+  color: #16456f;
+}
+.alert strong { color: inherit; }
+.alert p:last-child { margin-bottom: 0; }
+
+/* ---------- Two-column detail layouts ---------- */
+
+/* A wide primary column with a narrower context/detail panel beside it — the shape used
+   by the review, queue, issues and messages screens. Collapses to a single stacked
+   column before the panel gets too narrow to read. */
+.split {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.split-main {
+  flex: 2 1 0;
+  min-width: 0;
+}
+.split-aside {
+  flex: 1 1 0;
+  min-width: 260px;
+  position: sticky;
+  top: calc(var(--nav-h) + 16px);
+}
+
+@media (max-width: 980px) {
+  .split { flex-direction: column; }
+  .split-main, .split-aside { width: 100%; flex: none; position: static; }
+}
+
+/* ---------- Label/value pairs in detail panels ---------- */
+
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin-bottom: 3px;
+}
+.field-value { color: var(--text); font-size: 13.5px; }
+.field-value a { font-size: 13.5px; }
+
+/* ---------- Comment / message threads ---------- */
+
+.thread-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.thread-item:last-child { border-bottom: none; }
+.thread-meta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.thread-meta strong { color: var(--text); font-weight: 600; }
+.thread-body { margin: 0; color: var(--text); }
+
+/* ---------- Empty & loading states ---------- */
+
+/* Table bodies previously fell back to a bare left-aligned "Loading…" or "No results"
+   cell that read as a broken row; these center it and mute it so it reads as a state. */
+.state-cell {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 28px 14px;
+  font-size: 13.5px;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 28px 16px;
+  font-size: 13.5px;
+}
+
+.is-loading { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .is-loading { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* ---------- Layout utilities ---------- */
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.form-stack {
+  display: grid;
+  gap: 10px;
+}
+.form-stack--narrow { max-width: 520px; }
+
+/* A page title followed by an action button on the same line. */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* A row of key facts across the top of a screen — reads as a summary strip rather than
+   a run-on sentence of bolded fragments. */
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 36px;
+  background: var(--surface-muted);
+}
+.summary-bar .field { margin-bottom: 0; }
+
+.muted { color: var(--text-muted); }
+.text-sm { font-size: 12.5px; }
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 640px) {
+  main { padding: 20px 16px 48px; }
+  header.app-header { padding: 12px 16px; font-size: 14px; }
+  .portal-nav { padding: 8px 16px; }
+  /* Filter fields stop reserving a 140px minimum, which otherwise forces the bar into
+     one control per line long before it needs to. */
+  .filter-bar label { min-width: 0; flex: 1 1 140px; }
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+}
 
 /* ---------- Misc ---------- */
 

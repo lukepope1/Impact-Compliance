@@ -70,7 +70,7 @@ export default function DealList() {
       </div>
       <p>Impact Marketplace internal view. Deal-scoped access is enforced server-side.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       {deals && (
         <div className="stat-grid">
@@ -110,9 +110,10 @@ export default function DealList() {
         </div>
       )}
 
-      {!deals && !error && <p>Loading…</p>}
+      {!deals && !error && <p className="is-loading">Loading…</p>}
 
       {deals && (
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -139,13 +140,14 @@ export default function DealList() {
               );
             })}
             {deals.length === 0 && (
-              <tr><td colSpan={6}>No deals yet — run the seed script or create one via the API.</td></tr>
+              <tr><td className="state-cell" colSpan={6}>No deals yet — run the seed script or create one via the API.</td></tr>
             )}
             {deals.length > 0 && filtered && filtered.length === 0 && (
-              <tr><td colSpan={6}>No deals match this filter.</td></tr>
+              <tr><td className="state-cell" colSpan={6}>No deals match this filter.</td></tr>
             )}
           </tbody>
         </table>
+        </div>
       )}
     </main>
   );

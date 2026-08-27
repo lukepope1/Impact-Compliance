@@ -113,28 +113,28 @@ export default function CdePortfolio() {
       <h1>CDE Portfolio Dashboard</h1>
       <p>Enterprise Financial CDE · only deals assigned to this CDE organization are shown.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-value">{assignedDeals}</div>
           <div className="stat-label">Assigned deals</div>
-          <span className="badge badge-navy" style={{ marginTop: 6 }}>Portfolio</span>
+          <div className="badge-stack"><span className="badge badge-navy">Portfolio</span></div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{currentCount}</div>
           <div className="stat-label">Current</div>
-          <span className="badge badge-success" style={{ marginTop: 6 }}>On track</span>
+          <div className="badge-stack"><span className="badge badge-success">On track</span></div>
         </div>
         <div className={`stat-card${lateReturnedCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-value">{lateReturnedCount}</div>
           <div className="stat-label">Late / returned</div>
-          <span className="badge badge-danger" style={{ marginTop: 6 }}>Attention</span>
+          <div className="badge-stack"><span className="badge badge-danger">Attention</span></div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{amisReadyCount}</div>
           <div className="stat-label">AMIS ready</div>
-          <span className="badge badge-navy" style={{ marginTop: 6 }}>This cycle</span>
+          <div className="badge-stack"><span className="badge badge-navy">This cycle</span></div>
         </div>
       </div>
 
@@ -170,7 +170,8 @@ export default function CdePortfolio() {
         </label>
       </div>
 
-      <table>
+      <div className="table-wrap">
+        <table>
         <thead>
           <tr><th>Deal</th><th>QALICB</th><th>Next deadline</th><th>Compliance</th><th>CBR</th><th>AMIS</th></tr>
         </thead>
@@ -204,10 +205,11 @@ export default function CdePortfolio() {
               </tr>
             );
           })}
-          {filtered && filtered.length === 0 && <tr><td colSpan={6}>No deals match this filter.</td></tr>}
-          {!rows && !error && <tr><td colSpan={6}>Loading…</td></tr>}
+          {filtered && filtered.length === 0 && <tr><td colSpan={6} className="state-cell">No deals match this filter.</td></tr>}
+          {!rows && !error && <tr><td colSpan={6} className="state-cell">Loading…</td></tr>}
         </tbody>
-      </table>
+        </table>
+      </div>
     </main>
   );
 }

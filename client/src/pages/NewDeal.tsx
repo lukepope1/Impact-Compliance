@@ -20,8 +20,8 @@ export default function NewDeal() {
   return (
     <main>
       <h1>New Deal</h1>
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
-      <form className="card" onSubmit={submit} style={{ display: "grid", gap: 12, maxWidth: 420 }}>
+      {error && <div className="alert alert-error">{error}</div>}
+      <form className="card form-stack" onSubmit={submit} style={{ maxWidth: 420 }}>
         <label>Deal code
           <input value={form.dealCode} onChange={(e) => setForm({ ...form, dealCode: e.target.value })} required />
         </label>

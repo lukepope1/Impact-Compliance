@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type RequirementDefinition } from "../api/client";
+import { humanize } from "../utils/format";
+import { SeverityBadge } from "./shared/StatusBadge";
 
 const CATEGORIES = [
   "document_collection",
@@ -111,7 +113,7 @@ export default function RequirementBuilder() {
     <main>
       <h1>Requirement Builder & Conflict Resolution</h1>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <h2>New requirement (draft)</h2>
@@ -124,12 +126,12 @@ export default function RequirementBuilder() {
           </label>
           <label>Category
             <select value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.map((c) => <option key={c} value={c}>{humanize(c)}</option>)}
             </select>
           </label>
           <label>Cadence
             <select value={draft.cadence} onChange={(e) => setDraft({ ...draft, cadence: e.target.value })}>
-              {CADENCES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CADENCES.map((c) => <option key={c} value={c}>{humanize(c)}</option>)}
             </select>
           </label>
           <label>Due (days after period end)
@@ -157,8 +159,8 @@ export default function RequirementBuilder() {
 
       {defs.map((def) => (
         <div className="card" key={def.id}>
-          <h2>{def.title} <small style={{ color: "#888" }}>v{def.version} · {def.status}</small></h2>
-          <p>{def.category} · {def.cadence} · severity {def.severity}</p>
+          <h2>{def.title} <small className="muted">v{def.version} · {humanize(def.status)}</small></h2>
+          <p>{humanize(def.category)} · {humanize(def.cadence)} · severity <SeverityBadge severity={def.severity} /></p>
           <p>Due rule: {JSON.stringify(def.dueRule)}</p>
 
           {def.sources.length > 0 && (
@@ -169,11 +171,11 @@ export default function RequirementBuilder() {
             </ul>
           )}
 
-          <div style={{ background: "#fdf8e8", border: "1px solid #e8dfa8", borderRadius: 4, padding: 12, marginTop: 8 }}>
-            <strong>Source conflict:</strong> {def.conflictStatus}
+          <div className="alert alert-warning" style={{ marginTop: 8 }}>
+            <strong>Source conflict:</strong> {humanize(def.conflictStatus)}
             {def.conflictResolutionNote && <p style={{ margin: "4px 0" }}>{def.conflictResolutionNote}</p>}
             {def.status === "draft" && (
-              <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <div className="btn-row" style={{ marginTop: 8 }}>
                 <input
                   placeholder="Resolution note (required to change status)"
                   style={{ flex: 1 }}
@@ -195,13 +197,13 @@ export default function RequirementBuilder() {
               <button onClick={() => generateInstances(def)}>
                 {def.cadence === "on_request" ? "Create instance for this request" : "Generate instances"}
               </button>
-              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "#1f7a8c" }}>{generateResult[def.id]}</span>}
+              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "var(--teal)" }}>{generateResult[def.id]}</span>}
             </div>
           )}
         </div>
       ))}
 
-      {defs.length === 0 && <p>No requirements configured yet.</p>}
+      {defs.length === 0 && <p className="empty-state">No requirements configured yet.</p>}
     </main>
   );
 }

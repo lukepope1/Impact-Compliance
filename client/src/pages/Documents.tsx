@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type DocumentSummary } from "../api/client";
+import { humanize } from "../utils/format";
+import { ScanStatusBadge } from "./shared/StatusBadge";
 
 const DOCUMENT_TYPES = ["financial_statement", "rent_roll", "tax_return", "cbr", "compliance_certificate", "other"];
 const SHARE_SCOPES = ["impact_only", "qalicb_and_impact", "deal_shared", "selected_cdes", "cde_private"];
@@ -11,12 +13,6 @@ function formatBytes(n: string | number | null) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function scanStatusColor(status: string) {
-  if (status === "clean") return "#1f7a8c";
-  if (status === "infected") return "#b00";
-  return "#a67c00"; // pending / failed
 }
 
 export default function Documents() {
@@ -143,9 +139,9 @@ export default function Documents() {
       <h1>Documents & Evidence</h1>
       <p>Versioned evidence. Share scope is enforced server-side — this list only shows what the current user can see.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      <form className="card" onSubmit={upload} style={{ display: "grid", gap: 8, maxWidth: 480 }}>
+      <form className="card form-stack form-stack--narrow" onSubmit={upload}>
         <h2>Upload evidence</h2>
         <input
           placeholder="Title (e.g. Q2 2026 Balance Sheet)"
@@ -153,10 +149,10 @@ export default function Documents() {
           onChange={(e) => setMeta({ ...meta, title: e.target.value })}
         />
         <select value={meta.documentType} onChange={(e) => setMeta({ ...meta, documentType: e.target.value })}>
-          {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
         </select>
         <select value={meta.shareScope} onChange={(e) => setMeta({ ...meta, shareScope: e.target.value })}>
-          {SHARE_SCOPES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {SHARE_SCOPES.map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
         </select>
         <input type="file" ref={fileInput} required />
         <button type="submit" disabled={uploading}>{uploading ? "Uploading…" : "Upload"}</button>
@@ -171,18 +167,18 @@ export default function Documents() {
           Type
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="all">All types</option>
-            {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
           </select>
         </label>
         <label style={{ marginBottom: 0 }}>
           Sharing
           <select value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)}>
             <option value="all">All sharing levels</option>
-            {SHARE_SCOPES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {SHARE_SCOPES.map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
           </select>
         </label>
         {docs && (
-          <span style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+          <span className="muted text-sm">
             {filteredDocs?.length ?? 0} of {docs.length} shown
           </span>
         )}
@@ -200,11 +196,11 @@ export default function Documents() {
               <Fragment key={d.id}>
                 <tr>
                   <td>{d.title}</td>
-                  <td>{d.documentType}</td>
-                  <td>{d.shareScope}</td>
+                  <td>{humanize(d.documentType)}</td>
+                  <td>{humanize(d.shareScope)}</td>
                   <td>v{d.currentVersion}</td>
-                  <td style={latest ? { color: scanStatusColor(latest.malwareScanStatus) } : undefined}>
-                    {latest ? `${formatBytes(latest.fileSizeBytes)} · ${latest.malwareScanStatus}` : "—"}
+                  <td>
+                    {latest ? <>{formatBytes(latest.fileSizeBytes)} · <ScanStatusBadge status={latest.malwareScanStatus} /></> : "—"}
                   </td>
                   <td>
                     {latest && latest.malwareScanStatus === "clean" && (
@@ -221,6 +217,7 @@ export default function Documents() {
                         <h3 style={{ marginTop: 0 }}>Version history — {d.title}</h3>
                         {!expandedDoc && <p>Loading…</p>}
                         {expandedDoc && (
+                          <div className="table-wrap">
                           <table>
                             <thead>
                               <tr><th>Version</th><th>File</th><th>Size</th><th>Scan status</th><th>Uploaded</th><th>Superseded</th><th></th></tr>
@@ -231,7 +228,7 @@ export default function Documents() {
                                   <td>v{v.versionNumber}</td>
                                   <td>{v.fileName}</td>
                                   <td>{formatBytes(v.fileSizeBytes)}</td>
-                                  <td style={{ color: scanStatusColor(v.malwareScanStatus) }}>{v.malwareScanStatus}</td>
+                                  <td><ScanStatusBadge status={v.malwareScanStatus} /></td>
                                   <td>{new Date(v.uploadedAt).toLocaleString()}</td>
                                   <td>{v.supersededAt ? new Date(v.supersededAt).toLocaleString() : "—"}</td>
                                   <td>
@@ -246,12 +243,13 @@ export default function Documents() {
                               ))}
                             </tbody>
                           </table>
+                          </div>
                         )}
 
                         <form onSubmit={(e) => uploadNewVersion(e, d.id)} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
                           <input type="file" ref={newVersionInput} required />
                           <button type="submit" disabled={busyAction}>Upload new version</button>
-                          <span style={{ color: "#666", fontSize: 13 }}>Never overwrites — the prior version is kept and marked superseded.</span>
+                          <span className="muted" style={{ fontSize: 13 }}>Never overwrites — the prior version is kept and marked superseded.</span>
                         </form>
                       </div>
                     </td>
@@ -260,9 +258,9 @@ export default function Documents() {
               </Fragment>
             );
           })}
-          {docs && docs.length === 0 && <tr><td colSpan={6}>No documents visible to you on this deal yet.</td></tr>}
+          {docs && docs.length === 0 && <tr><td className="state-cell" colSpan={6}>No documents visible to you on this deal yet.</td></tr>}
           {docs && docs.length > 0 && filteredDocs && filteredDocs.length === 0 && (
-            <tr><td colSpan={6}>No documents match this search/filter.</td></tr>
+            <tr><td className="state-cell" colSpan={6}>No documents match this search/filter.</td></tr>
           )}
         </tbody>
       </table>

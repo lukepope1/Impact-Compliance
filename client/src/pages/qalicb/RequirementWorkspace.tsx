@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, type Deal, type RequirementInstanceDetail, type Submission } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import CommentThread from "../shared/CommentThread";
+import { humanize } from "../../utils/format";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
@@ -121,7 +122,7 @@ export default function RequirementWorkspace() {
     }
   }
 
-  if (!instance) return <main>{error ? <div className="card">{error}</div> : "Loading…"}</main>;
+  if (!instance) return <main>{error ? <div className="alert alert-error">{error}</div> : <p className="muted is-loading">Loading…</p>}</main>;
 
   const def = instance.requirementDefinition;
   const requiredTypes = def.evidenceSchema?.requiredDocumentTypes ?? [];
@@ -137,10 +138,10 @@ export default function RequirementWorkspace() {
         <h1>Submission Review & Attestation</h1>
         <p>{deal?.legalName ? `${deal.legalName} · ` : ""}{def.title} · {periodLabel(instance.reportingPeriodStart, instance.reportingPeriodEnd)}</p>
 
-        {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
 
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-          <div style={{ flex: 2, minWidth: 0 }}>
+        <div className="split">
+          <div className="split-main">
             <div className="card">
               <h2>Submission completeness</h2>
               {draft.documents.map((d) => <span key={d.documentId} className="badge badge-success" style={{ display: "block", width: "fit-content", marginBottom: 8 }}>✓ {d.document.title} attached</span>)}
@@ -160,14 +161,14 @@ export default function RequirementWorkspace() {
                   style={{ display: "block", width: "100%", marginTop: 4 }}
                 />
               </label>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="btn-row">
                 <button type="button" onClick={() => setReviewMode(false)}>Back</button>
                 <button type="submit" disabled={busy}>{busy ? "Submitting…" : "Attest & Submit"}</button>
               </div>
             </form>
           </div>
 
-          <div className="card" style={{ flex: 1, minWidth: 240 }}>
+          <div className="card split-aside">
             <h2>What happens next?</h2>
             <ol style={{ paddingLeft: 18, margin: 0 }}>
               <li style={{ marginBottom: 10 }}>Submission becomes immutable version {draft.submissionVersion}.</li>
@@ -185,19 +186,19 @@ export default function RequirementWorkspace() {
       <h1>Requirement Detail & Upload</h1>
       <p>{def.title} · Due {fmt(instance.dueDate)} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)}</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
-        <p><strong>Category:</strong> {def.category} · <strong>Cadence:</strong> {def.cadence}</p>
+        <p><strong>Category:</strong> {humanize(def.category)} · <strong>Cadence:</strong> {humanize(def.cadence)}</p>
         {def.sources.length > 0 && (
           <p><strong>Source basis:</strong> {def.sources.map((s) => `${s.sourceDocumentName}${s.sectionReference ? ` ${s.sectionReference}` : ""}`).join("; ")}</p>
         )}
         {requiredTypes.length > 0 && <p><strong>Evidence required:</strong> {requiredTypes.join(", ")}</p>}
-        <p><strong>Status:</strong> {isLocked ? draft!.status : wasReturned ? "Returned — revise and resubmit" : draft ? "Draft" : "Not started"}</p>
+        <p><strong>Status:</strong> {isLocked ? humanize(draft!.status) : wasReturned ? "Returned — revise and resubmit" : draft ? "Draft" : "Not started"}</p>
       </div>
 
       {wasReturned && (
-        <div className="card" style={{ background: "#fdf8e8", border: "1px solid #e8dfa8" }}>
+        <div className="alert alert-warning">
           <strong>Returned for revision:</strong> {draft!.responseNote || "See reviewer note."}
         </div>
       )}
@@ -220,7 +221,7 @@ export default function RequirementWorkspace() {
           Review & Submit
         </button>
       )}
-      {isLocked && <p style={{ color: "#1f7a8c" }}>Submitted {fmt(draft!.submittedAt)}. This submission is now locked.</p>}
+      {isLocked && <p className="alert alert-info">Submitted {fmt(draft!.submittedAt)}. This submission is now locked.</p>}
 
       {dealId && instanceId && (
         <CommentThread dealId={dealId} instanceId={instanceId} availableVisibilities={["deal_shared", "qalicb_shared"]} />

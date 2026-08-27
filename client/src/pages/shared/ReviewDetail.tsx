@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type CdeParticipation, type Deal, type Review, type RequirementInstanceDetail } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
+import { humanize } from "../../utils/format";
 import CommentThread from "./CommentThread";
 
 function fmt(d: string | null) {
@@ -79,7 +80,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
     }
   }
 
-  if (!instance) return <main>{error ? <div className="card">{error}</div> : "Loading…"}</main>;
+  if (!instance) return <main>{error ? <div className="alert alert-error">{error}</div> : <p className="muted is-loading">Loading…</p>}</main>;
 
   const submission = instance.submissions[0];
   const def = instance.requirementDefinition;
@@ -95,7 +96,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
   const headerBits = [
     deal?.legalName,
     myParticipation?.subCdeName,
-    instance.responsibleParty ? `${instance.responsibleParty.legalName} (${instance.responsibleParty.partyRole})` : null,
+    instance.responsibleParty ? `${instance.responsibleParty.legalName} (${humanize(instance.responsibleParty.partyRole)})` : null,
     periodLabel(instance.reportingPeriodStart, instance.reportingPeriodEnd),
   ].filter(Boolean);
 
@@ -111,12 +112,12 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
     <main>
       <h1>{def.title}</h1>
       <p>{headerBits.join(" · ")}</p>
-      <p style={{ color: "var(--text-muted)" }}>Due {fmt(instance.dueDate)} · {def.category} · Severity: {def.severity}</p>
+      <p className="muted">Due {fmt(instance.dueDate)} · {humanize(def.category)} · Severity: {humanize(def.severity)}</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 0 }}>
+      <div className="split">
+        <div className="split-main">
           <div className="card">
             <h2>Impact status</h2>
             {impactReview ? (
@@ -125,21 +126,21 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
                   <span className={`badge ${impactReview.decision === "approved" ? "badge-success" : impactReview.decision === "returned" ? "badge-danger" : "badge-neutral"}`}>
                     {DECISION_LABEL[impactReview.decision] ?? impactReview.decision}
                   </span>
-                  <span style={{ marginLeft: 8, color: "var(--text-muted)" }}>
+                  <span className="muted" style={{ marginLeft: 8 }}>
                     {impactReview.reviewerUser?.email} ({impactReview.reviewingOrganizationName}) · {fmtDateTime(impactReview.decidedAt)}
                   </span>
                 </p>
                 {impactReview.decisionNote && <p><em>Impact note:</em> {impactReview.decisionNote}</p>}
               </>
             ) : (
-              <p style={{ color: "var(--text-muted)" }}>Not yet reviewed by Impact.</p>
+              <p className="muted">Not yet reviewed by Impact.</p>
             )}
             {stage === "cde" && cdeReview && (
               <p style={{ marginTop: 8 }}>
                 <span className={`badge ${cdeReview.decision === "approved" ? "badge-success" : cdeReview.decision === "returned" ? "badge-danger" : "badge-neutral"}`}>
                   CDE: {DECISION_LABEL[cdeReview.decision] ?? cdeReview.decision}
                 </span>
-                <span style={{ marginLeft: 8, color: "var(--text-muted)" }}>
+                <span className="muted" style={{ marginLeft: 8 }}>
                   {cdeReview.reviewerUser?.email} ({cdeReview.reviewingOrganizationName}) · {fmtDateTime(cdeReview.decidedAt)}
                 </span>
               </p>
@@ -148,12 +149,12 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
 
           <div className="card">
             <h2>Source basis</h2>
-            {def.sources.length === 0 && <p style={{ color: "var(--text-muted)" }}>No source citations recorded for this requirement.</p>}
+            {def.sources.length === 0 && <p className="muted">No source citations recorded for this requirement.</p>}
             {def.sources.map((s) => (
-              <div key={s.id} style={{ padding: "6px 0", borderBottom: "1px solid #eee" }}>
+              <div key={s.id} className="thread-item">
                 <strong>{s.sourceDocumentName}</strong>
-                {s.sectionReference && <span style={{ color: "var(--text-muted)" }}> · {s.sectionReference}</span>}
-                {s.sourceExcerpt && <p style={{ margin: "4px 0 0", color: "var(--text-muted)" }}>&ldquo;{s.sourceExcerpt}&rdquo;</p>}
+                {s.sectionReference && <span className="muted"> · {s.sectionReference}</span>}
+                {s.sourceExcerpt && <p className="muted" style={{ margin: "4px 0 0" }}>&ldquo;{s.sourceExcerpt}&rdquo;</p>}
               </div>
             ))}
           </div>
@@ -161,13 +162,13 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
           <div className="card">
             <h2>Submitted evidence</h2>
             {submission?.documents.map((d) => <p key={d.documentId}>{d.document.title}</p>)}
-            {(!submission || submission.documents.length === 0) && <p style={{ color: "var(--text-muted)" }}>No evidence attached.</p>}
+            {(!submission || submission.documents.length === 0) && <p className="muted">No evidence attached.</p>}
           </div>
 
           <div className="card">
             <h2>Structured values (attestation)</h2>
             <p>{submission?.attestationText || "—"}</p>
-            <p style={{ color: "var(--text-muted)" }}>Submitted {fmt(submission?.submittedAt ?? null)}</p>
+            <p className="muted">Submitted {fmt(submission?.submittedAt ?? null)}</p>
           </div>
 
           <div className="card">
@@ -179,12 +180,18 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => decide("returned")} disabled={busy}>Request Clarification</button>
-              <button onClick={() => decide("acknowledged")} disabled={busy}>Acknowledge (no substantive review needed)</button>
-              <button onClick={() => decide("waived")} disabled={busy}>Waive requirement</button>
+            {/* Approve is the affirmative outcome and stays the primary button; the other
+                three are real but comparatively rare choices, so they read as secondary
+                rather than competing as four identical teal buttons of equal weight. */}
+            <div className="btn-row">
               <button onClick={() => decide("approved")} disabled={busy}>Approve</button>
+              <button className="btn-secondary" onClick={() => decide("returned")} disabled={busy}>Request clarification</button>
+              <button className="btn-secondary" onClick={() => decide("acknowledged")} disabled={busy}>Acknowledge</button>
+              <button className="btn-secondary" onClick={() => decide("waived")} disabled={busy}>Waive requirement</button>
             </div>
+            <p className="text-sm muted" style={{ marginTop: 8, marginBottom: 0 }}>
+              Acknowledge advances items that need confirming but no substantive evidence review. Returning or waiving requires a note.
+            </p>
           </div>
 
           {dealId && instanceId && (
@@ -196,30 +203,30 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
           )}
         </div>
 
-        <div className="card" style={{ flex: 1, minWidth: 240 }}>
+        <div className="card split-aside">
           <h2>Context / History</h2>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Submission version</div>
-            <div>{submission ? `v${submission.submissionVersion}` : "—"}</div>
+          <div className="field">
+            <div className="field-label">Submission version</div>
+            <div className="field-value">{submission ? `v${submission.submissionVersion}` : "—"}</div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Submission date</div>
-            <div>{fmt(submission?.submittedAt ?? null)}</div>
+          <div className="field">
+            <div className="field-label">Submission date</div>
+            <div className="field-value">{fmt(submission?.submittedAt ?? null)}</div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Impact approval date</div>
-            <div>{impactReview && impactReview.decision !== "returned" ? fmt(impactReview.decidedAt) : "—"}</div>
+          <div className="field">
+            <div className="field-label">Impact approval date</div>
+            <div className="field-value">{impactReview && impactReview.decision !== "returned" ? fmt(impactReview.decidedAt) : "—"}</div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Sharing status</div>
-            <div>{tightestScope ? SHARE_SCOPE_LABEL[tightestScope] : "—"}</div>
+          <div className="field">
+            <div className="field-label">Sharing status</div>
+            <div className="field-value">{tightestScope ? SHARE_SCOPE_LABEL[tightestScope] : "—"}</div>
           </div>
           {history && history.length > 1 && (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 4 }}>Full decision history</div>
+            <div className="field">
+              <div className="field-label">Full decision history</div>
               {history.map((r) => (
-                <div key={r.id} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #eee" }}>
-                  <span className="badge badge-neutral">{r.reviewStage}</span> {DECISION_LABEL[r.decision] ?? r.decision} · {fmt(r.decidedAt)}
+                <div key={r.id} className="thread-item" style={{ fontSize: 13 }}>
+                  <span className="badge badge-neutral">{humanize(r.reviewStage)}</span> {DECISION_LABEL[r.decision] ?? r.decision} · {fmt(r.decidedAt)}
                 </div>
               ))}
             </div>

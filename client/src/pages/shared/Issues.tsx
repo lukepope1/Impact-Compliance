@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type IssueNoteRow, type IssueRow } from "../../api/client";
+import { humanize } from "../../utils/format";
+import { SeverityBadge, IssueStatusBadge } from "./StatusBadge";
 
 const ISSUE_TYPES = [
   "missing_item",
@@ -99,7 +101,7 @@ export default function Issues() {
       <h1>Issues & Exceptions</h1>
       <p>Operational issues and exceptions; no automatic legal/recapture conclusion.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <form className="card" onSubmit={create} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <h2 style={{ gridColumn: "span 2" }}>Log an issue</h2>
@@ -110,10 +112,10 @@ export default function Issues() {
           style={{ gridColumn: "span 2" }}
         />
         <select value={draft.issueType} onChange={(e) => setDraft({ ...draft, issueType: e.target.value })}>
-          {ISSUE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {ISSUE_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
         </select>
         <select value={draft.severity} onChange={(e) => setDraft({ ...draft, severity: e.target.value })}>
-          {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {SEVERITIES.map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
         </select>
         <textarea
           placeholder="Description"
@@ -127,6 +129,7 @@ export default function Issues() {
         </div>
       </form>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Severity</th><th>Issue</th><th>Type</th><th>Status</th><th>Resolution</th><th></th></tr>
@@ -137,15 +140,15 @@ export default function Issues() {
             return (
               <Fragment key={i.id}>
                 <tr>
-                  <td>{i.severity}</td>
+                  <td><SeverityBadge severity={i.severity} /></td>
                   <td>{i.title}</td>
-                  <td>{i.issueType}</td>
-                  <td>{i.status}</td>
+                  <td>{humanize(i.issueType)}</td>
+                  <td><IssueStatusBadge status={i.status} /></td>
                   <td>
                     {i.status === "resolved" ? (
                       i.resolution
                     ) : (
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="btn-row">
                         <input
                           placeholder="Resolution note"
                           value={resolutionNotes[i.id] ?? ""}
@@ -164,27 +167,27 @@ export default function Issues() {
                     <td colSpan={6}>
                       <div className="card" style={{ margin: "8px 0" }}>
                         <h3 style={{ marginTop: 0 }}>Notes — {i.title}</h3>
-                        <p style={{ marginTop: 0, fontSize: 12.5 }}>
+                        <p className="text-sm" style={{ marginTop: 0 }}>
                           Private notes are visible only to your organization and Impact — not shared with other orgs on this
                           deal, including other CDEs.
                         </p>
                         {!notes && <p>Loading…</p>}
-                        {notes && notes.length === 0 && <p style={{ color: "var(--text-muted)" }}>No notes yet.</p>}
+                        {notes && notes.length === 0 && <p className="muted">No notes yet.</p>}
                         {notes && notes.length > 0 && (
-                          <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                          <div style={{ marginBottom: 12 }}>
                             {notes.map((n) => (
-                              <div key={n.id} style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
-                                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+                              <div key={n.id} className="thread-item">
+                                <div className="thread-meta">
                                   {n.authorOrganization.legalName} · {n.authorUser.email} ·{" "}
                                   {n.visibility === "org_private" ? "Private" : "Shared with deal"} ·{" "}
                                   {new Date(n.createdAt).toLocaleString()}
                                 </div>
-                                <div>{n.body}</div>
+                                <div className="thread-body">{n.body}</div>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div style={{ display: "grid", gap: 8 }}>
+                        <div className="form-stack">
                           <textarea
                             placeholder="Add a note…"
                             rows={2}
@@ -208,9 +211,10 @@ export default function Issues() {
               </Fragment>
             );
           })}
-          {issues && issues.length === 0 && <tr><td colSpan={6}>No issues logged.</td></tr>}
+          {issues && issues.length === 0 && <tr><td className="state-cell" colSpan={6}>No issues logged.</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

@@ -93,7 +93,7 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
       <h1>Review Queue</h1>
       <p>Every submission across your portfolio awaiting {stage === "impact" ? "Impact" : "this CDE's"} decision, most urgent first.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card filter-bar">
         <label>
@@ -129,8 +129,9 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 0 }}>
+      <div className="split">
+        <div className="split-main">
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -154,34 +155,35 @@ export default function ReviewQueueAll({ portal, stage }: { portal: "impact" | "
                 </tr>
               ))}
               {filtered && filtered.length === 0 && (
-                <tr><td colSpan={stage === "cde" ? 6 : 5}>{rows && rows.length > 0 ? "No items match this filter." : "Nothing pending across any deal."}</td></tr>
+                <tr><td className="state-cell" colSpan={stage === "cde" ? 6 : 5}>{rows && rows.length > 0 ? "No items match this filter." : "Nothing pending across any deal."}</td></tr>
               )}
-              {!rows && !error && <tr><td colSpan={stage === "cde" ? 6 : 5}>Loading…</td></tr>}
+              {!rows && !error && <tr><td className="state-cell" colSpan={stage === "cde" ? 6 : 5}>Loading…</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
 
-        <div className="card" style={{ flex: 1, minWidth: 220 }}>
+        <div className="card split-aside">
           <h2>Queue Summary</h2>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Signed in as</div>
-            <div>{user?.email ?? "—"}</div>
+          <div className="field">
+            <div className="field-label">Signed in as</div>
+            <div className="field-value">{user?.email ?? "—"}</div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Oldest item</div>
-            <div>{oldest ? relativeDay(oldest.updatedAt) : "—"}</div>
+          <div className="field">
+            <div className="field-label">Oldest item</div>
+            <div className="field-value">{oldest ? relativeDay(oldest.updatedAt) : "—"}</div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Deals represented</div>
-            <div>{dealsRepresented}</div>
+          <div className="field">
+            <div className="field-label">Deals represented</div>
+            <div className="field-value">{dealsRepresented}</div>
           </div>
-          <div>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 4 }}>Priority</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div className="field">
+            <div className="field-label">Priority</div>
+            <div className="badge-stack">
               {severityCounts.high && <span className="badge badge-danger">High {severityCounts.high}</span>}
               {severityCounts.normal && <span className="badge badge-neutral">Normal {severityCounts.normal}</span>}
               {severityCounts.low && <span className="badge badge-navy">Low {severityCounts.low}</span>}
-              {!severityCounts.high && !severityCounts.normal && !severityCounts.low && <span style={{ color: "var(--text-muted)" }}>—</span>}
+              {!severityCounts.high && !severityCounts.normal && !severityCounts.low && <span className="muted">—</span>}
             </div>
           </div>
         </div>

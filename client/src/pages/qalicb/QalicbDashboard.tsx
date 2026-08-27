@@ -88,28 +88,28 @@ export default function QalicbDashboard() {
       <h1>QALICB Dashboard</h1>
       <p>{deals?.map((d) => d.legalName).join(", ") || "Loading…"} · Compliance Year {year}</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="stat-grid">
         <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-value">{openCount}</div>
           <div className="stat-label">Open tasks</div>
-          {overdueCount > 0 && <span className="badge badge-danger" style={{ marginTop: 6 }}>{overdueCount} overdue</span>}
+          {overdueCount > 0 && <div className="badge-stack"><span className="badge badge-danger">{overdueCount} overdue</span></div>}
         </div>
         <div className="stat-card">
           <div className="stat-value">{upcomingCount}</div>
           <div className="stat-label">Due within 30 days</div>
-          <span className="badge badge-success" style={{ marginTop: 6 }}>On track</span>
+          <div className="badge-stack"><span className="badge badge-success">On track</span></div>
         </div>
         <div className={`stat-card${returnedCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-value">{returnedCount}</div>
           <div className="stat-label">Returned</div>
-          {returnedCount > 0 && <span className="badge badge-danger" style={{ marginTop: 6 }}>Action needed</span>}
+          {returnedCount > 0 && <div className="badge-stack"><span className="badge badge-danger">Action needed</span></div>}
         </div>
         <div className="stat-card">
           <div className="stat-value">{approvedYtdCount}</div>
           <div className="stat-label">Approved YTD</div>
-          <span className="badge badge-navy" style={{ marginTop: 6 }}>CY {year}</span>
+          <div className="badge-stack"><span className="badge badge-navy">CY {year}</span></div>
         </div>
       </div>
 
@@ -154,7 +154,7 @@ export default function QalicbDashboard() {
         </thead>
         <tbody>
           {filtered?.map((r) => (
-            <tr key={r.id} style={r.isOverdue ? { background: "#fdecec" } : undefined}>
+            <tr key={r.id} className={r.isOverdue ? "row-danger" : undefined}>
               <td>{fmt(r.dueDate)}</td>
               <td>{r.requirementDefinition.title}</td>
               <td>{r.responsibleParty ? r.responsibleParty.legalName : "Deal-level"} · {fmt(r.reportingPeriodEnd)}</td>
@@ -163,9 +163,9 @@ export default function QalicbDashboard() {
             </tr>
           ))}
           {filtered && filtered.length === 0 && (
-            <tr><td colSpan={5}>{rows && rows.length > 0 ? "No tasks match this filter." : "No tasks yet."}</td></tr>
+            <tr><td colSpan={5} className="state-cell">{rows && rows.length > 0 ? "No tasks match this filter." : "No tasks yet."}</td></tr>
           )}
-          {!rows && !error && <tr><td colSpan={5}>Loading…</td></tr>}
+          {!rows && !error && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
         </tbody>
       </table>
     </main>

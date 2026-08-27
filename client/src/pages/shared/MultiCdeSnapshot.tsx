@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type SharedOutcomeSnapshotDetail } from "../../api/client";
-import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
+import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
 
 // Snapshot values don't carry a field-type flag, only a human label — mirrors the
 // fieldCode-keyed sets in AmisCenter.tsx, keyed by label instead since that's what this
@@ -74,23 +74,32 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
       <h1>Multi-CDE Shared Snapshot — CY {year}</h1>
       <p>Shared project data across participating CDEs. One golden record; CDE-private data stays separate.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <button onClick={generate}>{snapshot ? "Regenerate snapshot" : "Generate snapshot"}</button>
-        {snapshot && <span style={{ marginLeft: 8 }}>Version {snapshot.snapshotVersion} · {snapshot.status}</span>}
+        {snapshot && <span style={{ marginLeft: 8 }}>Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}</span>}
       </div>
 
       {snapshot && (
         <>
-          <div className="card" style={{ background: "var(--surface-muted, #f6f8fb)" }}>
-            <strong>Lead CDE: {snapshot.controlledByCdeParticipation?.cdeOrganization.legalName ?? "—"}</strong>
-            {"  ·  "}
-            <strong>Golden record status: {goldenRecordStatusLabel(snapshot.status, snapshot.approvals)}</strong>
-            {"  ·  "}
-            <strong>
-              Participant approvals: {snapshot.approvals.filter((a) => a.decision !== "pending").length} of {snapshot.approvals.length}
-            </strong>
+          {/* The three facts a reviewer needs before reading the field table: who controls
+              the record, where it is in the approval cycle, and how many CDEs have acted. */}
+          <div className="card summary-bar">
+            <div className="field">
+              <div className="field-label">Lead CDE</div>
+              <div className="field-value">{snapshot.controlledByCdeParticipation?.cdeOrganization.legalName ?? "—"}</div>
+            </div>
+            <div className="field">
+              <div className="field-label">Golden record status</div>
+              <div className="field-value">{goldenRecordStatusLabel(snapshot.status, snapshot.approvals)}</div>
+            </div>
+            <div className="field">
+              <div className="field-label">Participant approvals</div>
+              <div className="field-value">
+                {snapshot.approvals.filter((a) => a.decision !== "pending").length} of {snapshot.approvals.length}
+              </div>
+            </div>
           </div>
 
           <div className="card">
@@ -111,7 +120,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
               <thead><tr><th>CDE</th><th>Decision</th><th>Note</th></tr></thead>
               <tbody>
                 {snapshot.approvals.map((a, i) => (
-                  <tr key={i}><td>{a.cdeParticipation.cdeOrganization.legalName}</td><td>{a.decision}</td><td>{a.decisionNote}</td></tr>
+                  <tr key={i}><td>{a.cdeParticipation.cdeOrganization.legalName}</td><td>{humanize(a.decision)}</td><td>{a.decisionNote}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -124,7 +133,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
             <div className="card">
               <h2>My CDE decision</h2>
               <textarea placeholder="Note (optional)" rows={2} style={{ width: "100%", marginBottom: 8 }} value={note} onChange={(e) => setNote(e.target.value)} />
-              <div style={{ display: "flex", gap: 8 }}>
+              <div className="btn-row">
                 <button onClick={() => decide("changes_requested")}>Request changes</button>
                 <button onClick={() => decide("not_reporting")}>Not reporting this field</button>
                 <button onClick={() => decide("approved")}>Approve snapshot</button>

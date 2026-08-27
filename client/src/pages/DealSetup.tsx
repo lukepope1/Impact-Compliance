@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type CdeParticipation, type Deal, type DealParty, type Organization, type ProjectAddress } from "../api/client";
-import { formatCurrency } from "../utils/format";
+import { formatCurrency, humanize } from "../utils/format";
 
 const PARTY_ROLES = [
   "borrower",
@@ -66,7 +66,7 @@ export default function DealSetup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId]);
 
-  if (!deal) return <main>{error ? <div className="card">{error}</div> : "Loading…"}</main>;
+  if (!deal) return <main>{error ? <div className="alert alert-error">{error}</div> : <p className="muted is-loading">Loading…</p>}</main>;
 
   const checklist = [
     ["Profile", true],
@@ -159,7 +159,7 @@ export default function DealSetup() {
         ))}
       </div>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <h2>Deal profile</h2>
@@ -171,7 +171,7 @@ export default function DealSetup() {
 
       <div className="card">
         <h2>Project address</h2>
-        <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
+        <p className="muted" style={{ marginTop: 0 }}>
           Drives the AMIS "Project Census Tract" and "Project City / State" fields — one primary address per deal.
         </p>
         <form onSubmit={saveAddress} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, alignItems: "end" }}>
@@ -203,9 +203,9 @@ export default function DealSetup() {
           <thead><tr><th>Legal name</th><th>Role</th><th>Reporting party</th></tr></thead>
           <tbody>
             {parties.map((p) => (
-              <tr key={p.id}><td>{p.legalName}</td><td>{p.partyRole}</td><td>{p.isReportingParty ? "Yes" : "No"}</td></tr>
+              <tr key={p.id}><td>{p.legalName}</td><td>{humanize(p.partyRole)}</td><td>{p.isReportingParty ? "Yes" : "No"}</td></tr>
             ))}
-            {parties.length === 0 && <tr><td colSpan={3}>No parties yet.</td></tr>}
+            {parties.length === 0 && <tr><td className="state-cell" colSpan={3}>No parties yet.</td></tr>}
           </tbody>
         </table>
 
@@ -216,12 +216,13 @@ export default function DealSetup() {
             onChange={(e) => setNewParty({ ...newParty, legalName: e.target.value })}
           />
           <select value={newParty.partyRole} onChange={(e) => setNewParty({ ...newParty, partyRole: e.target.value })}>
-            {PARTY_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            {PARTY_ROLES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
           </select>
           <button type="submit">+ Add party</button>
         </form>
 
-        <table style={{ marginTop: 16 }}>
+        <div className="table-wrap" style={{ marginTop: 16 }}>
+        <table>
           <thead><tr><th>CDE</th><th>Sub-CDE name</th><th>Lead</th><th>Allocation control #</th><th>QEI amount</th><th>Allocation amount</th><th></th></tr></thead>
           <tbody>
             {cdes.map((c) => (
@@ -235,9 +236,10 @@ export default function DealSetup() {
                 <td><button onClick={() => startEditCde(c)}>Edit</button></td>
               </tr>
             ))}
-            {cdes.length === 0 && <tr><td colSpan={7}>No CDEs yet.</td></tr>}
+            {cdes.length === 0 && <tr><td className="state-cell" colSpan={7}>No CDEs yet.</td></tr>}
           </tbody>
         </table>
+        </div>
 
         {editingCdeId && (
           <form onSubmit={saveCdeEdit} className="card" style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -251,8 +253,10 @@ export default function DealSetup() {
             <label>Allocation amount
               <input type="number" value={cdeEdit.allocationAmount} onChange={(e) => setCdeEdit({ ...cdeEdit, allocationAmount: e.target.value })} />
             </label>
-            <button type="submit">Save</button>
-            <button type="button" onClick={() => setEditingCdeId(null)}>Cancel</button>
+            <div className="btn-row">
+              <button type="submit">Save</button>
+              <button type="button" onClick={() => setEditingCdeId(null)}>Cancel</button>
+            </div>
           </form>
         )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type AuditEventRow, type Deal, type IssueRow } from "../../api/client";
+import { SeverityBadge, IssueStatusBadge } from "./StatusBadge";
 
 function fmtShort(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC", month: "short", day: "numeric" }) : "—";
@@ -69,7 +70,7 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
       <h1>Issues & Exceptions</h1>
       <p>Operational issues and exceptions; no automatic legal/recapture conclusion.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <strong>{open.length}</strong> open &nbsp;·&nbsp; <strong>{resolved.length}</strong> resolved
@@ -111,8 +112,9 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 0 }}>
+      <div className="split">
+        <div className="split-main">
+          <div className="table-wrap">
           <table>
             <thead>
               <tr><th>Severity</th><th>Deal</th><th>Issue</th><th>Related item</th><th>Due</th><th>Status</th></tr>
@@ -122,44 +124,45 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
                 <tr
                   key={i.id}
                   onClick={() => { setSelected(i); ensureAuditLoaded(i.dealId); }}
-                  style={{ cursor: "pointer", background: selected?.id === i.id ? "var(--surface-selected, #eef3fb)" : undefined }}
+                  className={`row-selectable${selected?.id === i.id ? " is-selected" : ""}`}
                 >
-                  <td>{i.severity}</td>
+                  <td><SeverityBadge severity={i.severity} /></td>
                   <td>{i.dealName}</td>
                   <td>{i.title}</td>
                   <td>{i.requirementInstance ? i.requirementInstance.requirementDefinition.title : "—"}</td>
                   <td>{fmtShort(i.dueDate)}</td>
-                  <td>{i.status}</td>
+                  <td><IssueStatusBadge status={i.status} /></td>
                 </tr>
               ))}
               {filtered && filtered.length === 0 && (
-                <tr><td colSpan={6}>{rows && rows.length > 0 ? "No issues match this filter." : "No issues logged on any deal."}</td></tr>
+                <tr><td className="state-cell" colSpan={6}>{rows && rows.length > 0 ? "No issues match this filter." : "No issues logged on any deal."}</td></tr>
               )}
-              {!rows && !error && <tr><td colSpan={6}>Loading…</td></tr>}
+              {!rows && !error && <tr><td className="state-cell" colSpan={6}>Loading…</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
 
-        <div className="card" style={{ flex: 1, minWidth: 260 }}>
+        <div className="card split-aside">
           <h2>Selected issue</h2>
-          {!selected && <p style={{ color: "var(--text-muted)" }}>Click a row to see its details.</p>}
+          {!selected && <p className="muted">Click a row to see its details.</p>}
           {selected && (
             <>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Owner</div>
-                <div>{selected.assignedToOrganization?.legalName ?? "—"}</div>
+              <div className="field">
+                <div className="field-label">Owner</div>
+                <div className="field-value">{selected.assignedToOrganization?.legalName ?? "—"}</div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Visibility</div>
-                <div>Deal shared</div>
+              <div className="field">
+                <div className="field-label">Visibility</div>
+                <div className="field-value">Deal shared</div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Resolution</div>
-                <div>{selected.resolution ?? "—"}</div>
+              <div className="field">
+                <div className="field-label">Resolution</div>
+                <div className="field-value">{selected.resolution ?? "—"}</div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>History</div>
-                <div>
+              <div className="field">
+                <div className="field-label">History</div>
+                <div className="field-value">
                   {portal === "impact"
                     ? (auditByDeal[selected.dealId] ? `${historyCount} event${historyCount === 1 ? "" : "s"}` : "Loading…")
                     : "Not visible to this portal"}

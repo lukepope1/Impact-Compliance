@@ -41,19 +41,19 @@ export default function CommentThread({ dealId, instanceId, availableVisibilitie
   return (
     <div className="card">
       <h2>Comments</h2>
-      {error && <div style={{ color: "#b00", marginBottom: 8 }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       {comments?.map((c) => (
-        <div key={c.id} style={{ padding: "8px 0", borderBottom: "1px solid #eee" }}>
-          <div style={{ fontSize: 13 }}>
+        <div key={c.id} className="thread-item">
+          <div className="thread-meta">
             <strong>{c.authorUser.firstName ?? c.authorUser.email}</strong> ({c.authorOrganization.legalName})
-            <span style={{ color: "#999", marginLeft: 8 }}>{VISIBILITY_LABELS[c.visibility] ?? c.visibility}</span>
-            <span style={{ color: "#999", marginLeft: 8 }}>{new Date(c.createdAt).toLocaleString()}</span>
+            <span className="muted" style={{ marginLeft: 8 }}>{VISIBILITY_LABELS[c.visibility] ?? c.visibility}</span>
+            <span className="muted" style={{ marginLeft: 8 }}>{new Date(c.createdAt).toLocaleString()}</span>
           </div>
-          <div>{c.body}</div>
+          <div className="thread-body">{c.body}</div>
         </div>
       ))}
-      {comments && comments.length === 0 && <p style={{ color: "#666" }}>No comments yet.</p>}
+      {comments && comments.length === 0 && <p className="muted">No comments yet.</p>}
 
       <form onSubmit={post} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <textarea

@@ -832,6 +832,63 @@ and documented at the time:
   Impact), replied as her, confirmed the thread live-updated to `Returned`, then closed it
   as Impact and confirmed the status change.
 
+- **UI/UX consistency pass across the whole client.** The design system in `index.css`
+  was reasonable, but screens built at different points had each hand-rolled their own
+  version of the same patterns instead of using it. An audit found 63 hardcoded hex
+  colors and 273 inline `style={{...}}` props across 25 files, plus raw snake_case enum
+  values (`document_collection`, `not_due`, `amis_csv`, `impact_only`) rendering directly
+  into ~25 table cells and headers.
+
+  **Extended the design system** with the primitives those screens had been improvising:
+  `.alert`/`.alert-error`/`-warning`/`-info`; `.split`/`.split-main`/`.split-aside` (the
+  two-column detail layout, now responsive and with a sticky aside); `.field`/
+  `.field-label`/`.field-value` (side-panel label/value pairs); `.thread-item`/
+  `.thread-meta`/`.thread-body`; `.table-wrap` (horizontal scroll for the tables that had
+  grown to 8 columns); `tr.row-selectable`/`.is-selected`/`.row-danger`; `.state-cell` and
+  `.empty-state`; `.btn-row`, `.form-stack`, `.badge-stack`, `.summary-bar`, `.muted`,
+  `.cell-code`; `--info`/`--surface-muted` tokens and a `badge-info` color.
+
+  **Fixed real layout breakage, not just inconsistency**: `main` inside `.portal-shell`
+  had no max-width, so content stretched edge-to-edge on a wide monitor; the sidebar's
+  sticky offset was a hardcoded `96px` that didn't match the sticky nav above it (now both
+  read `--nav-h`); there were no breakpoints at all, so the sidebar + two-column layouts
+  squeezed rather than reflowing on a narrow window. Added `820px` (sidebar becomes a
+  horizontal strip), `980px` (split layouts stack), and `640px` (padding/filter-bar)
+  breakpoints, plus a `prefers-reduced-motion` guard.
+
+  **Killed the raw enum leakage** with a `humanize()` helper that title-cases snake_case
+  but keeps the domain acronyms uppercase — `amis_csv` -> "AMIS CSV", not "Amis csv".
+  Added shared `SeverityBadge`, `IssueStatusBadge` and `ScanStatusBadge` components so
+  severity/status columns render as colored badges consistently instead of each screen
+  either printing the bare string or inventing its own color map (`DocumentsAll.tsx` and
+  `Documents.tsx` had two different local scan-status maps; both were deleted).
+
+  **Extracted `PortalLayout.tsx`.** The three portal layouts were near-identical copies
+  that had drifted: Impact rendered its log-out button inline inside the identity
+  sentence while CDE and QALICB wrapped theirs in `.portal-nav-links`, so the same control
+  sat in a different place depending on which portal you were in. All three now render one
+  shared shell, which also gained the signed-in org name beside the email — useful when
+  the same screens differ by portal.
+
+  **One genuine interaction fix**: the review screen's four decision buttons (Approve /
+  Request clarification / Acknowledge / Waive) were four identical teal primaries of equal
+  visual weight. Approve is now the primary and the other three are secondary, with the
+  "acknowledge means no substantive review needed" explanation moved out of a very long
+  button label into a hint line beneath.
+
+  Result: 63 hardcoded colors -> 0, and 273 inline styles -> 120 (the remainder are
+  legitimate one-offs — specific widths, grid templates, conditional backgrounds).
+  Both `tsc --noEmit` runs clean.
+
+  Verified live in all three portals, checking computed styles rather than just markup:
+  design tokens resolve; the shared nav renders org + email; the sidebar sticks at the
+  real nav height; `.table-wrap` computes `overflow-x: auto`; severity/status badges
+  resolve to the right background colors; clicking a row applies `.is-selected` and
+  populates the `.field` panel; the review screen's Approve button computes teal while the
+  other three compute white; `amis_csv` renders "AMIS CSV" and `document_collection`
+  renders "Document collection". Two HMR errors seen mid-sweep were transient
+  concurrent-edit states — both pages were re-loaded afterward and render correctly.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

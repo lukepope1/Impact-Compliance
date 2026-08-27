@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type AuditEventRow } from "../api/client";
+import { humanize } from "../utils/format";
 
 // Basic RFC 4180 escaping — wrap in quotes and double any embedded quote whenever a field
 // contains a comma, quote, or newline; otherwise leave it bare for readability.
@@ -56,14 +57,14 @@ export default function AuditLog() {
       <h1>Audit Log</h1>
       <p>Every mutation on this deal, most recent first. Impact Marketplace staff only.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <button onClick={exportCsv} disabled={!events || events.length === 0}>
           Export CSV
         </button>
         {events && events.length >= 200 && (
-          <span style={{ marginLeft: 8, fontSize: 12.5, color: "var(--text-muted)" }}>
+          <span className="muted text-sm" style={{ marginLeft: 8 }}>
             Showing the 200 most recent events — the export covers the same 200, not the full history.
           </span>
         )}
@@ -78,11 +79,11 @@ export default function AuditLog() {
             <tr key={e.id}>
               <td>{new Date(e.occurredAt).toLocaleString()}</td>
               <td>{e.actorUser?.email ?? "—"}{e.actorOrganization ? ` (${e.actorOrganization.legalName})` : ""}</td>
-              <td>{e.objectType}{e.objectId ? ` · ${e.objectId.slice(0, 8)}` : ""}</td>
-              <td>{e.action}</td>
+              <td>{humanize(e.objectType)}{e.objectId ? ` · ${e.objectId.slice(0, 8)}` : ""}</td>
+              <td>{humanize(e.action)}</td>
             </tr>
           ))}
-          {events && events.length === 0 && <tr><td colSpan={4}>No audit events yet.</td></tr>}
+          {events && events.length === 0 && <tr><td className="state-cell" colSpan={4}>No audit events yet.</td></tr>}
         </tbody>
       </table>
     </main>

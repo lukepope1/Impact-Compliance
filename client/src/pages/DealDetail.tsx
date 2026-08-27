@@ -61,7 +61,7 @@ export default function DealDetail() {
     }
   }
 
-  if (!deal) return <main>Loading…</main>;
+  if (!deal) return <main><p className="muted is-loading">Loading…</p></main>;
 
   return (
     <main>
@@ -70,10 +70,10 @@ export default function DealDetail() {
         <p>Status: <strong>{STATUS_LABELS[deal.status] ?? deal.status}</strong></p>
         <p>Multi-CDE: {deal.isMultiCde ? "Yes" : "No"}</p>
 
-        {error && <div style={{ color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid var(--danger)", borderRadius: 6, padding: 10, marginBottom: 10 }}>{error}</div>}
+        {error && <div className="alert alert-error">{error}</div>}
 
         {options.length > 0 ? (
-          <div style={{ display: "grid", gap: 8, maxWidth: 480 }}>
+          <div className="form-stack" style={{ maxWidth: 480 }}>
             <label>
               Move to
               <select value={nextStatus} onChange={(e) => setNextStatus(e.target.value)}>
@@ -93,7 +93,7 @@ export default function DealDetail() {
                   {changing ? "Updating…" : `Move to ${STATUS_LABELS[nextStatus]}`}
                 </button>
                 {nextStatus === "archived" && (
-                  <span style={{ marginLeft: 8, fontSize: 12.5, color: "var(--text-muted)" }}>
+                  <span className="muted text-sm" style={{ marginLeft: 8 }}>
                     Archiving is terminal — there's no way back to an active status afterward.
                   </span>
                 )}
@@ -101,7 +101,7 @@ export default function DealDetail() {
             )}
           </div>
         ) : (
-          <p style={{ margin: 0, fontSize: 12.5 }}>Archived — this is the deal's terminal status.</p>
+          <p className="text-sm" style={{ margin: 0 }}>Archived — this is the deal's terminal status.</p>
         )}
       </div>
       <div className="card">
@@ -126,7 +126,7 @@ export default function DealDetail() {
         {" · "}
         <Link to={`/impact/deals/${dealId}/amis`}>AMIS readiness & export</Link>
       </div>
-      <p style={{ color: "#666" }}>
+      <p className="muted">
         The QALICB and CDE portals require signing in as a user with that portal's role —
         log out and sign in as one of the seeded demo accounts to try them.
       </p>

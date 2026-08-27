@@ -121,15 +121,17 @@ export default function QalicbCommunityBenefitsOverview() {
       <h1>Community Benefits Overview</h1>
       <p>CY {year} Annual Community Benefits Report · prior-year values can roll forward but must be reconfirmed.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="stat-grid">
         <div className={`stat-card${completionPercent < 100 ? " stat-warning" : ""}`}>
           <div className="stat-value">{completionPercent}%</div>
           <div className="stat-label">CBR completion</div>
-          <span className={`badge ${completionPercent === 100 ? "badge-success" : "badge-warning"}`} style={{ marginTop: 6 }}>
-            {completionPercent === 100 ? "Complete" : "Continue"}
-          </span>
+          <div className="badge-stack">
+            <span className={`badge ${completionPercent === 100 ? "badge-success" : "badge-warning"}`}>
+              {completionPercent === 100 ? "Complete" : "Continue"}
+            </span>
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{completeCount} of {totalCount}</div>
@@ -138,7 +140,7 @@ export default function QalicbCommunityBenefitsOverview() {
         <div className={`stat-card${needsAttentionCount > 0 ? " stat-warning" : ""}`}>
           <div className="stat-value">{needsAttentionCount}</div>
           <div className="stat-label">Needs attention</div>
-          {needsAttentionCount > 0 && <span className="badge badge-warning" style={{ marginTop: 6 }}>Review</span>}
+          {needsAttentionCount > 0 && <div className="badge-stack"><span className="badge badge-warning">Review</span></div>}
         </div>
       </div>
 
@@ -180,9 +182,9 @@ export default function QalicbCommunityBenefitsOverview() {
             </tr>
           ))}
           {filtered && filtered.length === 0 && (
-            <tr><td colSpan={5}>{rows && rows.length > 0 ? "No sections match this filter." : "No deals assigned yet."}</td></tr>
+            <tr><td colSpan={5} className="state-cell">{rows && rows.length > 0 ? "No sections match this filter." : "No deals assigned yet."}</td></tr>
           )}
-          {!rows && !error && <tr><td colSpan={5}>Loading…</td></tr>}
+          {!rows && !error && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
         </tbody>
       </table>
     </main>

@@ -1,9 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
-import PortalGuard from "../../auth/PortalGuard";
-import { useAuth } from "../../auth/AuthContext";
-import NotificationBell from "../shared/NotificationBell";
+import PortalLayout, { type NavItem } from "../shared/PortalLayout";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   { to: "/impact/deals", label: "Portfolio", end: true },
   { to: "/impact/review-queue", label: "Review Queue" },
   { to: "/impact/amis", label: "AMIS" },
@@ -13,27 +10,5 @@ const NAV_ITEMS = [
 ];
 
 export default function ImpactLayout() {
-  const { user, logout } = useAuth();
-
-  return (
-    <PortalGuard portal="impact">
-      <nav className="portal-nav">
-        <span>
-          <strong>Impact Marketplace staff</strong> — signed in as {user?.email} &nbsp;·&nbsp;
-          <button className="btn-logout" onClick={logout}>Log out</button>
-        </span>
-        <NotificationBell />
-      </nav>
-      <div className="portal-shell">
-        <aside className="portal-sidebar">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.to} to={item.to} end={item.end}>
-              {item.label}
-            </NavLink>
-          ))}
-        </aside>
-        <Outlet />
-      </div>
-    </PortalGuard>
-  );
+  return <PortalLayout portal="impact" label="Impact Marketplace" navItems={NAV_ITEMS} />;
 }

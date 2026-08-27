@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type RequirementInstance } from "../api/client";
+import { humanize } from "../utils/format";
+import StatusBadge from "./shared/StatusBadge";
 
 // Dates from the API are calendar dates stored as UTC midnight (e.g. "period end" or
 // "due date" — no time-of-day meaning). Formatting with the viewer's local timezone can
@@ -87,15 +89,15 @@ export default function Deadlines() {
       <h1>Deadlines</h1>
       <p>Generated from published requirement definitions. Overdue/upcoming status recomputed on every load.</p>
 
-      {error && <div className="card" style={{ color: "var(--danger)", background: "var(--danger-bg)", borderColor: "var(--danger)" }}>{error}</div>}
-      {result && <div className="card" style={{ color: "var(--text)" }}>{result}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
+      {result && <div className="alert alert-info">{result}</div>}
 
       <div className="card">
         <strong>{overdueCount}</strong> overdue &nbsp;·&nbsp; <strong>{upcomingCount}</strong> due within 30 days &nbsp;·&nbsp; <strong>{instances?.length ?? 0}</strong> total
       </div>
 
       {selected.size > 0 && (
-        <div className="card" style={{ display: "grid", gap: 8 }}>
+        <div className="card form-stack">
           <strong>{selected.size} selected</strong>
           <textarea
             placeholder="Reason for waiving (required — applied to every selected instance)"
@@ -111,6 +113,7 @@ export default function Deadlines() {
         </div>
       )}
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -128,7 +131,7 @@ export default function Deadlines() {
         </thead>
         <tbody>
           {instances?.map((i) => (
-            <tr key={i.id} style={i.isOverdue ? { background: "#fdecec" } : undefined}>
+            <tr key={i.id} className={i.isOverdue ? "row-danger" : undefined}>
               <td>
                 {isWaivable(i.status) && (
                   <input
@@ -141,16 +144,17 @@ export default function Deadlines() {
               </td>
               <td>{fmt(i.dueDate)}</td>
               <td>{i.requirementDefinition.title}</td>
-              <td>{i.responsibleParty ? `${i.responsibleParty.legalName} (${i.responsibleParty.partyRole})` : "Deal-level"}</td>
+              <td>{i.responsibleParty ? `${i.responsibleParty.legalName} (${humanize(i.responsibleParty.partyRole)})` : "Deal-level"}</td>
               <td>{fmt(i.reportingPeriodStart)} – {fmt(i.reportingPeriodEnd)}</td>
-              <td>{i.isOverdue ? "OVERDUE" : i.status}</td>
+              <td><StatusBadge status={i.status} isOverdue={i.isOverdue} /></td>
             </tr>
           ))}
           {instances && instances.length === 0 && (
-            <tr><td colSpan={6}>No instances yet — publish a requirement and generate instances from the Requirement Builder.</td></tr>
+            <tr><td className="state-cell" colSpan={6}>No instances yet — publish a requirement and generate instances from the Requirement Builder.</td></tr>
           )}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

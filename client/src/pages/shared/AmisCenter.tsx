@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
-import { formatCurrency, formatDate, formatNumber } from "../../utils/format";
+import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
 
 // goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
 // plain counts vs. dates vs. text — mirrored here since the readiness API returns raw
@@ -107,12 +107,14 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
       )}
       <p>Controlled files only. Phase 1 does not automatically certify or submit in AMIS.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="card">
-        <strong>{readyCount}</strong> ready &nbsp;·&nbsp; <strong style={{ color: missingCount ? "#b00" : undefined }}>{missingCount}</strong> missing
+      <div className="card btn-row">
+        <span className="badge badge-success">{readyCount} ready</span>
+        <span className={`badge ${missingCount ? "badge-danger" : "badge-neutral"}`}>{missingCount} missing</span>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead><tr><th>AMIS field</th><th>Internal field</th><th>Value</th><th>Source</th><th>Status</th><th></th></tr></thead>
         <tbody>
@@ -121,22 +123,23 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
             return (
               <tr key={r.fieldCode}>
                 <td>{r.label}</td>
-                <td style={{ color: "var(--text-muted)", fontFamily: "monospace", fontSize: 12.5 }}>{r.fieldCode}</td>
+                <td className="cell-code">{r.fieldCode}</td>
                 <td>{formatFieldValue(r.fieldCode, r.value)}</td>
                 <td>{r.source}</td>
-                <td style={r.status === "missing" ? { color: "#b00" } : { color: "#1f7a8c" }}>{r.status.toUpperCase()}</td>
+                <td><span className={`badge ${r.status === "missing" ? "badge-danger" : "badge-success"}`}>{humanize(r.status)}</span></td>
                 <td>{link && <Link to={link}>{r.status === "missing" ? "Resolve" : "View source"}</Link>}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      </div>
 
       <div className="card">
         <button onClick={generateExport} disabled={busy || missingCount > 0}>
           {busy ? "Generating…" : "Generate CSV"}
         </button>
-        {missingCount > 0 && <span style={{ marginLeft: 8, color: "#b00" }}>Resolve missing fields before exporting.</span>}
+        {missingCount > 0 && <span style={{ marginLeft: 8, color: "var(--danger)" }}>Resolve missing fields before exporting.</span>}
       </div>
 
       <table>
@@ -145,12 +148,12 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
           {exports?.map((e) => (
             <tr key={e.id}>
               <td>{new Date(e.generatedAt).toLocaleString()}</td>
-              <td>{e.exportType}</td>
-              <td>{e.status}</td>
+              <td>{humanize(e.exportType)}</td>
+              <td>{humanize(e.status)}</td>
               <td>{e.fileName && <button onClick={() => download(e.id, e.fileName!)}>Download</button>}</td>
             </tr>
           ))}
-          {exports && exports.length === 0 && <tr><td colSpan={4}>No exports generated yet.</td></tr>}
+          {exports && exports.length === 0 && <tr><td className="state-cell" colSpan={4}>No exports generated yet.</td></tr>}
         </tbody>
       </table>
     </main>

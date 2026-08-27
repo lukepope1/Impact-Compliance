@@ -22,7 +22,7 @@ export default function ReviewQueue({ stage, portal, title }: { stage: "impact" 
       <h1>{title}</h1>
       <p>Only submissions requiring this {stage === "impact" ? "review" : "CDE's decision"} appear.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <table>
         <thead>
@@ -37,7 +37,7 @@ export default function ReviewQueue({ stage, portal, title }: { stage: "impact" 
               <td><Link to={`${basePath}/${r.id}`}>Review</Link></td>
             </tr>
           ))}
-          {rows && rows.length === 0 && <tr><td colSpan={4}>Nothing pending.</td></tr>}
+          {rows && rows.length === 0 && <tr><td className="state-cell" colSpan={4}>Nothing pending.</td></tr>}
         </tbody>
       </table>
     </main>

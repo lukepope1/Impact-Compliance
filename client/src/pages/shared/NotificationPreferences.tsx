@@ -52,7 +52,7 @@ export default function NotificationPreferences() {
     }
   }
 
-  if (loading) return <main>Loading…</main>;
+  if (loading) return <main><p className="muted is-loading">Loading…</p></main>;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
@@ -64,7 +64,7 @@ export default function NotificationPreferences() {
         <a href="#" onClick={(e) => { e.preventDefault(); navigate(-1); }}>← Back</a>
       </p>
 
-      {error && <div className="card" style={{ color: "var(--danger)", background: "var(--danger-bg)", borderColor: "var(--danger)" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card">
         <h2>Email delivery</h2>
@@ -111,7 +111,7 @@ export default function NotificationPreferences() {
             <tr key={r.eventKey}>
               <td>
                 <div style={{ fontWeight: 600, color: "var(--text)" }}>{r.label}</div>
-                <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{r.description}</div>
+                <div className="text-sm muted">{r.description}</div>
               </td>
               <td>
                 <input
@@ -134,7 +134,7 @@ export default function NotificationPreferences() {
             </tr>
           ))}
           {rows === null && !error && (
-            <tr><td colSpan={3}>Loading…</td></tr>
+            <tr><td className="state-cell" colSpan={3}>Loading…</td></tr>
           )}
         </tbody>
       </table>

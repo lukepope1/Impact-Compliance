@@ -1,20 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type DocumentSummary } from "../../api/client";
-import { formatDate } from "../../utils/format";
-
-const SCAN_STATUS_LABEL: Record<string, string> = {
-  clean: "Clean",
-  pending: "Pending",
-  failed: "Failed",
-  infected: "Infected",
-};
-const SCAN_STATUS_BADGE: Record<string, string> = {
-  clean: "badge-success",
-  pending: "badge-warning",
-  failed: "badge-danger",
-  infected: "badge-danger",
-};
+import { formatDate, humanize } from "../../utils/format";
+import { ScanStatusBadge } from "./StatusBadge";
 
 type Row = DocumentSummary & { dealId: string; dealName: string };
 
@@ -58,7 +46,7 @@ export default function DocumentsAll({ portal }: { portal: "impact" | "cde" | "q
       <h1>Document Library</h1>
       <p>Searchable, versioned evidence. Share scope is enforced server-side.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card filter-bar">
         <label>
@@ -84,6 +72,7 @@ export default function DocumentsAll({ portal }: { portal: "impact" | "cde" | "q
         </label>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Document</th><th>Deal</th><th>Type</th><th>Entity / Period</th><th>Version</th><th>Sharing</th><th>Status</th><th></th></tr>
@@ -95,22 +84,23 @@ export default function DocumentsAll({ portal }: { portal: "impact" | "cde" | "q
               <tr key={d.id}>
                 <td>{d.title}</td>
                 <td>{d.dealName}</td>
-                <td>{d.documentType}</td>
+                <td>{humanize(d.documentType)}</td>
                 <td>
                   {d.legalEntityParty ? d.legalEntityParty.legalName : "Deal-level"}
                   {d.reportingPeriodEnd ? ` · ${formatDate(d.reportingPeriodEnd)}` : ""}
                 </td>
                 <td>v{d.currentVersion}</td>
-                <td>{d.shareScope.replace(/_/g, " ")}</td>
-                <td><span className={`badge ${SCAN_STATUS_BADGE[scanStatus] ?? "badge-neutral"}`}>{SCAN_STATUS_LABEL[scanStatus] ?? scanStatus}</span></td>
+                <td>{humanize(d.shareScope)}</td>
+                <td><ScanStatusBadge status={scanStatus} /></td>
                 <td><Link to={`/${portal}/deals/${d.dealId}/documents`}>View</Link></td>
               </tr>
             );
           })}
-          {filtered && filtered.length === 0 && <tr><td colSpan={8}>{docs && docs.length > 0 ? "No documents match this filter." : "No documents yet."}</td></tr>}
-          {!docs && !error && <tr><td colSpan={8}>Loading…</td></tr>}
+          {filtered && filtered.length === 0 && <tr><td className="state-cell" colSpan={8}>{docs && docs.length > 0 ? "No documents match this filter." : "No documents yet."}</td></tr>}
+          {!docs && !error && <tr><td className="state-cell" colSpan={8}>Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

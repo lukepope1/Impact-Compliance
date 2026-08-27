@@ -17,7 +17,7 @@ export default function DealsListAll({ portal, rowLinkSuffix }: { portal: "impac
       <h1>Deals</h1>
       <p>Every deal in your portfolio.</p>
 
-      {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
       <table>
         <thead>
@@ -31,8 +31,8 @@ export default function DealsListAll({ portal, rowLinkSuffix }: { portal: "impac
               <td><span className={`badge ${dealStatusBadgeClass(d.status)}`}>{d.status.replace("_", " ")}</span></td>
             </tr>
           ))}
-          {deals && deals.length === 0 && <tr><td colSpan={3}>No deals assigned.</td></tr>}
-          {!deals && !error && <tr><td colSpan={3}>Loading…</td></tr>}
+          {deals && deals.length === 0 && <tr><td className="state-cell" colSpan={3}>No deals assigned.</td></tr>}
+          {!deals && !error && <tr><td className="state-cell" colSpan={3}>Loading…</td></tr>}
         </tbody>
       </table>
     </main>

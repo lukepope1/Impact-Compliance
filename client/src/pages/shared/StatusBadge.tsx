@@ -1,3 +1,5 @@
+import { humanize } from "../../utils/format";
+
 // Central status -> badge-color mapping so every dashboard/table renders the same
 // requirement-instance status the same way instead of each screen picking its own colors.
 const STATUS_CLASSES: Record<string, string> = {
@@ -35,6 +37,42 @@ const STATUS_LABELS: Record<string, string> = {
 export default function StatusBadge({ status, isOverdue }: { status: string; isOverdue?: boolean }) {
   if (isOverdue) return <span className="badge badge-danger">Overdue</span>;
   return <span className={`badge ${STATUS_CLASSES[status] ?? "badge-neutral"}`}>{STATUS_LABELS[status] ?? status}</span>;
+}
+
+const SEVERITY_CLASSES: Record<string, string> = {
+  critical: "badge-danger",
+  high: "badge-danger",
+  normal: "badge-neutral",
+  low: "badge-navy",
+};
+
+/** Issue/exception severity — same vocabulary the requirement definitions use. */
+export function SeverityBadge({ severity }: { severity: string }) {
+  return <span className={`badge ${SEVERITY_CLASSES[severity] ?? "badge-neutral"}`}>{humanize(severity)}</span>;
+}
+
+const ISSUE_STATUS_CLASSES: Record<string, string> = {
+  open: "badge-warning",
+  in_review: "badge-info",
+  waiting_external: "badge-navy",
+  resolved: "badge-success",
+  closed: "badge-neutral",
+};
+
+export function IssueStatusBadge({ status }: { status: string }) {
+  return <span className={`badge ${ISSUE_STATUS_CLASSES[status] ?? "badge-neutral"}`}>{humanize(status)}</span>;
+}
+
+const SCAN_STATUS_CLASSES: Record<string, string> = {
+  clean: "badge-success",
+  pending: "badge-warning",
+  failed: "badge-danger",
+  infected: "badge-danger",
+};
+
+/** Malware-scan state of a document's latest version. */
+export function ScanStatusBadge({ status }: { status: string }) {
+  return <span className={`badge ${SCAN_STATUS_CLASSES[status] ?? "badge-neutral"}`}>{humanize(status)}</span>;
 }
 
 export function dealStatusBadgeClass(status: string): string {
