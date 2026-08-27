@@ -1,20 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api, type RequirementInstanceDetail, type Submission } from "../../api/client";
+import { api, type Deal, type RequirementInstanceDetail, type Submission } from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
 import CommentThread from "../shared/CommentThread";
 
 function fmt(d: string | null) {
   return d ? new Date(d).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—";
 }
 
+// Derives a compact period label ("Q2 2026", "H1 2026", "CY 2026") from the real
+// reporting period dates — same logic as the Review Queue's period column.
+function periodLabel(startIso: string | null, endIso: string | null): string {
+  if (!startIso || !endIso) return "—";
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const year = end.getUTCFullYear();
+  const spanMonths = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + (end.getUTCMonth() - start.getUTCMonth()) + 1;
+  if (spanMonths <= 3) return `Q${Math.floor(start.getUTCMonth() / 3) + 1} ${year}`;
+  if (spanMonths <= 6) return `H${start.getUTCMonth() < 6 ? 1 : 2} ${year}`;
+  return `CY ${year}`;
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  qalicb_admin: "QALICB Admin",
+  qalicb_contributor: "QALICB Contributor",
+};
+
+const CERTIFICATION_STATEMENT =
+  "I certify that the submitted information is true, correct and complete in all material respects for the reporting period, subject to the applicable loan-document language.";
+
 export default function RequirementWorkspace() {
   const { dealId, instanceId } = useParams();
+  const { user } = useAuth();
+  const [deal, setDeal] = useState<Deal | null>(null);
   const [instance, setInstance] = useState<RequirementInstanceDetail | null>(null);
   const [draft, setDraft] = useState<Submission | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewMode, setReviewMode] = useState(false);
-  const [attestation, setAttestation] = useState("");
-  const [signerName, setSignerName] = useState("");
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -26,6 +48,7 @@ export default function RequirementWorkspace() {
       // whether it's still a draft or has just moved to submitted/returned/etc.
       setDraft(inst.submissions[0] ?? null);
     }).catch((e) => setError(String(e.message ?? e)));
+    api.getDeal(dealId).then(setDeal).catch(() => setDeal(null));
   }
 
   useEffect(refresh, [dealId, instanceId]);
@@ -62,17 +85,20 @@ export default function RequirementWorkspace() {
     }
   }
 
+  // The signer isn't asked to retype their own name — they're already authenticated, so
+  // clicking "Attest & Submit" *is* the signature act, the same way an e-signature flow
+  // treats a confirmed click from a logged-in identity as the signing event. The signer
+  // line is built from the real logged-in user and their real role on this deal, not a
+  // free-text field the user could put anything in.
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!dealId || !instanceId || !draft) return;
-    if (!attestation.trim() || !signerName.trim()) {
-      setError("Attestation statement and signer name are both required.");
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
-      await api.submitSubmission(dealId, instanceId, draft.id, `${attestation.trim()} — Authorized signer: ${signerName.trim()}`);
+      const signerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown signer";
+      const roleLabel = ROLE_LABEL[user?.memberships[0]?.roleCode ?? ""] ?? "Authorized signer";
+      await api.submitSubmission(dealId, instanceId, draft.id, `${CERTIFICATION_STATEMENT} — ${roleLabel}: ${signerName}`);
       refresh();
       setReviewMode(false);
     } catch (e) {
@@ -93,39 +119,47 @@ export default function RequirementWorkspace() {
   const wasReturned = draft?.status === "returned";
 
   if (reviewMode && draft) {
+    const signerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown signer";
+    const roleLabel = ROLE_LABEL[user?.memberships[0]?.roleCode ?? ""] ?? "Authorized signer";
+
     return (
       <main>
         <h1>Submission Review & Attestation</h1>
-        <p>{def.title} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)}</p>
+        <p>{deal?.legalName ? `${deal.legalName} · ` : ""}{def.title} · {periodLabel(instance.reportingPeriodStart, instance.reportingPeriodEnd)}</p>
 
         {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
-        <div className="card">
-          <h2>Submission completeness</h2>
-          {draft.documents.map((d) => <p key={d.documentId}>✓ {d.document.title} attached</p>)}
-          {attachedCount === 0 && <p>! No evidence attached yet</p>}
-          <p>! Officer certification / attestation required</p>
-        </div>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+          <div style={{ flex: 2, minWidth: 0 }}>
+            <div className="card">
+              <h2>Submission completeness</h2>
+              {draft.documents.map((d) => <span key={d.documentId} className="badge badge-success" style={{ display: "block", width: "fit-content", marginBottom: 8 }}>✓ {d.document.title} attached</span>)}
+              {attachedCount === 0 && <span className="badge badge-warning" style={{ display: "block", width: "fit-content" }}>! No evidence attached yet</span>}
+              <span className="badge badge-warning" style={{ display: "block", width: "fit-content" }}>! Officer certification / attestation required</span>
+            </div>
 
-        <form className="card" onSubmit={submit} style={{ display: "grid", gap: 8, maxWidth: 520 }}>
-          <h2>Attestation</h2>
-          <p>I certify that the submitted information is true, correct and complete in all material respects for the reporting period.</p>
-          <textarea
-            placeholder="Attestation statement"
-            rows={3}
-            value={attestation}
-            onChange={(e) => setAttestation(e.target.value)}
-          />
-          <input
-            placeholder="Authorized signer name and title"
-            value={signerName}
-            onChange={(e) => setSignerName(e.target.value)}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={() => setReviewMode(false)}>Back</button>
-            <button type="submit" disabled={busy}>Attest & Submit</button>
+            <form className="card" onSubmit={submit}>
+              <h2>Attestation</h2>
+              <p>{CERTIFICATION_STATEMENT}</p>
+              <div style={{ background: "var(--surface-muted, #f6f8fb)", borderRadius: 6, padding: "10px 12px", marginBottom: 12 }}>
+                Authorized {roleLabel}: {signerName}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" onClick={() => setReviewMode(false)}>Back</button>
+                <button type="submit" disabled={busy}>{busy ? "Submitting…" : "Attest & Submit"}</button>
+              </div>
+            </form>
           </div>
-        </form>
+
+          <div className="card" style={{ flex: 1, minWidth: 240 }}>
+            <h2>What happens next?</h2>
+            <ol style={{ paddingLeft: 18, margin: 0 }}>
+              <li style={{ marginBottom: 10 }}>Submission becomes immutable version {draft.submissionVersion}.</li>
+              <li style={{ marginBottom: 10 }}>Impact Marketplace reviews completeness/compliance.</li>
+              <li>Approved evidence is then released to applicable CDE reviewer(s).</li>
+            </ol>
+          </div>
+        </div>
       </main>
     );
   }

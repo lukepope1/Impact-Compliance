@@ -699,6 +699,34 @@ and documented at the time:
   due date at all — previously this filter's bug wouldn't have shown here since neither
   issue had a past due date, but the shared logic is now consistent everywhere it's used.
 
+- **Simplified the QALICB Attestation screen to match a "Q-04" wireframe**:
+  `RequirementWorkspace.tsx`'s review/submit screen previously asked the signer to
+  retype a free-text attestation statement *and* their own name/title into two blank
+  fields — the user pointed out the mock just shows the fixed certification text next to
+  a signature line, and asked "wouldn't we just need a signature?"
+
+  Rebuilt it that way: the certification paragraph is fixed (matching the wireframe's
+  wording, including "subject to the applicable loan-document language"), and the signer
+  line is no longer a text input at all — it's built from the actual logged-in user
+  (`Authorized {roleLabel}: {firstName} {lastName}`, via a small `qalicb_admin`/
+  `qalicb_contributor` → label map) and simply displayed. Clicking "Attest & Submit" *is*
+  the signing act, the same way a confirmed click from an authenticated identity works in
+  a real e-signature flow — there's no field left where someone could type a name that
+  isn't their own. Also added the deal name + a real `periodLabel()` (`Q1 2026`-style) to
+  the header, and a real "What happens next?" panel describing the actual review pipeline
+  (Impact review → CDE release), matching what `reviews.ts` actually does.
+
+  Deliberately didn't fabricate the wireframe's "CFO"-style job title — no such field
+  exists on `User`, so showing one would mean inventing data; the role label (`QALICB
+  Admin`) is the honest real equivalent.
+
+  Verified live end-to-end as Jane Doe (`qalicb_admin`): attached real evidence via the
+  API, opened Review & Submit, confirmed the header read "Millennium Holdings · Quarterly
+  Financial Statements · Q1 2026," the signature line read "Authorized QALICB Admin: Jane
+  Doe" with no input to fill in, then clicked Attest & Submit and confirmed via the API
+  that the real stored `attestationText` was exactly the fixed statement plus that same
+  real signer line, and the instance's status flipped to `submitted`.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
