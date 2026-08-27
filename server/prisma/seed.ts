@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedAdditionalQalicbs } from "./additionalQalicbs";
 import { seedPortfolioDemoData } from "./portfolioDemoData";
+import { seedTlrCatalog } from "./seedTlrCatalog";
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,13 @@ const prisma = new PrismaClient();
 const DEV_PASSWORD = "password123";
 
 async function main() {
+  // The TLR catalog is reference data, not demo data: it describes the AMIS report format
+  // itself, so it belongs in every environment and must load even when the demo guard
+  // below bails out. It's all upserts, so re-running it on each boot is how a regenerated
+  // catalog reaches a deployed environment.
+  const catalog = await seedTlrCatalog(prisma);
+  console.log("TLR catalog:", catalog);
+
   // Everything below creates rows unconditionally, so a second run would duplicate every
   // organization, user and deal. Local dev always starts from a fresh database, but a
   // deployed review environment re-runs this on each boot (see SEED_ON_START in
