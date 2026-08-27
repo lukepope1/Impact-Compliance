@@ -17,6 +17,7 @@ import CdePortfolio from "./pages/cde/CdePortfolio";
 import CdeDealOverview from "./pages/cde/CdeDealOverview";
 import ImpactAuditAll from "./pages/impact/ImpactAuditAll";
 import QalicbCbrRedirect from "./pages/qalicb/QalicbCbrRedirect";
+import QalicbCommunityBenefitsOverview from "./pages/qalicb/QalicbCommunityBenefitsOverview";
 import ReviewQueueAll from "./pages/shared/ReviewQueueAll";
 import IssuesAll from "./pages/shared/IssuesAll";
 import DocumentsAll from "./pages/shared/DocumentsAll";
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/qalicb" element={<QalicbLayout />}>
           <Route index element={<QalicbDashboard />} />
           <Route path="tasks" element={<QalicbComplianceTasks />} />
+          <Route path="benefits" element={<QalicbCommunityBenefitsOverview />} />
           <Route path="cbr" element={<QalicbCbrRedirect />} />
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />

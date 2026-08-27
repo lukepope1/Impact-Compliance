@@ -266,6 +266,8 @@ export interface JobRecordRow {
   jobStatus: string | null;
   hourlyWage: string | null;
   accessibleToLicLip: boolean | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TenantOccupantRow {
@@ -275,6 +277,7 @@ export interface TenantOccupantRow {
   purposeGoodsServices: string | null;
   squareFeet: string | null;
   currentEmployees: string | null;
+  createdAt: string;
 }
 
 export interface BenefitRecordRow {
@@ -295,6 +298,7 @@ export interface ServiceOutcomeRow {
   peopleServedCurrent: string | null;
   percentLowIncome: string | null;
   outcomeNarrative: string | null;
+  createdAt: string;
 }
 
 export interface CbrPeriod {
@@ -306,6 +310,8 @@ export interface CbrPeriod {
     annualNetOperatingIncome: string | null;
     projectDescription: string | null;
     butForStatement: string | null;
+    createdAt: string;
+    updatedAt: string;
   } | null;
   jobRecords: JobRecordRow[];
   tenantOccupants: TenantOccupantRow[];

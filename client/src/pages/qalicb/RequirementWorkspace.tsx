@@ -37,6 +37,7 @@ export default function RequirementWorkspace() {
   const [draft, setDraft] = useState<Submission | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reviewMode, setReviewMode] = useState(false);
+  const [signerName, setSignerName] = useState("");
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -85,20 +86,32 @@ export default function RequirementWorkspace() {
     }
   }
 
-  // The signer isn't asked to retype their own name — they're already authenticated, so
-  // clicking "Attest & Submit" *is* the signature act, the same way an e-signature flow
-  // treats a confirmed click from a logged-in identity as the signing event. The signer
-  // line is built from the real logged-in user and their real role on this deal, not a
-  // free-text field the user could put anything in.
+  // Pre-filled from the real logged-in identity so nobody has to retype their own name,
+  // but left editable — the person clicking submit isn't always the authorized officer
+  // themselves (e.g. a contributor preparing the packet for the CFO to sign off on), so
+  // the name on the attestation needs to be correctable, not locked to whoever's logged in.
+  function defaultSignerName() {
+    return [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "";
+  }
+
+  function openReviewMode() {
+    setSignerName(defaultSignerName());
+    setReviewMode(true);
+  }
+
+  const roleLabel = ROLE_LABEL[user?.memberships[0]?.roleCode ?? ""] ?? "Authorized signer";
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!dealId || !instanceId || !draft) return;
+    if (!signerName.trim()) {
+      setError("A signer name is required to attest.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const signerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown signer";
-      const roleLabel = ROLE_LABEL[user?.memberships[0]?.roleCode ?? ""] ?? "Authorized signer";
-      await api.submitSubmission(dealId, instanceId, draft.id, `${CERTIFICATION_STATEMENT} — ${roleLabel}: ${signerName}`);
+      await api.submitSubmission(dealId, instanceId, draft.id, `${CERTIFICATION_STATEMENT} — ${roleLabel}: ${signerName.trim()}`);
       refresh();
       setReviewMode(false);
     } catch (e) {
@@ -119,9 +132,6 @@ export default function RequirementWorkspace() {
   const wasReturned = draft?.status === "returned";
 
   if (reviewMode && draft) {
-    const signerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Unknown signer";
-    const roleLabel = ROLE_LABEL[user?.memberships[0]?.roleCode ?? ""] ?? "Authorized signer";
-
     return (
       <main>
         <h1>Submission Review & Attestation</h1>
@@ -141,9 +151,15 @@ export default function RequirementWorkspace() {
             <form className="card" onSubmit={submit}>
               <h2>Attestation</h2>
               <p>{CERTIFICATION_STATEMENT}</p>
-              <div style={{ background: "var(--surface-muted, #f6f8fb)", borderRadius: 6, padding: "10px 12px", marginBottom: 12 }}>
-                Authorized {roleLabel}: {signerName}
-              </div>
+              <label style={{ display: "block", marginBottom: 12 }}>
+                Authorized {roleLabel}
+                <input
+                  value={signerName}
+                  onChange={(e) => setSignerName(e.target.value)}
+                  placeholder="Signer name"
+                  style={{ display: "block", width: "100%", marginTop: 4 }}
+                />
+              </label>
               <div style={{ display: "flex", gap: 8 }}>
                 <button type="button" onClick={() => setReviewMode(false)}>Back</button>
                 <button type="submit" disabled={busy}>{busy ? "Submitting…" : "Attest & Submit"}</button>
@@ -200,7 +216,7 @@ export default function RequirementWorkspace() {
       </div>
 
       {!isLocked && (
-        <button onClick={() => setReviewMode(true)} disabled={!draft || attachedCount === 0}>
+        <button onClick={openReviewMode} disabled={!draft || attachedCount === 0}>
           Review & Submit
         </button>
       )}

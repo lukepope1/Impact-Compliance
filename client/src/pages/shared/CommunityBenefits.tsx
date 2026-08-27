@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { api, type CbrPeriod } from "../../api/client";
 import { formatCurrency, formatNumber } from "../../utils/format";
 
@@ -19,6 +19,7 @@ function findBenefit(period: CbrPeriod, code: string, employeeClass: string) {
 
 export default function CommunityBenefits() {
   const { dealId } = useParams();
+  const location = useLocation();
   const year = new Date().getFullYear();
   const [period, setPeriod] = useState<CbrPeriod | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,15 @@ export default function CommunityBenefits() {
   }
 
   useEffect(refresh, [dealId]);
+
+  // Lets the Community Benefits Overview page's per-section "Continue"/"Review" links
+  // land directly on the relevant card instead of just the top of this (fairly long)
+  // single-page form. Runs after the period has loaded so the target element exists.
+  useEffect(() => {
+    if (!period || !location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [period, location.hash]);
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -141,7 +151,7 @@ export default function CommunityBenefits() {
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
-      <form className="card" onSubmit={saveProfile} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <form id="project-profile" className="card" onSubmit={saveProfile} style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <h2 style={{ margin: 0 }}>Project Profile</h2>
         <label>Annual gross revenue
           <input type="number" value={revenue} onChange={(e) => setRevenue(e.target.value)} />
@@ -155,7 +165,7 @@ export default function CommunityBenefits() {
         )}
       </form>
 
-      <div className="card">
+      <div id="jobs-workforce" className="card">
         <h2>Jobs & Workforce — {formatNumber(totalJobsCreated)} FTE created</h2>
         <table>
           <thead><tr><th>Title</th><th>FTE</th><th>Status</th></tr></thead>
@@ -176,7 +186,7 @@ export default function CommunityBenefits() {
         </form>
       </div>
 
-      <div className="card">
+      <div id="job-benefits" className="card">
         <h2>Job Benefits</h2>
         <p style={{ color: "#666", marginTop: 0 }}>Benefit rows can roll forward from a prior year and just need reconfirming.</p>
         <table>
@@ -221,7 +231,7 @@ export default function CommunityBenefits() {
         </table>
       </div>
 
-      <div className="card">
+      <div id="tenants-occupants" className="card">
         <h2>Tenants & Occupants</h2>
         <table>
           <thead><tr><th>Organization</th><th>Purpose</th></tr></thead>
@@ -237,7 +247,7 @@ export default function CommunityBenefits() {
         </form>
       </div>
 
-      <div className="card">
+      <div id="commercial-services" className="card">
         <h2>Commercial / Community Services</h2>
         <p style={{ color: "#666", marginTop: 0 }}>Goods/services provided to low-income communities, and the outcomes they produce.</p>
         <table>

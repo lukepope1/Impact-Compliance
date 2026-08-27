@@ -727,6 +727,49 @@ and documented at the time:
   that the real stored `attestationText` was exactly the fixed statement plus that same
   real signer line, and the instance's status flipped to `submitted`.
 
+- **Made the attestation signer field editable again**: the user tried this right after
+  it shipped and correctly pushed back — locking the signature to a static, non-editable
+  display of the logged-in user's name went too far. The person clicking through the
+  submission flow isn't always the authorized officer themselves (e.g. a contributor
+  preparing the packet for the CFO to sign), so the name needs to be correctable. Kept the
+  real logged-in identity as the *default* (pre-filled, no retyping needed in the common
+  case) but turned it back into a real, editable text input, validated non-empty before
+  submit.
+
+- **Added a QALICB "Community Benefits Overview" page**, matching a "Q-05" wireframe:
+  cross-section status for the CBR across every deal the QALICB user has access to, with
+  a Deal/Status/Search filter bar and, per the user's explicit ask, a real click-through
+  action per row that deep-links straight to the relevant card on the (single-page) CBR
+  form — not just the top of a long form.
+
+  New sidebar item "Community Benefits" (renamed from "Community Benefits Report," which
+  now lives at this overview instead of redirecting straight to the form) and route
+  `/qalicb/benefits`. The 5 section rows per deal (Project Profile, Jobs & Workforce, Job
+  Benefits, Tenants & Occupants, Commercial/Community Services) reuse the same real
+  presence-based completion logic `CdeDealOverview.tsx`'s CBR-progress stat card already
+  established, just broken out per section instead of blended into one number — Job
+  Benefits alone gets a three-way state (not started / in progress / complete) since it
+  has 12 real fillable slots (6 benefit codes × 2 employee classes) to be partially
+  filled, where the other four sections are effectively binary (has any real data or
+  doesn't).
+
+  The deep-linking is genuinely real, not a fake anchor: `CommunityBenefits.tsx` got `id`
+  attributes on each of its 5 section cards and a `location.hash`-driven `scrollIntoView`
+  effect, so `/qalicb/deals/:dealId/cbr#tenants-occupants` actually lands on that card.
+
+  Two fields were deliberately left honest rather than matching the mock outright:
+  `BenefitRecord` has no `createdAt`/`updatedAt` in the schema at all, so Job Benefits'
+  "Last updated" column always shows "—" rather than a fabricated timestamp; and no
+  section has any real "owner" concept (unlike `Issue.assignedToOrganization`), so the
+  mock's per-row Owner column was dropped rather than inventing names.
+
+  Verified live on Millennium Holdings: overview correctly showed 80% CBR completion (4
+  of 5 sections), with the one incomplete section (Tenants & Occupants, genuinely empty)
+  showing "Start"; clicking through navigated to `/qalicb/deals/:dealId/cbr#tenants-
+  occupants` and — confirmed with the tab actually fronted, since this sandbox's
+  background-tab rendering doesn't run smooth-scroll animations — landed exactly on that
+  card.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
