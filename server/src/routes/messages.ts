@@ -1,60 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { Message, MessageVisibility, Organization, RoleCode } from "@prisma/client";
+import type { Message, Organization } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess } from "../middleware/auth";
 import { orgTypeMap } from "../lib/documentAccess";
-import { notify, resolveDealMembers } from "../lib/notifications";
+import { dueSuffix, notifyThreadAudience } from "../lib/messageNotifications";
 
 export const messagesRouter = Router({ mergeParams: true });
-
-const IMPACT_ROLES: RoleCode[] = ["impact_super_admin", "impact_compliance_manager", "impact_analyst"];
-const QALICB_ROLES: RoleCode[] = ["qalicb_admin", "qalicb_contributor"];
-const CDE_ROLES: RoleCode[] = ["cde_admin", "cde_reviewer", "cde_viewer"];
-
-/**
- * Who gets told about a thread, per audience. Deliberately mirrors canSeeMessage() below
- * — notifying someone about a message they then can't open would be worse than staying
- * quiet. Impact appears in every row because Impact can read every thread on its deals.
- */
-const AUDIENCE_ROLES: Record<MessageVisibility, RoleCode[]> = {
-  qalicb_shared: [...QALICB_ROLES, ...IMPACT_ROLES],
-  deal_shared: [...QALICB_ROLES, ...IMPACT_ROLES, ...CDE_ROLES],
-  cde_private: [...CDE_ROLES, ...IMPACT_ROLES],
-};
-
-function dueSuffix(dueDate: Date | null) {
-  if (!dueDate) return "";
-  return ` A response is due by ${dueDate.toISOString().slice(0, 10)}.`;
-}
-
-/**
- * Notifies everyone who can see a thread, except the person who just acted — they know
- * what they did. Only the acting *user* is excluded rather than their whole organization,
- * so a colleague at the same org still finds out a request landed.
- */
-async function notifyThreadAudience(params: {
-  dealId: string;
-  visibility: MessageVisibility;
-  actingUserId: string;
-  notificationType: "message_received" | "message_replied";
-  subject: string;
-  body: string;
-}) {
-  const targets = (await resolveDealMembers(params.dealId, AUDIENCE_ROLES[params.visibility])).filter(
-    (t) => t.userId !== params.actingUserId
-  );
-  if (targets.length === 0) return;
-
-  await notify({
-    targets,
-    dealId: params.dealId,
-    notificationType: params.notificationType,
-    subject: params.subject,
-    body: params.body,
-  });
-}
 
 const MESSAGE_INCLUDE = {
   fromUser: { select: { email: true, firstName: true, lastName: true } },

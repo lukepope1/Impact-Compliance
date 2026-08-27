@@ -125,6 +125,42 @@ instance's crash is the same risk any interval-based job has and isn't specific 
 locking scheme; a production deployment wanting delivery guarantees on top of this would
 want an outbox/retry pattern, which is out of scope here.
 
+## Message thread overdue sweep
+
+`lib/messageSweep.ts` does for message threads what the deadline sweep does for
+requirement instances: calls out anything still open past its response date. Before this,
+a lender/information request could sail past its due date with the only trace being the
+Due-date filter on the Messages screen — someone had to go looking to find out.
+
+Wired up in `index.ts` alongside the other two sweeps, sharing the deadline sweep's
+interval (`DEADLINE_SWEEP_INTERVAL_MINUTES`, default hourly) but with its own advisory-lock
+key (`84_217_005`, next to the deadline sweep's `…003` and the digest's `…004`) and its own
+startup offset, so the three don't start in lockstep on every tick.
+
+Two things differ from the deadline sweep, both because a thread is simpler than a
+requirement instance:
+
+- **Overdue is computed at read time, not stored.** A thread's due date never moves once
+  set, so there's no `isOverdue` column to keep in sync — the query just asks for
+  `dueDate < now`.
+- **`Message.overdueNotifiedAt` exists purely as a "we already said so" marker**, so an
+  open thread is called out once rather than on every hourly tick. Rows are claimed
+  (marker written) inside the locked transaction and the notifications sent after it
+  commits — same split as the deadline sweep, so slow SMTP never holds a lock.
+
+Skips closed threads (nobody owes a response), replies (only root threads carry a due
+date), and threads on closed/archived deals — matching the deadline sweep's scope.
+
+Audience comes from `lib/messageNotifications.ts`, shared with the create/reply routes
+precisely so the sweep can't drift from them or from `canSeeMessage()`.
+
+Verified live: backdated an open `qalicb_shared` thread's due date, then ran the sweep
+twice. The first run flagged 1 thread and notified the QALICB and Impact users (2 rows
+each — one `in_app`, one `email`); the CDE got nothing, correctly, since `qalicb_shared`
+excludes CDEs. **The second run flagged 0 and created no further rows**, which is the whole
+point of the marker column. The backdated date and the resulting test notifications were
+restored/removed afterward.
+
 ## Email delivery
 
 `email.ts` wraps `nodemailer` against `SMTP_HOST`/`PORT`/`USER`/`PASS`/`FROM`. Unset

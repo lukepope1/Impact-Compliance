@@ -948,6 +948,12 @@ model Message {
   dueDate               DateTime?           @map("due_date") @db.Date
   slaDays               Int?                @map("sla_days")
   status                MessageStatus       @default(open)
+  // Set the first time the overdue sweep alerts on this thread, so a thread that stays
+  // open past its response date is called out once rather than every hourly tick. Unlike
+  // RequirementInstance.isOverdue this isn't a derived display flag — a thread's due date
+  // never moves once set, so "is it overdue" is computable at read time and this column
+  // only records that we already said so.
+  overdueNotifiedAt     DateTime?           @map("overdue_notified_at")
   createdAt             DateTime            @default(now()) @map("created_at")
 
   @@index([dealId, parentMessageId, createdAt])

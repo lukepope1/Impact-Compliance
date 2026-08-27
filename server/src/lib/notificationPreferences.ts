@@ -35,6 +35,11 @@ export const NOTIFICATION_EVENTS = [
     description: "A thread you can see got a new reply.",
   },
   {
+    key: "message_overdue",
+    label: "A request passed its response date",
+    description: "A message thread you can see is still open past the date a response was due.",
+  },
+  {
     key: "deadline_upcoming",
     label: "A deadline is coming up",
     description: "A requirement instance just crossed into the 30-day due-soon window.",

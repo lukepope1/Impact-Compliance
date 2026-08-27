@@ -992,10 +992,33 @@ and documented at the time:
   2026-09-01." Confirmed both new toggles render on the preferences screen and that no
   "SLA" text survives anywhere on the Messages page.
 
-  Still open: nothing fires when a response date actually *passes*. Requirement instances
-  get swept and flipped to overdue automatically (`deadlineSweep.ts`); message threads
-  don't, so an overdue thread is only visible via the Due-date filter. That would be the
-  next step if the response window is meant to drive behavior rather than set expectations.
+- **Added the message overdue sweep**, closing the gap flagged above — a response date
+  passing now actually fires something instead of only showing up if someone thought to
+  use the Due-date filter. `lib/messageSweep.ts` mirrors `deadlineSweep.ts`: same hourly
+  interval, same transaction-scoped advisory lock pattern for multi-instance coordination
+  (own key `84_217_005`), same split of claim-inside-the-lock / send-after-it-commits so
+  slow SMTP never holds a lock. Full details in docs/NOTIFICATIONS.md.
+
+  Needed one migration (`add_message_overdue_notified_at`) for a `Message.overdueNotifiedAt`
+  marker, so an open thread is called out once rather than on every tick. Deliberately
+  *not* an `isOverdue` column like the requirement instances have: a thread's due date
+  never moves once set, so overdue is computable at read time and the only thing worth
+  persisting is that we already said so.
+
+  Also extracted the audience mapping into `lib/messageNotifications.ts`, shared by the
+  create/reply routes and the sweep. Two copies of "who can see this thread" would
+  eventually disagree with each other and with `canSeeMessage()`, which is exactly the
+  class of bug that produced the mislabelled visibility earlier.
+
+  Verified by running the sweep twice against a backdated thread: first run flagged 1 and
+  notified the QALICB and Impact users (2 rows each, `in_app` + `email`) with the CDE
+  correctly getting nothing on a `qalicb_shared` thread; **second run flagged 0 and wrote
+  nothing**, proving the once-only guard. Restored the backdated due date and deleted the
+  resulting test notifications afterward so the demo data stays honest.
+
+  Running the migration also confirmed the fix for the recurring Windows `EPERM` on
+  `prisma generate`: stopping the API server *before* migrating (rather than after hitting
+  the error) let migrate and generate both complete in one pass.
 
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT

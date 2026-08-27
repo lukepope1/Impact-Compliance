@@ -28,6 +28,7 @@ import { notificationsRouter } from "./routes/notificationsRouter";
 import { verifyStorageReachable } from "./lib/storage";
 import { runDeadlineSweep } from "./lib/deadlineSweep";
 import { runDigestSweep } from "./lib/notificationDigest";
+import { runMessageOverdueSweep } from "./lib/messageSweep";
 
 // Prisma returns BigInt for file_size_bytes; JSON.stringify can't serialize BigInt
 // natively and Node treats the resulting rejection as fatal, so patch it globally
@@ -111,12 +112,31 @@ function startDigestSweeper() {
   setInterval(sweep, DIGEST_INTERVAL_MS);
 }
 
+// Calls out message threads still open past their response date (see lib/messageSweep.ts).
+// Shares the deadline sweep's interval since both answer the same question — "has a date
+// passed while nobody was looking" — but runs on its own advisory-lock key and its own
+// offset so the two don't start in lockstep every tick.
+function startMessageSweeper() {
+  const sweep = () =>
+    runMessageOverdueSweep()
+      .then((result) => {
+        if (result.threadsFlagged > 0) {
+          console.log(`Message overdue sweep: ${result.threadsFlagged} thread(s) past their response date.`);
+        }
+      })
+      .catch((err) => console.error("Message overdue sweep failed:", err));
+
+  setTimeout(sweep, 20_000);
+  setInterval(sweep, SWEEP_INTERVAL_MS);
+}
+
 verifyStorageReachable()
   .then(() => {
     app.listen(port, () => {
       console.log(`NMTC Compliance Platform API listening on :${port}`);
       startDeadlineSweeper();
       startDigestSweeper();
+      startMessageSweeper();
     });
   })
   .catch((err) => {
