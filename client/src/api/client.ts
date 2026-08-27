@@ -238,6 +238,21 @@ export interface CommentRow {
   authorOrganization: { legalName: string };
 }
 
+export interface MessageRow {
+  id: string;
+  visibility: string;
+  subject: string | null;
+  body: string;
+  dueDate: string | null;
+  slaDays: number | null;
+  status: string;
+  createdAt: string;
+  fromUser: { email: string; firstName: string | null; lastName: string | null };
+  fromOrganization: { legalName: string };
+  requirementInstance: { id: string; requirementDefinition: { title: string } } | null;
+  replies: MessageRow[];
+}
+
 export interface IssueNoteRow {
   id: string;
   body: string;
@@ -570,6 +585,23 @@ export const api = {
   ) => request<IssueRow>(`/deals/${dealId}/issues`, { method: "POST", body: JSON.stringify(data) }),
   resolveIssue: (dealId: string, issueId: string, resolution: string) =>
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
+
+  listMessages: (dealId: string) => request<MessageRow[]>(`/deals/${dealId}/messages`),
+  createMessage: (
+    dealId: string,
+    data: {
+      visibility: string;
+      subject: string;
+      body: string;
+      dueDate?: string;
+      slaDays?: number;
+      requirementInstanceId?: string;
+    }
+  ) => request<MessageRow>(`/deals/${dealId}/messages`, { method: "POST", body: JSON.stringify(data) }),
+  replyMessage: (dealId: string, messageId: string, body: string) =>
+    request<MessageRow>(`/deals/${dealId}/messages/${messageId}/reply`, { method: "POST", body: JSON.stringify({ body }) }),
+  closeMessage: (dealId: string, messageId: string) =>
+    request<MessageRow>(`/deals/${dealId}/messages/${messageId}/close`, { method: "POST" }),
 
   listIssueNotes: (dealId: string, issueId: string) =>
     request<IssueNoteRow[]>(`/deals/${dealId}/issues/${issueId}/notes`),

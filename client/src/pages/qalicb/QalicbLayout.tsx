@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: "/qalicb/tasks", label: "Compliance Tasks" },
   { to: "/qalicb/benefits", label: "Community Benefits" },
   { to: "/qalicb/documents", label: "Documents" },
+  { to: "/qalicb/messages", label: "Messages" },
 ];
 
 export default function QalicbLayout() {

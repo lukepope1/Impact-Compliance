@@ -256,6 +256,18 @@ enum CommentVisibility {
   cde_private
 }
 
+enum MessageVisibility {
+  qalicb_shared
+  deal_shared
+  cde_private
+}
+
+enum MessageStatus {
+  open
+  returned
+  closed
+}
+
 enum IssueType {
   missing_item
   late_item
@@ -381,6 +393,7 @@ model Organization {
   ownedDocuments         Document[]
   documentAccessGrants   DocumentAccessGrant[]
   comments               Comment[]
+  messages               Message[]
   assignedIssues         Issue[]
   issueNotes             IssueNote[]
   notifications          Notification[]
@@ -417,6 +430,7 @@ model User {
   attestedSubmissions    Submission[]              @relation("AttestedByUser")
   reviews                Review[]
   comments               Comment[]
+  messages               Message[]
   assignedIssues         Issue[]
   issueNotes             IssueNote[]
   resolvedStructuredValues StructuredValue[]       @relation("StructuredValueEnteredBy")
@@ -475,6 +489,7 @@ model Deal {
   requirementDefinitions RequirementDefinition[]
   requirementInstances   RequirementInstance[]
   comments               Comment[]
+  messages               Message[]
   issues                 Issue[]
   issueNotes             IssueNote[]
   cbrReportingPeriods    CbrReportingPeriod[]
@@ -762,6 +777,7 @@ model RequirementInstance {
   submissions  Submission[]
   reviews      Review[]
   comments     Comment[]
+  messages     Message[]
   issues       Issue[]
   notifications Notification[]
 
@@ -905,6 +921,37 @@ model Comment {
   editedAt               DateTime?           @map("edited_at")
 
   @@map("comments")
+}
+
+// A lightweight request/response thread between deal parties — distinct from Comment
+// (which is a flat note attached to one requirement instance) in that a Message thread
+// has its own due date/SLA and an explicit Open/Returned/Closed lifecycle, matching how
+// an actual lender/CDE information request is tracked, not just discussed. Replies are
+// Message rows with parentMessageId set; only the root row's subject/dueDate/status are
+// meaningful — see messages.ts for the status-transition rules.
+model Message {
+  id                    String              @id @default(uuid())
+  dealId                String              @map("deal_id")
+  deal                  Deal                @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  parentMessageId       String?             @map("parent_message_id")
+  parentMessage         Message?            @relation("MessageReplies", fields: [parentMessageId], references: [id], onDelete: Cascade)
+  replies               Message[]           @relation("MessageReplies")
+  requirementInstanceId String?             @map("requirement_instance_id")
+  requirementInstance   RequirementInstance? @relation(fields: [requirementInstanceId], references: [id])
+  fromUserId            String              @map("from_user_id")
+  fromUser              User                @relation(fields: [fromUserId], references: [id])
+  fromOrganizationId    String              @map("from_organization_id")
+  fromOrganization      Organization        @relation(fields: [fromOrganizationId], references: [id])
+  visibility            MessageVisibility
+  subject               String?
+  body                  String
+  dueDate               DateTime?           @map("due_date") @db.Date
+  slaDays               Int?                @map("sla_days")
+  status                MessageStatus       @default(open)
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  @@index([dealId, parentMessageId, createdAt])
+  @@map("messages")
 }
 
 model Issue {

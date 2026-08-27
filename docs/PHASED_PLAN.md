@@ -799,6 +799,39 @@ and documented at the time:
   behavior already documented elsewhere), and the deal-scoped page's full upload/version-
   history/download functionality working exactly as it already does for Impact and CDE.
 
+- **Added a Messages & Lender Requests center**, matching a "Q-11" wireframe. Unlike the
+  last several features, this genuinely had no backing model — `Comment` is a flat note
+  with no due date, status, or sender/recipient framing, and the on-request
+  `RequirementInstance` flow (Impact-only, `responseDays`-derived due date) is the closest
+  real analog but isn't a message thread. Asked the user to choose between repurposing
+  those or building a real new model; they chose the real model.
+
+  Added a new `Message` Prisma model + migration (`20260827004309_add_messages`): a
+  thread root carries `subject`/`body`/`dueDate`/`slaDays`/`status`
+  (`open`/`returned`/`closed`) and a `fromOrganization`/`fromUser`; replies are `Message`
+  rows with `parentMessageId` set, inheriting the root's visibility. New
+  `MessageVisibility` enum deliberately drops `impact_private` (present on
+  `CommentVisibility`) — a request thread only visible to Impact wouldn't be a request to
+  anyone, so that value wouldn't mean anything here.
+
+  Status transitions live in `messages.ts`, not the client: a reply from an org other than
+  the thread's original sender flips `open → returned` (ball back in the sender's court);
+  a reply from the original sender while `returned` flips it back to `open`; closing is
+  gated to the sender's org or Impact staff, mirroring who's actually allowed to decide a
+  request is satisfied.
+
+  Built the shared `MessagesAll.tsx` (filter bar, click-to-select thread panel showing
+  Requirement/SLA/Visibility/full thread, reply + close actions, and a "+ New request"
+  composer) and wired it into the QALICB portal only, per the request — the component
+  itself is portal-parameterized like the other `*All.tsx` pages, so extending it to
+  Impact/CDE later is just adding a route.
+
+  Verified live end-to-end on Millennium Holdings: created a real request as Impact
+  (`slaDays: 5` correctly derived a due date 5 days out), confirmed Jane Doe (QALICB) saw
+  it with the right SLA/visibility text and no visible "Close thread" (not her org, not
+  Impact), replied as her, confirmed the thread live-updated to `Returned`, then closed it
+  as Impact and confirmed the status change.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
