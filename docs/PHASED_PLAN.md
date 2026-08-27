@@ -622,6 +622,28 @@ and documented at the time:
   lookup used elsewhere (`CdeDealOverview.tsx`) as a subtitle line under the page title.
   Verified live: shows "Millennium Holdings · Millennium Holdings LLC".
 
+- **QALICB Dashboard update to a "Q-01" wireframe** (stat cards + filter bar only, scoped
+  down from the full mock): the 4 stat cards were rebuilt to match — `Open tasks` (with a
+  real overdue-count badge folded in, rather than its own separate card), `Due within 30
+  days`, `Returned`, and a new `Approved YTD` count. Approved YTD counts instances whose
+  status shows they've cleared at least one review stage (`impact_approved` or later,
+  excluding `waived` since a waiver isn't an approval) with `updatedAt` in the current
+  calendar year — the model has no dedicated "approval date," so `updatedAt` (the last
+  status transition) is the same honest proxy the Review Queue redesign already used for
+  "when did this arrive." Also added the Deal / Status / Due date / Search filter bar,
+  matching the pattern used everywhere else in the app, and a "Compliance Year {year}"
+  suffix on the header line.
+
+  Deliberately did *not* expand the QALICB sidebar to match the mock's 6 items — Documents
+  and Organization have no real QALICB-scoped pages behind them yet, and Messages has no
+  backing feature in this app at all. Confirmed scope with the user first; building those
+  out is a separate, bigger task if wanted later.
+
+  Verified live as the Millennium Holdings QALICB user: stat cards showed real counts (26
+  open / 24 due-in-30 / 2 returned / 1 approved YTD) matching the underlying data, and
+  filtering by "Overdue" correctly narrowed the table to exactly the 2 rows the stat card
+  counted.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type RequirementInstance } from "../../api/client";
 import StatusBadge from "../shared/StatusBadge";
@@ -16,10 +16,26 @@ const ACTION_LABEL: Record<string, string> = {
   impact_review: "Submitted",
 };
 
+// "Approved" for the YTD count means the requirement has cleared review at some stage —
+// impact or CDE approval, or further along — not merely submitted and still pending
+// review. Excludes "waived": a waiver isn't an approval of the underlying evidence.
+const APPROVED_STATUSES = new Set(["impact_approved", "cde_approved", "amis_ready", "exported_filed", "closed"]);
+
+const STATUS_FILTERS = ["all", "not_due", "upcoming", "draft_submitted", "submitted", "impact_review", "returned"] as const;
+const DUE_FILTERS = ["all", "overdue", "7_days", "30_days"] as const;
+
+type Row = RequirementInstance & { dealId: string; dealCode: string };
+
 export default function QalicbDashboard() {
+  const year = new Date().getFullYear();
   const [deals, setDeals] = useState<Deal[] | null>(null);
-  const [rows, setRows] = useState<(RequirementInstance & { dealId: string; dealCode: string })[] | null>(null);
+  const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [dealFilter, setDealFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("all");
+  const [dueFilter, setDueFilter] = useState<(typeof DUE_FILTERS)[number]>("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     api
@@ -34,36 +50,95 @@ export default function QalicbDashboard() {
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 
+  const filtered = useMemo(() => {
+    if (!rows) return rows;
+    const q = search.trim().toLowerCase();
+    const now = new Date();
+    const in7 = new Date(now.getTime() + 7 * 86400000);
+    const in30 = new Date(now.getTime() + 30 * 86400000);
+
+    return rows.filter((r) => {
+      if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (dueFilter === "overdue" && !r.isOverdue) return false;
+      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) <= in7)) return false;
+      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) <= in30)) return false;
+      if (q && !r.requirementDefinition.title.toLowerCase().includes(q) && !r.dealCode.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, dealFilter, statusFilter, dueFilter, search]);
+
   const CLOSED_LIKE = ["submitted", "impact_review", "impact_approved", "cde_review", "cde_approved", "amis_ready", "exported_filed", "closed", "waived"];
   const openCount = rows?.filter((r) => !CLOSED_LIKE.includes(r.status)).length ?? 0;
   const overdueCount = rows?.filter((r) => r.isOverdue).length ?? 0;
-  const upcomingCount = rows?.filter((r) => r.status === "upcoming").length ?? 0;
+  const upcomingCount = rows?.filter((r) => r.status === "upcoming" || r.status === "not_due").length ?? 0;
   const returnedCount = rows?.filter((r) => r.status === "returned").length ?? 0;
+  const approvedYtdCount =
+    rows?.filter((r) => APPROVED_STATUSES.has(r.status) && new Date(r.updatedAt).getFullYear() === year).length ?? 0;
 
   return (
     <main>
       <h1>QALICB Dashboard</h1>
-      <p>{deals?.map((d) => d.legalName).join(", ") || "Loading…"}</p>
+      <p>{deals?.map((d) => d.legalName).join(", ") || "Loading…"} · Compliance Year {year}</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
       <div className="stat-grid">
-        <div className="stat-card">
+        <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-value">{openCount}</div>
           <div className="stat-label">Open tasks</div>
+          {overdueCount > 0 && <span className="badge badge-danger" style={{ marginTop: 6 }}>{overdueCount} overdue</span>}
         </div>
-        <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
-          <div className="stat-value">{overdueCount}</div>
-          <div className="stat-label">Overdue</div>
-        </div>
-        <div className={`stat-card${upcomingCount > 0 ? " stat-warning" : ""}`}>
+        <div className="stat-card">
           <div className="stat-value">{upcomingCount}</div>
           <div className="stat-label">Due within 30 days</div>
+          <span className="badge badge-success" style={{ marginTop: 6 }}>On track</span>
         </div>
         <div className={`stat-card${returnedCount > 0 ? " stat-danger" : ""}`}>
           <div className="stat-value">{returnedCount}</div>
-          <div className="stat-label">Returned for revision</div>
+          <div className="stat-label">Returned</div>
+          {returnedCount > 0 && <span className="badge badge-danger" style={{ marginTop: 6 }}>Action needed</span>}
         </div>
+        <div className="stat-card">
+          <div className="stat-value">{approvedYtdCount}</div>
+          <div className="stat-label">Approved YTD</div>
+          <span className="badge badge-navy" style={{ marginTop: 6 }}>CY {year}</span>
+        </div>
+      </div>
+
+      <div className="card filter-bar">
+        <label>
+          Deal
+          <select value={dealFilter} onChange={(e) => setDealFilter(e.target.value)}>
+            <option value="all">All</option>
+            {deals?.map((d) => <option key={d.id} value={d.id}>{d.legalName}</option>)}
+          </select>
+        </label>
+        <label>
+          Status
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="all">All</option>
+            <option value="not_due">Not due</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="draft_submitted">Draft</option>
+            <option value="submitted">Submitted</option>
+            <option value="impact_review">In review</option>
+            <option value="returned">Returned</option>
+          </select>
+        </label>
+        <label>
+          Due date
+          <select value={dueFilter} onChange={(e) => setDueFilter(e.target.value as typeof dueFilter)}>
+            <option value="all">All</option>
+            <option value="overdue">Overdue</option>
+            <option value="7_days">Within 7 days</option>
+            <option value="30_days">Within 30 days</option>
+          </select>
+        </label>
+        <label className="filter-search">
+          Search
+          <input placeholder="Requirement or deal…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </label>
       </div>
 
       <table>
@@ -71,7 +146,7 @@ export default function QalicbDashboard() {
           <tr><th>Due</th><th>Requirement</th><th>Entity / Period</th><th>Status</th><th>Action</th></tr>
         </thead>
         <tbody>
-          {rows?.map((r) => (
+          {filtered?.map((r) => (
             <tr key={r.id} style={r.isOverdue ? { background: "#fdecec" } : undefined}>
               <td>{fmt(r.dueDate)}</td>
               <td>{r.requirementDefinition.title}</td>
@@ -80,7 +155,10 @@ export default function QalicbDashboard() {
               <td><Link to={`/qalicb/deals/${r.dealId}/requirements/${r.id}`}>{ACTION_LABEL[r.status] ?? "View"}</Link></td>
             </tr>
           ))}
-          {rows && rows.length === 0 && <tr><td colSpan={5}>No tasks yet.</td></tr>}
+          {filtered && filtered.length === 0 && (
+            <tr><td colSpan={5}>{rows && rows.length > 0 ? "No tasks match this filter." : "No tasks yet."}</td></tr>
+          )}
+          {!rows && !error && <tr><td colSpan={5}>Loading…</td></tr>}
         </tbody>
       </table>
     </main>
