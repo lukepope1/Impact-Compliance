@@ -7,13 +7,29 @@ import { signAccessToken, verifyAccessToken } from "../lib/authTokens";
 
 export const authRouter = Router();
 
-// Credential-stuffing / brute-force guard. Keyed on IP (express-rate-limit's default) so
-// it can't be used to lock a legitimate user out by hammering their email from elsewhere;
-// the login route already gives a generic error either way, so this only slows down
-// automated guessing, not a single mistyped password.
+/**
+ * Credential-stuffing / brute-force guard. Keyed on IP (express-rate-limit's default) so
+ * it can't be used to lock a legitimate user out by hammering their email from elsewhere;
+ * the login route already gives a generic error either way, so this only slows down
+ * automated guessing, not a single mistyped password.
+ *
+ * Both numbers are configurable because the production-appropriate value (10 per 15
+ * minutes) is far too tight for local development and demos: one person signing in and
+ * out across the four seeded accounts trips it in a couple of minutes, and a whole team
+ * behind one office IP shares a single budget — so a few people fumbling passwords locks
+ * out everyone else.
+ *
+ * The defaults stay strict rather than keying off NODE_ENV, matching how the rest of this
+ * codebase fails closed (see scanner.ts, which never silently reports "clean"): a
+ * deployment that forgets to set anything gets the safe limit, and loosening it has to be
+ * a deliberate act. server/.env sets a development value — see docs/LOCAL_DEV.md.
+ */
+const LOGIN_RATE_LIMIT = Number(process.env.LOGIN_RATE_LIMIT ?? 10);
+const LOGIN_RATE_WINDOW_MINUTES = Number(process.env.LOGIN_RATE_WINDOW_MINUTES ?? 15);
+
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
+  windowMs: LOGIN_RATE_WINDOW_MINUTES * 60 * 1000,
+  limit: LOGIN_RATE_LIMIT,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts. Try again in a few minutes." },

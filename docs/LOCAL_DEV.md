@@ -44,6 +44,17 @@ npm run seed                          # loads the sample deal + demo users (see 
 Or from the repo root, once the database is already running: `npm run dev` starts both
 the API and client together (see root `package.json`).
 
+**If logins start failing with "Too many login attempts":** that's the real brute-force
+limiter in `server/src/routes/auth.ts`, which defaults to a deliberately strict 10
+attempts per 15 minutes, keyed by IP. Cycling through the demo accounts below trips it
+within a couple of minutes, and because it's per-IP, several people sharing an office
+network or one tunnel URL draw down a single budget. `server/.env.example` ships
+`LOGIN_RATE_LIMIT=200` for exactly this — make sure your `server/.env` has it.
+
+Note the limiter's counter is in memory, so restarting the API also clears it. `tsx watch`
+reloads on source changes but **not** on `.env` changes, so after editing `.env` you have
+to actually restart the server for a new value to take effect.
+
 ## Signing in
 
 The app requires a real login — visit the client and sign in, or use the demo-account
