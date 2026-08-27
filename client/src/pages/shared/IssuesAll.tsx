@@ -53,8 +53,8 @@ export default function IssuesAll({ portal }: { portal: "impact" | "cde" }) {
       if (dealFilter !== "all" && r.dealId !== dealFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (dueFilter === "overdue" && !(r.dueDate && r.status !== "resolved" && new Date(r.dueDate) < now)) return false;
-      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) <= in7)) return false;
-      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) <= in30)) return false;
+      if (dueFilter === "7_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in7)) return false;
+      if (dueFilter === "30_days" && !(r.dueDate && new Date(r.dueDate) >= now && new Date(r.dueDate) <= in30)) return false;
       if (q && !r.dealName.toLowerCase().includes(q) && !r.title.toLowerCase().includes(q)) return false;
       return true;
     });

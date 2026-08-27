@@ -685,6 +685,20 @@ and documented at the time:
   correctly returns zero rows too, instead of surfacing already-approved requirements from
   earlier in the year.
 
+- **Same due-date lower-bound fix applied across the rest of the app**: the missing
+  `dueDate >= now` check wasn't unique to the QALICB pages — the same `7_days`/`30_days`
+  filter shape, copied across several pages, had it in `ReviewQueueAll.tsx` (shared
+  Impact/CDE review queue) and `IssuesAll.tsx` (just redesigned this session) too. Fixed
+  both the same way. Checked `CdePortfolio.tsx`, which has the same-looking filter but
+  turned out *not* to have the bug — its `nextDeadline` value is already pre-filtered
+  upstream to exclude overdue/past dates before the due-date filter ever sees it, so
+  there was nothing to fix there.
+
+  Verified live: filtering the Impact Issues page to "Within 30 days" now correctly
+  returns just the one issue actually due soon (Aug 30), excluding an older issue with no
+  due date at all — previously this filter's bug wouldn't have shown here since neither
+  issue had a past due date, but the shared logic is now consistent everywhere it's used.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
