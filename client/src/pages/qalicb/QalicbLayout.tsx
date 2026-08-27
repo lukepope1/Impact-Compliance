@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: "/qalicb", label: "Dashboard", end: true },
   { to: "/qalicb/tasks", label: "Compliance Tasks" },
   { to: "/qalicb/benefits", label: "Community Benefits" },
+  { to: "/qalicb/documents", label: "Documents" },
 ];
 
 export default function QalicbLayout() {

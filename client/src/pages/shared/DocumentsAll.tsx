@@ -1,17 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Deal, type DocumentSummary } from "../../api/client";
+import { formatDate } from "../../utils/format";
 
-/** Cross-deal document list — server-side share-scope enforcement (canAccessDocument) already limits each deal's list to what you can see, so this is just those lists concatenated. Shared between the Impact and CDE portal sidebars. */
-export default function DocumentsAll({ portal }: { portal: "impact" | "cde" }) {
-  const [docs, setDocs] = useState<(DocumentSummary & { dealId: string; dealName: string })[] | null>(null);
+const SCAN_STATUS_LABEL: Record<string, string> = {
+  clean: "Clean",
+  pending: "Pending",
+  failed: "Failed",
+  infected: "Infected",
+};
+const SCAN_STATUS_BADGE: Record<string, string> = {
+  clean: "badge-success",
+  pending: "badge-warning",
+  failed: "badge-danger",
+  infected: "badge-danger",
+};
+
+type Row = DocumentSummary & { dealId: string; dealName: string };
+
+/** Cross-deal document list — server-side share-scope enforcement (canAccessDocument) already limits each deal's list to what you can see, so this is just those lists concatenated. Shared across the Impact, CDE, and QALICB portal sidebars. */
+export default function DocumentsAll({ portal }: { portal: "impact" | "cde" | "qalicb" }) {
+  const [docs, setDocs] = useState<Row[] | null>(null);
+  const [deals, setDeals] = useState<Deal[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [dealFilter, setDealFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     api
       .listDeals()
       .then(async (deals: Deal[]) => {
+        setDeals(deals);
         const perDeal = await Promise.all(
           deals.map((d) => api.listDocuments(d.id).then((docs) => docs.map((doc) => ({ ...doc, dealId: d.id, dealName: d.legalName }))))
         );
@@ -23,41 +44,71 @@ export default function DocumentsAll({ portal }: { portal: "impact" | "cde" }) {
   const filtered = useMemo(() => {
     if (!docs) return docs;
     const q = search.trim().toLowerCase();
-    if (!q) return docs;
-    return docs.filter((d) => d.title.toLowerCase().includes(q) || d.dealName.toLowerCase().includes(q));
-  }, [docs, search]);
+    return docs.filter((d) => {
+      if (dealFilter !== "all" && d.dealId !== dealFilter) return false;
+      const scanStatus = d.versions[0]?.malwareScanStatus ?? "pending";
+      if (statusFilter !== "all" && scanStatus !== statusFilter) return false;
+      if (q && !d.title.toLowerCase().includes(q) && !d.dealName.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [docs, dealFilter, statusFilter, search]);
 
   return (
     <main>
-      <h1>Documents</h1>
-      <p>Evidence visible to you across every deal in your portfolio.</p>
+      <h1>Document Library</h1>
+      <p>Searchable, versioned evidence. Share scope is enforced server-side.</p>
 
       {error && <div className="card" style={{ color: "#b00" }}>{error}</div>}
 
-      <div className="card">
+      <div className="card filter-bar">
         <label>
-          Search title or deal
-          <input placeholder="e.g. Balance Sheet, Riverside…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          Deal
+          <select value={dealFilter} onChange={(e) => setDealFilter(e.target.value)}>
+            <option value="all">All</option>
+            {deals?.map((d) => <option key={d.id} value={d.id}>{d.legalName}</option>)}
+          </select>
+        </label>
+        <label>
+          Status
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="clean">Clean</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+            <option value="infected">Infected</option>
+          </select>
+        </label>
+        <label className="filter-search">
+          Search
+          <input placeholder="Document or deal…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </label>
       </div>
 
       <table>
         <thead>
-          <tr><th>Document</th><th>Deal</th><th>Type</th><th>Sharing</th><th>Versions</th><th></th></tr>
+          <tr><th>Document</th><th>Deal</th><th>Type</th><th>Entity / Period</th><th>Version</th><th>Sharing</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
-          {filtered?.map((d) => (
-            <tr key={d.id}>
-              <td>{d.title}</td>
-              <td>{d.dealName}</td>
-              <td>{d.documentType}</td>
-              <td>{d.shareScope}</td>
-              <td>v{d.currentVersion}</td>
-              <td><Link to={`/${portal}/deals/${d.dealId}/documents`}>View</Link></td>
-            </tr>
-          ))}
-          {filtered && filtered.length === 0 && <tr><td colSpan={6}>No documents match.</td></tr>}
-          {!docs && !error && <tr><td colSpan={6}>Loading…</td></tr>}
+          {filtered?.map((d) => {
+            const scanStatus = d.versions[0]?.malwareScanStatus ?? "pending";
+            return (
+              <tr key={d.id}>
+                <td>{d.title}</td>
+                <td>{d.dealName}</td>
+                <td>{d.documentType}</td>
+                <td>
+                  {d.legalEntityParty ? d.legalEntityParty.legalName : "Deal-level"}
+                  {d.reportingPeriodEnd ? ` · ${formatDate(d.reportingPeriodEnd)}` : ""}
+                </td>
+                <td>v{d.currentVersion}</td>
+                <td>{d.shareScope.replace(/_/g, " ")}</td>
+                <td><span className={`badge ${SCAN_STATUS_BADGE[scanStatus] ?? "badge-neutral"}`}>{SCAN_STATUS_LABEL[scanStatus] ?? scanStatus}</span></td>
+                <td><Link to={`/${portal}/deals/${d.dealId}/documents`}>View</Link></td>
+              </tr>
+            );
+          })}
+          {filtered && filtered.length === 0 && <tr><td colSpan={8}>{docs && docs.length > 0 ? "No documents match this filter." : "No documents yet."}</td></tr>}
+          {!docs && !error && <tr><td colSpan={8}>Loading…</td></tr>}
         </tbody>
       </table>
     </main>

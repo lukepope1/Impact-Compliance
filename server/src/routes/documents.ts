@@ -49,7 +49,10 @@ documentsRouter.get("/", requireDealAccess, async (req, res) => {
 
   const docs = await prisma.document.findMany({
     where: { dealId: req.params.dealId, status: { not: "deleted" } },
-    include: { versions: { orderBy: { versionNumber: "desc" }, take: 1 } },
+    include: {
+      versions: { orderBy: { versionNumber: "desc" }, take: 1 },
+      legalEntityParty: { select: { legalName: true, partyRole: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -65,7 +68,7 @@ documentsRouter.get("/:documentId", requireDealAccess, async (req, res) => {
   const orgIds = req.user!.memberships.map((m) => m.organizationId);
   const doc = await prisma.document.findUnique({
     where: { id: req.params.documentId },
-    include: { versions: { orderBy: { versionNumber: "desc" } } },
+    include: { versions: { orderBy: { versionNumber: "desc" } }, legalEntityParty: { select: { legalName: true, partyRole: true } } },
   });
   if (!doc || doc.dealId !== req.params.dealId) return res.status(404).json({ error: "Document not found" });
 

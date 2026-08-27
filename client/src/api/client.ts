@@ -154,6 +154,7 @@ export interface DocumentSummary {
   reportingPeriodEnd: string | null;
   createdAt: string;
   versions: DocumentVersionSummary[];
+  legalEntityParty: { legalName: string; partyRole: string } | null;
 }
 
 export interface AuditEventRow {

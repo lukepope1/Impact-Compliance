@@ -74,8 +74,10 @@ export default function App() {
           <Route path="tasks" element={<QalicbComplianceTasks />} />
           <Route path="benefits" element={<QalicbCommunityBenefitsOverview />} />
           <Route path="cbr" element={<QalicbCbrRedirect />} />
+          <Route path="documents" element={<DocumentsAll portal="qalicb" />} />
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
+          <Route path="deals/:dealId/documents" element={<Documents />} />
         </Route>
 
         <Route path="/cde" element={<CdeLayout />}>

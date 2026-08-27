@@ -770,6 +770,35 @@ and documented at the time:
   background-tab rendering doesn't run smooth-scroll animations — landed exactly on that
   card.
 
+- **Gave QALICB a searchable Document Library, matching a "Q-10" wireframe**: the
+  underlying pieces were already real and portal-agnostic — the server's document routes
+  are gated by deal access, not role (`canAccessDocument` already explicitly grants
+  QALICB visibility), and both `Documents.tsx` (deal-scoped, with upload) and
+  `DocumentsAll.tsx` (cross-deal aggregate) had no Impact/CDE-specific assumptions in
+  their JSX. QALICB was just missing the route and sidebar entry — added `/qalicb/documents`
+  and `/qalicb/deals/:dealId/documents`, plus a "Documents" sidebar item.
+
+  While matching the wireframe, upgraded `DocumentsAll.tsx` itself (shared, so Impact and
+  CDE get this too) with a real filter bar (Deal / Status / Search), an `Entity / Period`
+  column, and a `Status` column. `Entity / Period` needed one real addition:
+  `Document.legalEntityParty` (an existing relation to `DealParty`) wasn't being selected
+  by the server's `GET /deals/:dealId/documents` route — added it there and to the
+  `DocumentSummary` client type. `Status` reuses the real malware-scan status already on
+  each document's latest version (`Clean`/`Pending`/`Failed`/`Infected`) rather than the
+  wireframe's "Approved," since no document-level approval/review concept exists — only
+  requirement-instance submissions go through review, not documents themselves.
+
+  Skipped the wireframe's "Due date" filter — no due-date concept applies to documents in
+  this schema (that filter shape is copied from pages where it's real, like requirement
+  instances and issues; documents don't have one).
+
+  Verified live as the Millennium Holdings QALICB user: both `/qalicb/documents` and the
+  deal-scoped `/qalicb/deals/:dealId/documents` render real data — 9 real documents with
+  correct type/version/sharing, `Status: Pending` (honest, since this dev environment has
+  no malware scanner configured — matches the same "fail-closed, never silently clean"
+  behavior already documented elsewhere), and the deal-scoped page's full upload/version-
+  history/download functionality working exactly as it already does for Impact and CDE.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
