@@ -6,6 +6,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/impact/amis", label: "AMIS" },
   { to: "/impact/issues", label: "Issues" },
   { to: "/impact/documents", label: "Documents" },
+  { to: "/impact/messages", label: "Messages" },
   { to: "/impact/audit", label: "Audit Log" },
 ];
 

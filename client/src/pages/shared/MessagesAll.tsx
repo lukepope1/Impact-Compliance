@@ -20,10 +20,30 @@ function relativeDay(iso: string): string {
 
 const STATUS_LABEL: Record<string, string> = { open: "Open", returned: "Returned", closed: "Closed" };
 const STATUS_BADGE: Record<string, string> = { open: "badge-warning", returned: "badge-navy", closed: "badge-neutral" };
+/**
+ * Who can actually read a thread, stated the same way from every portal so the label
+ * can't contradict the server. These mirror canSeeMessage() in routes/messages.ts
+ * exactly — an earlier label claimed qalicb_shared was "Shared with QALICB + applicable
+ * CDE" when the server excludes CDEs from it, so a QALICB could be told a CDE was in a
+ * conversation the CDE could never see. Impact can read every thread on its deals in all
+ * three cases, which is why Impact appears in each label.
+ */
 const VISIBILITY_LABEL: Record<string, string> = {
-  qalicb_shared: "Shared with QALICB + applicable CDE",
-  deal_shared: "Shared with all deal parties",
-  cde_private: "CDE + Impact only",
+  qalicb_shared: "QALICB + Impact",
+  deal_shared: "QALICB + Impact + CDEs",
+  cde_private: "CDEs + Impact",
+};
+
+/**
+ * Which audiences each portal may start a thread with. Mirrors the server's own checks:
+ * messages.ts rejects cde_private from anyone who isn't CDE or Impact staff. A QALICB
+ * therefore gets exactly the two channels that matter to them — Impact alone, or Impact
+ * plus the CDEs on the deal.
+ */
+const VISIBILITY_OPTIONS: Record<"impact" | "cde" | "qalicb", string[]> = {
+  qalicb: ["qalicb_shared", "deal_shared"],
+  cde: ["cde_private", "deal_shared", "qalicb_shared"],
+  impact: ["qalicb_shared", "deal_shared", "cde_private"],
 };
 
 const DUE_FILTERS = ["all", "overdue", "7_days", "30_days"] as const;
@@ -46,7 +66,8 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
   const [search, setSearch] = useState("");
 
   const [composing, setComposing] = useState(false);
-  const [draft, setDraft] = useState({ dealId: "", subject: "", body: "", slaDays: "5", visibility: "qalicb_shared" });
+  const audienceOptions = VISIBILITY_OPTIONS[portal];
+  const [draft, setDraft] = useState({ dealId: "", subject: "", body: "", slaDays: "5", visibility: audienceOptions[0] });
 
   function refresh() {
     api
@@ -168,11 +189,13 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
               <label>SLA (days)
                 <input type="number" style={{ width: 60 }} value={draft.slaDays} onChange={(e) => setDraft({ ...draft, slaDays: e.target.value })} />
               </label>
-              <select value={draft.visibility} onChange={(e) => setDraft({ ...draft, visibility: e.target.value })}>
-                <option value="qalicb_shared">Shared with QALICB + applicable CDE</option>
-                <option value="deal_shared">Shared with all deal parties</option>
-                <option value="cde_private">CDE + Impact only</option>
-              </select>
+              <label>Visible to
+                <select value={draft.visibility} onChange={(e) => setDraft({ ...draft, visibility: e.target.value })}>
+                  {audienceOptions.map((v) => (
+                    <option key={v} value={v}>{VISIBILITY_LABEL[v] ?? v}</option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div><button type="submit" disabled={busy}>Send request</button></div>
           </form>
@@ -213,9 +236,10 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
 
       <div className="split">
         <div className="split-main">
+          <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>Received</th><th>From</th><th>Request / message</th><th>Due</th><th>Status</th></tr>
+              <tr><th>Received</th><th>From</th><th>Request / message</th><th>Visible to</th><th>Due</th><th>Status</th></tr>
             </thead>
             <tbody>
               {filtered?.map((r) => (
@@ -241,16 +265,18 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                       {r.subject ?? r.body}
                     </button>
                   </td>
+                  <td className="text-sm muted">{VISIBILITY_LABEL[r.visibility] ?? r.visibility}</td>
                   <td>{fmt(r.dueDate)}</td>
                   <td><span className={`badge ${STATUS_BADGE[r.status]}`}>{STATUS_LABEL[r.status] ?? r.status}</span></td>
                 </tr>
               ))}
               {filtered && filtered.length === 0 && (
-                <tr><td className="state-cell" colSpan={5}>{rows && rows.length > 0 ? "No requests match this filter." : "No requests yet."}</td></tr>
+                <tr><td className="state-cell" colSpan={6}>{rows && rows.length > 0 ? "No requests match this filter." : "No requests yet."}</td></tr>
               )}
-              {!rows && !error && <tr><td className="state-cell" colSpan={5}>Loading…</td></tr>}
+              {!rows && !error && <tr><td className="state-cell" colSpan={6}>Loading…</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="card split-aside">

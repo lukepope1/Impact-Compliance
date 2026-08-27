@@ -49,6 +49,7 @@ export default function App() {
           <Route path="amis" element={<AmisAll portal="impact" />} />
           <Route path="issues" element={<IssuesAll portal="impact" />} />
           <Route path="documents" element={<DocumentsAll portal="impact" />} />
+          <Route path="messages" element={<MessagesAll portal="impact" />} />
           <Route path="audit" element={<ImpactAuditAll />} />
           <Route path="deals/:dealId" element={<DealDetail />} />
           <Route path="deals/:dealId/setup" element={<DealSetup />} />
@@ -88,6 +89,7 @@ export default function App() {
           <Route path="review-queue" element={<ReviewQueueAll portal="cde" stage="cde" />} />
           <Route path="issues" element={<IssuesAll portal="cde" />} />
           <Route path="documents" element={<DocumentsAll portal="cde" />} />
+          <Route path="messages" element={<MessagesAll portal="cde" />} />
           <Route path="amis" element={<AmisAll portal="cde" />} />
           <Route path="deals/:dealId" element={<CdeDealOverview />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />

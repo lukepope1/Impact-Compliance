@@ -7,6 +7,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/cde/amis", label: "AMIS" },
   { to: "/cde/issues", label: "Issues" },
   { to: "/cde/documents", label: "Documents" },
+  { to: "/cde/messages", label: "Messages" },
 ];
 
 export default function CdeLayout() {

@@ -923,6 +923,46 @@ and documented at the time:
   option instead of filtering invisibly, so it's clear why the table narrowed and how to
   undo it — verified live going from 5 rows to the 1 outstanding section.
 
+- **Wired Messages into the Impact and CDE portals, and fixed a visibility label that
+  lied.** The messaging feature had only ever been mounted for QALICB — the Q-11 wireframe
+  was the *receiving* side. But every thread in that inbox originates from Impact or a
+  CDE, and neither had any UI to send or track one; the original demo request had to be
+  created with a raw API call. The recipient side existed without the sender side.
+
+  Before wiring it up, found and confirmed a real defect: the audience labelled "Shared
+  with QALICB + applicable CDE" does **not** include CDEs. Verified with a live probe
+  rather than by reading the code — created a `qalicb_shared` thread and checked each
+  role's list endpoint: Impact `true`, QALICB `true`, CDE `false`. Wiring the CDE portal
+  without fixing this would have shipped a portal that looked broken (empty for exactly
+  the threads a QALICB had been told the CDE could see).
+
+  The fix needed no schema change, because the model already supported what was wanted —
+  the labels were simply wrong about it:
+
+  | value | Impact | QALICB | CDE | channel |
+  |---|---|---|---|---|
+  | `qalicb_shared` | yes | yes | no | QALICB ↔ Impact, private |
+  | `deal_shared` | yes | yes | yes | everyone on the deal |
+  | `cde_private` | yes | no | yes | CDE ↔ Impact, private |
+
+  So the "message Impact only" and "message Impact and CDE" channels the user asked about
+  were already two existing options. Relabelled them to state audience uniformly
+  (`QALICB + Impact`, `QALICB + Impact + CDEs`, `CDEs + Impact`) so the same wording is
+  true from whichever portal reads it, and added a `VISIBILITY_OPTIONS` map so each portal
+  only offers audiences the server will actually accept (`messages.ts` rejects
+  `cde_private` from a non-CDE, so a QALICB never sees that option).
+
+  Chose one inbox with a "Visible to" column over two separate mailboxes: a thread's
+  audience is fixed at creation, so it's a property to display rather than a place to
+  file things, and splitting would make a QALICB check two lists for the same
+  conversation.
+
+  Verified the full loop live: a QALICB started a thread on the Impact-only channel and
+  Impact could read it while the CDE reviewer could not; the Impact portal lists all four
+  threads with all three compose audiences; the CDE portal lists only the `deal_shared`
+  one and defaults its composer to `cde_private`. The two probe threads created during
+  this testing were deleted afterward so the demo data stays realistic.
+
 ## Before this could go anywhere near production
 - A real identity provider (AWS Cognito or equivalent) replacing the local-credential JWT
   system — see the Auth section above for what's already real vs. what's still interim
