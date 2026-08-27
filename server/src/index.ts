@@ -3,6 +3,8 @@ import "dotenv/config";
 // middleware below, instead of becoming an unhandled rejection that crashes the process
 // (Node treats those as fatal — see the incident this caught during Phase 2 development).
 import "express-async-errors";
+import fs from "fs";
+import path from "path";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -65,6 +67,28 @@ app.use("/api/deals/:dealId/cbr", requireAuth, cbrRouter);
 app.use("/api/deals/:dealId/snapshots", requireAuth, snapshotsRouter);
 app.use("/api/deals/:dealId/amis", requireAuth, amisRouter);
 app.use("/api/notifications", requireAuth, notificationsRouter);
+
+/**
+ * Serves the built client from this same process when it's present, so a deployment is
+ * one service rather than two. That isn't only about cost: the client calls the API on
+ * relative `/api/...` paths, so same-origin serving means no CORS config, no API base URL
+ * to thread through the build, and no chance of the two halves pointing at different
+ * versions of each other.
+ *
+ * Guarded on the directory existing, so local dev — where Vite serves the client on its
+ * own port and proxies /api here — is completely unaffected.
+ */
+const clientDist = path.resolve(__dirname, "../../client/dist");
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  // Anything that isn't an API call is a client route: hand back index.html and let the
+  // router resolve it, so deep links and refreshes work instead of 404ing.
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+  console.log(`Serving client build from ${clientDist}`);
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

@@ -1,0 +1,58 @@
+# Render blueprint for the review environment — see docs/DEPLOYMENT.md.
+#
+# One web service, not two. The Express server serves the built client from the same
+# origin, so the client's relative /api calls just work: no CORS to configure, no API base
+# URL to bake into the build, and no way for the two halves to end up on different
+# versions of each other.
+services:
+  - type: web
+    name: nmtc-compliance
+    runtime: node
+    plan: free
+    region: oregon
+
+    # --include=dev is explicit because the build needs TypeScript and Vite, and Render
+    # skips devDependencies when NODE_ENV is production. prisma and tsx were moved to
+    # runtime dependencies since the start script uses them before the server boots.
+    buildCommand: >-
+      npm install --include=dev --prefix server &&
+      npm install --include=dev --prefix client &&
+      npx --prefix server prisma generate --schema server/prisma/schema.prisma &&
+      npm run build --prefix server &&
+      npm run build --prefix client
+
+    # Applies migrations (and optionally seeds) before listening — see
+    # server/scripts/start-production.mjs for why that happens here rather than at build.
+    startCommand: npm run start:production --prefix server
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nmtc-compliance-db
+          property: connectionString
+
+      # The server refuses to boot on a secret under 32 chars or containing "dev", so let
+      # Render generate a real one rather than risking a placeholder reaching a live URL.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Populates the demo data on first boot. The seed no-ops once the data exists, so
+      # this is safe to leave on across restarts. Set to false to stop reseeding entirely.
+      - key: SEED_ON_START
+        value: "true"
+
+      # The strict production default (10 per 15 min, per IP) locks out a review team
+      # sharing one office IP within minutes — several people clicking through the demo
+      # accounts is exactly the pattern it's designed to stop.
+      - key: LOGIN_RATE_LIMIT
+        value: "500"
+
+      - key: NODE_VERSION
+        value: "20"
+
+databases:
+  - name: nmtc-compliance-db
+    plan: free
+    region: oregon

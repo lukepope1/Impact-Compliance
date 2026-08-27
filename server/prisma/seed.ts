@@ -10,6 +10,16 @@ const prisma = new PrismaClient();
 const DEV_PASSWORD = "password123";
 
 async function main() {
+  // Everything below creates rows unconditionally, so a second run would duplicate every
+  // organization, user and deal. Local dev always starts from a fresh database, but a
+  // deployed review environment re-runs this on each boot (see SEED_ON_START in
+  // docs/DEPLOYMENT.md), so bail out if the data is already there rather than doubling it.
+  const alreadySeeded = await prisma.organization.findFirst({ where: { organizationType: "impact_marketplace" } });
+  if (alreadySeeded) {
+    console.log("Database already seeded — skipping.");
+    return;
+  }
+
   const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
   const impact = await prisma.organization.create({
     data: { organizationType: "impact_marketplace", legalName: "Impact Marketplace LLC" },
