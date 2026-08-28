@@ -41,10 +41,17 @@ export default function DealSetup() {
     censusTract: "",
   });
   const [savingAddress, setSavingAddress] = useState(false);
+  const [multiCdeProjectNumber, setMultiCdeProjectNumber] = useState("");
 
   function refresh() {
     if (!dealId) return;
-    api.getDeal(dealId).then(setDeal).catch((e) => setError(String(e.message ?? e)));
+    api
+      .getDeal(dealId)
+      .then((d) => {
+        setDeal(d);
+        setMultiCdeProjectNumber(d.multiCdeProjectNumber ?? "");
+      })
+      .catch((e) => setError(String(e.message ?? e)));
     api.listParties(dealId).then(setParties);
     api.listCdeParticipations(dealId).then(setCdes);
     api.getPrimaryProjectAddress(dealId).then((a) => {
@@ -121,6 +128,17 @@ export default function DealSetup() {
     }
   }
 
+  async function saveMultiCdeProjectNumber(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dealId) return;
+    try {
+      await api.updateDeal(dealId, { multiCdeProjectNumber: multiCdeProjectNumber.trim() || undefined });
+      refresh();
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    }
+  }
+
   async function saveAddress(e: React.FormEvent) {
     e.preventDefault();
     if (!dealId || !addressDraft.address1.trim() || !addressDraft.city.trim() || addressDraft.stateCode.trim().length !== 2 || !addressDraft.postalCode.trim()) {
@@ -168,6 +186,25 @@ export default function DealSetup() {
         <p>Legal name: {deal.legalName}</p>
         <p>Closing date: {deal.closingDate ? new Date(deal.closingDate).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—"}</p>
         <p>Multi-CDE: {deal.isMultiCde ? "Yes" : "No"}</p>
+
+        <form className="btn-row" style={{ alignItems: "flex-end" }} onSubmit={saveMultiCdeProjectNumber}>
+          <div className="field">
+            <label className="field-label" htmlFor="multi-cde-project-number">
+              Multi-CDE Project Number
+            </label>
+            <input
+              id="multi-cde-project-number"
+              placeholder="e.g. MCDE-00001923"
+              value={multiCdeProjectNumber}
+              onChange={(e) => setMultiCdeProjectNumber(e.target.value)}
+            />
+          </div>
+          <button type="submit">Save</button>
+        </form>
+        <p className="text-sm muted" style={{ marginBottom: 0 }}>
+          The shared identifier CDEs use for the same project in AMIS. Reported by every CDE on a multi-CDE deal, so
+          it is held once on the deal rather than per participation. Required for AMIS readiness.
+        </p>
       </div>
 
       <div className="card">

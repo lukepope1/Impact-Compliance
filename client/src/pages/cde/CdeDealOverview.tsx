@@ -56,6 +56,9 @@ export default function CdeDealOverview() {
   const [qlicis, setQlicis] = useState<QliciRow[] | null>(null);
   const [privateNoteCount, setPrivateNoteCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [participationDraft, setParticipationDraft] = useState({ allocationControlNumber: "", qeiAmount: "" });
+  const [savingParticipation, setSavingParticipation] = useState(false);
+  const [participationSaved, setParticipationSaved] = useState(false);
 
   useEffect(() => {
     if (!dealId) return;
@@ -76,11 +79,45 @@ export default function CdeDealOverview() {
       .catch(() => setPrivateNoteCount(0));
   }, [dealId, issues]);
 
+  // Derived above the early returns below, because the effect that seeds the edit form
+  // depends on it and a hook cannot sit after a conditional return.
+  const myOrgId = user?.memberships[0]?.organizationId;
+  const myParticipation = participations?.find((p) => p.cdeOrganization.id === myOrgId);
+
+  // Seeded from the loaded participation once, so typing isn't overwritten by a later refresh.
+  useEffect(() => {
+    if (!myParticipation) return;
+    setParticipationDraft({
+      allocationControlNumber: myParticipation.allocationControlNumber ?? "",
+      qeiAmount: myParticipation.qeiAmount ? String(Number(myParticipation.qeiAmount)) : "",
+    });
+  }, [myParticipation?.id]);
+
   if (error) return <main><div className="alert alert-error">{error}</div></main>;
   if (!deal) return <main><p className="muted is-loading">Loading…</p></main>;
 
-  const myOrgId = user?.memberships[0]?.organizationId;
-  const myParticipation = participations?.find((p) => p.cdeOrganization.id === myOrgId);
+  async function saveParticipation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dealId || !myParticipation) return;
+    setSavingParticipation(true);
+    setParticipationSaved(false);
+    setError(null);
+    try {
+      const updated = await api.updateCdeParticipation(dealId, myParticipation.id, {
+        allocationControlNumber: participationDraft.allocationControlNumber.trim() || undefined,
+        qeiAmount: participationDraft.qeiAmount.trim() === "" ? undefined : Number(participationDraft.qeiAmount),
+      });
+      setParticipations((prev) => prev?.map((p) => (p.id === updated.id ? updated : p)) ?? prev);
+      setParticipationSaved(true);
+      // Readiness reads these two fields, so refresh it rather than leave the panel above
+      // still reporting them missing.
+      api.getAmisReadiness(dealId, year).then(setAmisFields).catch(() => undefined);
+    } catch (err) {
+      setError(String((err as Error).message ?? err));
+    } finally {
+      setSavingParticipation(false);
+    }
+  }
   const myQlicis = qlicis?.filter((q) => q.cdeParticipation.cdeOrganizationId === myOrgId) ?? [];
   const borrower = parties?.find((p) => p.partyRole === "borrower");
 
@@ -192,10 +229,45 @@ export default function CdeDealOverview() {
             <p className="muted text-sm" style={{ marginTop: 0 }}>No QLICI records on this deal yet.</p>
           )}
 
-          <div className="field">
-            <div className="field-label">Allocation control no.</div>
-            <div className="field-value">{myParticipation?.allocationControlNumber ?? "—"}</div>
-          </div>
+          {/*
+            Editable here rather than read-only, because these are the CDE's own facts and
+            two of the fields AMIS readiness reports as missing. Routing them through Impact
+            added a hop without adding accuracy. Scoped to this CDE's own participation —
+            the server refuses an attempt to edit another CDE's row on a shared deal.
+          */}
+          {myParticipation && (
+            <form className="form-stack" onSubmit={saveParticipation}>
+              <div className="field">
+                <label className="field-label" htmlFor="alloc-control-no">Allocation control no.</label>
+                <input
+                  id="alloc-control-no"
+                  placeholder="e.g. 21-ACN-123456"
+                  value={participationDraft.allocationControlNumber}
+                  onChange={(e) => setParticipationDraft({ ...participationDraft, allocationControlNumber: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="field-label" htmlFor="qei-amount">QEI amount</label>
+                <input
+                  id="qei-amount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={participationDraft.qeiAmount}
+                  onChange={(e) => setParticipationDraft({ ...participationDraft, qeiAmount: e.target.value })}
+                />
+              </div>
+              <div className="btn-row">
+                <button type="submit" disabled={savingParticipation}>
+                  {savingParticipation ? "Saving…" : "Save"}
+                </button>
+                {participationSaved && <span className="muted text-sm">Saved.</span>}
+              </div>
+              <p className="text-sm muted" style={{ margin: 0 }}>
+                Both feed AMIS readiness. The QEI amount totals across every CDE on the deal.
+              </p>
+            </form>
+          )}
 
           <div className="field">
             <div className="field-label">Private notes</div>

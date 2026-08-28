@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { sourceLink, noEntryReason } from "../../utils/amisSources";
 import { api, type Deal, type GoldenFieldRow } from "../../api/client";
 
 /**
@@ -136,7 +137,21 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
                     {r.status === "missing" ? "Missing" : "Ready"}
                   </span>
                 </td>
-                <td><Link to={`/${portal}/deals/${r.dealId}/amis`}>Open</Link></td>
+                {/*
+                  A missing field links to where it is actually entered rather than to the
+                  deal's readiness page, which would only report the same gap again. Fields
+                  with no entry screen in this portal say why instead of offering a link
+                  that leads nowhere useful.
+                */}
+                <td>
+                  {(() => {
+                    const entry = sourceLink(r.fieldCode, portal, r.dealId);
+                    if (r.status === "missing" && entry) return <Link to={entry}>Resolve</Link>;
+                    const reason = noEntryReason(r.fieldCode, portal);
+                    if (r.status === "missing" && reason) return <span className="muted text-sm">{reason}</span>;
+                    return <Link to={`/${portal}/deals/${r.dealId}/amis`}>Open</Link>;
+                  })()}
+                </td>
               </tr>
             ))}
             {filtered && filtered.length === 0 && (

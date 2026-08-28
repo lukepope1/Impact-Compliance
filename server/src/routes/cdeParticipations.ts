@@ -115,16 +115,33 @@ const updateSchema = z.object({
  * fields need to be editable well after creation, not just set once. Deliberately excludes
  * cdeOrganizationId/isLeadCde/allocateeOrganizationId — changing which org participates or
  * who's lead is a bigger structural change than this endpoint is meant for.
+ *
+ * CDE staff may edit their own participation. The QEI amount and allocation control number
+ * are the CDE's own facts, and they are two of the fields AMIS readiness reports as
+ * missing, so requiring Impact to key them in second-hand adds a hop without adding
+ * accuracy. Both CDE roles are allowed rather than cde_admin alone, because cde_reviewer
+ * already approves multi-CDE snapshots and writes the whole TLR — withholding their own
+ * QEI amount from them would be a narrower trust than the rest of the app extends.
+ *
+ * It is strictly their own row: role membership alone would let one CDE edit another's
+ * participation on a multi-CDE deal, so the organization is checked too.
  */
+const CDE_EDIT_ROLES = new Set(["cde_admin", "cde_reviewer"]);
+
 cdeParticipationsRouter.patch(
   "/:participationId",
-  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager"),
+  requireRoleOnDealOrg("impact_super_admin", "impact_compliance_manager", "cde_admin", "cde_reviewer"),
   async (req, res) => {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
     const existing = await prisma.cdeParticipation.findUnique({ where: { id: req.params.participationId } });
     if (!existing || existing.dealId !== req.params.dealId) return res.status(404).json({ error: "CDE participation not found" });
+
+    const membership = res.locals.dealOrgMembership as { organizationId: string; roleCode: string };
+    if (CDE_EDIT_ROLES.has(membership.roleCode) && existing.cdeOrganizationId !== membership.organizationId) {
+      return res.status(403).json({ error: "You can only edit your own organization's participation" });
+    }
 
     const updated = await prisma.cdeParticipation.update({
       where: { id: req.params.participationId },

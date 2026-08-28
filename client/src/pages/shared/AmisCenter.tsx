@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
+import { sourceLink, noEntryReason } from "../../utils/amisSources";
 
 // goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
 // plain counts vs. dates vs. text — mirrored here since the readiness API returns raw
@@ -15,33 +16,6 @@ function formatFieldValue(fieldCode: string, value: string | number | null) {
   if (COUNT_FIELDS.has(fieldCode)) return formatNumber(value);
   if (DATE_FIELDS.has(fieldCode)) return formatDate(value as string | null);
   return value ?? "—";
-}
-
-// Where each field's underlying value can actually be seen/edited, per portal — only
-// fields where the target page genuinely renders that value. Several golden fields (the
-// QLICI principal total, the multi-CDE project number) have no page that surfaces them
-// today, so they're deliberately left out rather than linking somewhere that wouldn't
-// show what the row claims to source.
-const CBR_FIELDS = new Set([
-  "annual_gross_revenue",
-  "annual_net_operating_income",
-  "jobs_created_actual",
-  "jobs_retained_actual",
-  "jobs_construction_actual",
-  "tenant_count",
-]);
-const IMPACT_SETUP_FIELDS = new Set([
-  "project_closing_date",
-  "total_qei_amount",
-  "lead_cde_allocation_control_number",
-  "project_census_tract",
-  "project_city_state",
-]);
-
-function sourceLink(fieldCode: string, portal: "impact" | "cde", dealId: string): string | null {
-  if (CBR_FIELDS.has(fieldCode)) return `/${portal}/deals/${dealId}/cbr`;
-  if (portal === "impact" && IMPACT_SETUP_FIELDS.has(fieldCode)) return `/impact/deals/${dealId}/setup`;
-  return null;
 }
 
 export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
@@ -127,7 +101,13 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
                 <td>{formatFieldValue(r.fieldCode, r.value)}</td>
                 <td>{r.source}</td>
                 <td><span className={`badge ${r.status === "missing" ? "badge-danger" : "badge-success"}`}>{humanize(r.status)}</span></td>
-                <td>{link && <Link to={link}>{r.status === "missing" ? "Resolve" : "View source"}</Link>}</td>
+                <td>
+                  {link ? (
+                    <Link to={link}>{r.status === "missing" ? "Resolve" : "View source"}</Link>
+                  ) : (
+                    <span className="muted text-sm">{dealId ? noEntryReason(r.fieldCode, portal) : null}</span>
+                  )}
+                </td>
               </tr>
             );
           })}
