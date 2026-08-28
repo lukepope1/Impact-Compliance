@@ -30,6 +30,7 @@ import Issues from "./pages/shared/Issues";
 import CommunityBenefits from "./pages/shared/CommunityBenefits";
 import MultiCdeSnapshot from "./pages/shared/MultiCdeSnapshot";
 import AmisCenter from "./pages/shared/AmisCenter";
+import TlrEditor from "./pages/shared/TlrEditor";
 import NotificationPreferences from "./pages/shared/NotificationPreferences";
 import Login from "./auth/Login";
 
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
           <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="impact" />} />
           <Route path="deals/:dealId/amis" element={<AmisCenter portal="impact" />} />
+          <Route path="deals/:dealId/tlr" element={<TlrEditor portal="impact" />} />
           <Route
             path="deals/:dealId/review-queue"
             element={<ReviewQueue stage="impact" portal="impact" title="Impact Review Queue" />}
@@ -101,6 +103,7 @@ export default function App() {
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
           <Route path="deals/:dealId/snapshot" element={<MultiCdeSnapshot portal="cde" />} />
           <Route path="deals/:dealId/amis" element={<AmisCenter portal="cde" />} />
+          <Route path="deals/:dealId/tlr" element={<TlrEditor portal="cde" />} />
           <Route
             path="deals/:dealId/review-queue"
             element={<ReviewQueue stage="cde" portal="cde" title="CDE Review Queue" />}

@@ -1,5 +1,5 @@
 import type { FieldDataType, PrismaClient } from "@prisma/client";
-import { TLR_CATALOG, TLR_FIELD_COUNT, TLR_MAPPING_NAME, TLR_MAPPING_VERSION, type TlrDataType } from "./tlrFieldCatalog";
+import { TLR_CATALOG, TLR_FIELD_COUNT, TLR_MAPPING_NAME, TLR_MAPPING_VERSION, type TlrDataType } from "../src/lib/tlrFieldCatalog";
 
 /**
  * Loads the TLR field catalog into the generic field machinery the schema already

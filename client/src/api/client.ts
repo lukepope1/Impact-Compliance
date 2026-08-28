@@ -342,6 +342,42 @@ export interface ImpactTargetRow {
   sourceNote: string | null;
 }
 
+export type TlrDataType = "text" | "integer" | "decimal" | "currency" | "percent" | "boolean" | "date";
+
+export interface TlrFieldSpec {
+  fieldCode: string;
+  amisFieldName: string;
+  dataType: TlrDataType;
+  sortOrder: number;
+  /** Real values from a filed TLR, shown as a hint beside fields whose meaning isn't obvious. */
+  observed: string[];
+}
+
+export interface TlrObjectSpec {
+  amisObject: string;
+  /** "deal" fields are reported once per project; "qlici" fields once per note. */
+  scope: "deal" | "qlici";
+  fields: TlrFieldSpec[];
+}
+
+export interface TlrDisbursementRow {
+  id: string;
+  qliciId: string;
+  qeiName: string | null;
+  disbursementDate: string | null;
+  sourceAmount: number | null;
+  isRevolving: boolean;
+  amisNumber: string | null;
+}
+
+export interface TlrWorkspace {
+  year: number;
+  objects: TlrObjectSpec[];
+  qlicis: { id: string; qliciCode: string; qliciType: string; status: string }[];
+  disbursements: TlrDisbursementRow[];
+  values: { fieldCode: string; qliciId: string | null; value: string | number | boolean | null }[];
+}
+
 export interface PortfolioSummary {
   year: number;
   deals: {
@@ -625,6 +661,20 @@ export const api = {
     request<IssueRow>(`/deals/${dealId}/issues/${issueId}/resolve`, { method: "POST", body: JSON.stringify({ resolution }) }),
 
   getPortfolioSummary: (year: number) => request<PortfolioSummary>(`/portfolio/summary?year=${year}`),
+
+  getTlrWorkspace: (dealId: string, year: number) => request<TlrWorkspace>(`/deals/${dealId}/tlr?year=${year}`),
+  saveTlrValues: (
+    dealId: string,
+    year: number,
+    values: { fieldCode: string; qliciId: string | null; value: string | number | boolean | null }[]
+  ) => request<{ ok: true; written: number }>(`/deals/${dealId}/tlr/values`, {
+    method: "PUT",
+    body: JSON.stringify({ year, values }),
+  }),
+  createTlrDisbursement: (dealId: string, body: Omit<TlrDisbursementRow, "id">) =>
+    request<TlrDisbursementRow>(`/deals/${dealId}/tlr/disbursements`, { method: "POST", body: JSON.stringify(body) }),
+  deleteTlrDisbursement: (dealId: string, id: string) =>
+    request<{ ok: true }>(`/deals/${dealId}/tlr/disbursements/${id}`, { method: "DELETE" }),
 
   listImpactTargets: (dealId: string) => request<ImpactTargetRow[]>(`/deals/${dealId}/impact-targets`),
   saveImpactTargets: (

@@ -1335,7 +1335,7 @@ export const TLR_CATALOG: TlrObjectSpec[] = [
         "amisFieldName": "Loan-to-Value Ratio",
         "column": "N",
         "sortOrder": 14,
-        "dataType": "currency",
+        "dataType": "percent",
         "observed": [
           "211.3",
           "126",
@@ -2126,7 +2126,7 @@ export const TLR_CATALOG: TlrObjectSpec[] = [
         "amisFieldName": "Standard Loan to Value Ratio",
         "column": "CG",
         "sortOrder": 85,
-        "dataType": "currency",
+        "dataType": "percent",
         "observed": [
           "75.000"
         ],

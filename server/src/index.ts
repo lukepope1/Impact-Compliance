@@ -28,6 +28,7 @@ import { impactTargetsRouter } from "./routes/impactTargets";
 import { cbrRouter } from "./routes/cbr";
 import { snapshotsRouter } from "./routes/snapshots";
 import { amisRouter } from "./routes/amis";
+import { tlrRouter } from "./routes/tlr";
 import { notificationsRouter } from "./routes/notificationsRouter";
 import { verifyStorageReachable } from "./lib/storage";
 import { runDeadlineSweep } from "./lib/deadlineSweep";
@@ -66,6 +67,7 @@ app.use("/api/deals/:dealId/messages", requireAuth, messagesRouter);
 app.use("/api/deals/:dealId/cbr", requireAuth, cbrRouter);
 app.use("/api/deals/:dealId/snapshots", requireAuth, snapshotsRouter);
 app.use("/api/deals/:dealId/amis", requireAuth, amisRouter);
+app.use("/api/deals/:dealId/tlr", requireAuth, tlrRouter);
 app.use("/api/notifications", requireAuth, notificationsRouter);
 
 /**

@@ -1,0 +1,91 @@
+import { TLR_CATALOG, type TlrDataType } from "./tlrFieldCatalog";
+
+/**
+ * How each TLR object is scoped, which the catalog itself doesn't say.
+ *
+ * The sample workbook is one CDE's annual filing covering seven projects: 7 project rows,
+ * 7 address rows, and 14 note rows. So per deal a TLR carries one project row, one address
+ * row, and one note row per QLICI — which is what decides whether a field's value hangs off
+ * the deal or off a specific note.
+ *
+ * Disbursements are absent here on purpose. They are typed columns on their own table
+ * rather than StructuredValue rows, because unlike the other three objects a disbursement
+ * is a repeating record with no fixed count per note, so it needs add and remove rather
+ * than a fixed set of fields to fill in.
+ */
+export type TlrScope = "deal" | "qlici";
+
+// Ordered as the filing reads — the project, then where it is, then the notes against it —
+// rather than the alphabetical sheet order the workbook happens to be stored in.
+export const TLR_OBJECT_SCOPE: Record<string, TlrScope> = {
+  tlr_project__c: "deal",
+  tlr_address__c: "deal",
+  tlr_note__c: "qlici",
+};
+
+/**
+ * Columns AMIS owns rather than the filer. "Result" is the outcome AMIS writes back after
+ * an upload, and "AMIS Number" and "Record Type of New Record" are its own record
+ * identifiers. They stay in the catalog, because the catalog describes the report and an
+ * export still has to emit these columns — but offering them as form fields would invite
+ * someone to type a value AMIS overwrites.
+ */
+const AMIS_MANAGED = /^(result|amis number|record type of new record)$/i;
+
+export interface EditableTlrField {
+  fieldCode: string;
+  amisFieldName: string;
+  dataType: TlrDataType;
+  sortOrder: number;
+  observed: string[];
+}
+
+export interface EditableTlrObject {
+  amisObject: string;
+  scope: TlrScope;
+  fields: EditableTlrField[];
+}
+
+/** The three objects the field editor can write, in filing order. */
+export const EDITABLE_TLR_OBJECTS: EditableTlrObject[] = Object.keys(TLR_OBJECT_SCOPE)
+  .map((name) => TLR_CATALOG.find((o) => o.amisObject === name)!)
+  .filter(Boolean)
+  .map((o) => ({
+  amisObject: o.amisObject,
+  scope: TLR_OBJECT_SCOPE[o.amisObject],
+  fields: o.fields
+    .filter((f) => !AMIS_MANAGED.test(f.amisFieldName))
+    .map((f) => ({
+      fieldCode: f.fieldCode,
+      amisFieldName: f.amisFieldName,
+      dataType: f.dataType,
+      sortOrder: f.sortOrder,
+      observed: f.observed,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder),
+}));
+
+export const EDITABLE_FIELD_BY_CODE = new Map(
+  EDITABLE_TLR_OBJECTS.flatMap((o) => o.fields.map((f) => [f.fieldCode, { ...f, scope: o.scope, amisObject: o.amisObject }] as const))
+);
+
+/**
+ * Which StructuredValue column a value belongs in. StructuredValue keeps one typed column
+ * per shape rather than a single stringified blob, so a wrong type fails on write instead
+ * of surfacing as a bad TLR months later.
+ */
+export function columnForDataType(dataType: TlrDataType): "valueText" | "valueNumber" | "valueBoolean" | "valueDate" {
+  switch (dataType) {
+    case "boolean":
+      return "valueBoolean";
+    case "date":
+      return "valueDate";
+    case "integer":
+    case "decimal":
+    case "currency":
+    case "percent":
+      return "valueNumber";
+    default:
+      return "valueText";
+  }
+}

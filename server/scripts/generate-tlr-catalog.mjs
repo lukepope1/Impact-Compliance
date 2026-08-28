@@ -75,8 +75,11 @@ function inferType(label, values) {
   const allBool = values.every((v) => /^(y|n|yes|no|true|false)$/i.test(v));
   if (allBool) return "boolean";
   if (!allNumeric) return "text";
-  if (CURRENCY_HINT.test(label)) return "currency";
+  // Percent wins over currency when a label matches both, because the currency hint is the
+  // looser of the two: "Loan-to-Value Ratio" contains "value" but holds 211.3, a ratio, and
+  // typing it as money would put a dollar sign on it all the way through to the export.
   if (PERCENT_HINT.test(label)) return "percent";
+  if (CURRENCY_HINT.test(label)) return "currency";
   // "0.00" is a decimal even though its numeric value is whole — FTE counts arrive this
   // way and rounding them to integers would quietly lose fractional jobs.
   const anyFractionalNotation = values.some((v) => String(v).includes("."));
@@ -179,7 +182,9 @@ export const TLR_CATALOG: TlrObjectSpec[] = ${JSON.stringify(objects, null, 2)};
 export const TLR_FIELD_COUNT = ${total};
 `;
 
-const out = join(process.cwd(), "prisma", "tlrFieldCatalog.ts");
+// Lives under src/ rather than prisma/ because the API routes read it too, and the server's
+// tsconfig sets rootDir to src — anything outside it can't be imported by compiled code.
+const out = join(process.cwd(), "src", "lib", "tlrFieldCatalog.ts");
 writeFileSync(out, file);
 
 console.log(`${total} fields across ${objects.length} objects -> ${out}`);
