@@ -76,10 +76,29 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="card">
-        <button onClick={generate}>{snapshot ? "Regenerate snapshot" : "Generate snapshot"}</button>
-        {snapshot && <span style={{ marginLeft: 8 }}>Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}</span>}
-      </div>
+      {/* Generating is Impact's action — the server restricts it to their two admin roles.
+          The CDE portal rendered the button anyway, so a CDE who clicked it got a bare
+          "Insufficient role" and no idea what to do instead. This mirrors the treatment
+          the approval controls below already get in the opposite direction. */}
+      {portal === "impact" ? (
+        <div className="card">
+          <button onClick={generate}>{snapshot ? "Regenerate snapshot" : "Generate snapshot"}</button>
+          {snapshot && <span style={{ marginLeft: 8 }}>Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}</span>}
+        </div>
+      ) : (
+        snapshot && (
+          <div className="card">
+            Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}
+          </div>
+        )
+      )}
+
+      {portal === "cde" && !snapshot && !error && (
+        <p className="empty-state">
+          No shared snapshot has been generated for CY {year} yet. Impact generates it from the deal's reported
+          figures; it will appear here for your review and approval once they do.
+        </p>
+      )}
 
       {snapshot && (
         <>

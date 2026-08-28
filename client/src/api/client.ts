@@ -27,6 +27,21 @@ function authHeaders(extra?: HeadersInit): HeadersInit {
   return AUTH_TOKEN ? { Authorization: `Bearer ${AUTH_TOKEN}`, ...extra } : { ...extra };
 }
 
+/**
+ * Turns an error response into a message fit to show a user.
+ *
+ * Most routes send `{ error: "Some sentence" }`, and stringifying that wrapped it in
+ * literal quote marks — users were seeing `"Insufficient role"` on screen, quotes and all.
+ * A plain string is passed through; only structured errors (Zod's field map) are
+ * serialized, since there is no better single-line rendering for those.
+ */
+async function errorMessage(res: Response): Promise<string> {
+  const body = await res.json().catch(() => ({} as { error?: unknown }));
+  if (typeof body.error === "string") return body.error;
+  if (body.error) return JSON.stringify(body.error);
+  return `Request failed: ${res.status}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
@@ -40,10 +55,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await errorMessage(res));
   return res.json();
 }
 
@@ -177,10 +189,7 @@ async function requestForm<T>(path: string, form: FormData): Promise<T> {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ? JSON.stringify(body.error) : `Request failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await errorMessage(res));
   return res.json();
 }
 
@@ -194,10 +203,7 @@ async function downloadFile(path: string, fileName: string) {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(await errorMessage(res));
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;

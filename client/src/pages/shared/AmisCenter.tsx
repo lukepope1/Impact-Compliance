@@ -38,12 +38,19 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
 
   useEffect(refresh, [dealId]);
 
+  /**
+   * Produces the four-sheet TLR workbook — the format AMIS actually accepts.
+   *
+   * This used to emit a three-column "AMIS Field, Value, Source" CSV of the 13 golden
+   * fields, which was a readiness summary rather than a filing and looked nothing like a
+   * real TLR. The generator built from the certification workbook replaces it.
+   */
   async function generateExport() {
     if (!dealId) return;
     setBusy(true);
     setError(null);
     try {
-      await api.generateAmisExport(dealId, year);
+      await api.generateTlrExport(dealId, year);
       refresh();
     } catch (e) {
       setError(String((e as Error).message ?? e));
@@ -52,10 +59,13 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
     }
   }
 
-  async function download(exportId: string, fileName: string) {
+  // Older CSV batches are still downloadable through their original endpoint, so existing
+  // history keeps working rather than 404ing after the switch.
+  async function download(exportId: string, fileName: string, exportType: string) {
     if (!dealId) return;
     try {
-      await api.downloadAmisExport(dealId, exportId, fileName);
+      if (exportType === "amis_tlr_xlsx") await api.downloadTlrExport(dealId, exportId, fileName);
+      else await api.downloadAmisExport(dealId, exportId, fileName);
     } catch (e) {
       setError(String((e as Error).message ?? e));
     }
@@ -116,26 +126,34 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
       </div>
 
       <div className="card">
+        <h2>AMIS upload file</h2>
+        <p className="text-sm muted" style={{ marginTop: 0 }}>
+          Builds the four-sheet TLR certification workbook for CY {year} — the format AMIS accepts. The fields
+          above are a readiness check; the workbook itself is filled in on{" "}
+          <Link to={`/${portal}/deals/${dealId}/tlr?year=${year}`}>TLR Data Entry</Link>.
+        </p>
         <button onClick={generateExport} disabled={busy || missingCount > 0}>
-          {busy ? "Generating…" : "Generate CSV"}
+          {busy ? "Generating…" : `Generate ${year} TLR workbook`}
         </button>
         {missingCount > 0 && <span style={{ marginLeft: 8, color: "var(--danger)" }}>Resolve missing fields before exporting.</span>}
       </div>
 
-      <table>
-        <thead><tr><th>Generated</th><th>Type</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          {exports?.map((e) => (
-            <tr key={e.id}>
-              <td>{new Date(e.generatedAt).toLocaleString()}</td>
-              <td>{humanize(e.exportType)}</td>
-              <td>{humanize(e.status)}</td>
-              <td>{e.fileName && <button onClick={() => download(e.id, e.fileName!)}>Download</button>}</td>
-            </tr>
-          ))}
-          {exports && exports.length === 0 && <tr><td className="state-cell" colSpan={4}>No exports generated yet.</td></tr>}
-        </tbody>
-      </table>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Generated</th><th>Type</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {exports?.map((e) => (
+              <tr key={e.id}>
+                <td>{new Date(e.generatedAt).toLocaleString()}</td>
+                <td>{e.exportType === "amis_tlr_xlsx" ? "TLR workbook (.xlsx)" : humanize(e.exportType)}</td>
+                <td>{humanize(e.status)}</td>
+                <td>{e.fileName && <button onClick={() => download(e.id, e.fileName!, e.exportType)}>Download</button>}</td>
+              </tr>
+            ))}
+            {exports && exports.length === 0 && <tr><td className="state-cell" colSpan={4}>No exports generated yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }
