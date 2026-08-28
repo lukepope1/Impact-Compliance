@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
+import { api, ApiError, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
 import { sourceLink, noEntryReason } from "../../utils/amisSources";
 
@@ -27,6 +27,8 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
   const [parties, setParties] = useState<DealParty[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [blockers, setBlockers] = useState<string[]>([]);
+  const [generated, setGenerated] = useState<string | null>(null);
 
   function refresh() {
     if (!dealId) return;
@@ -49,11 +51,18 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
     if (!dealId) return;
     setBusy(true);
     setError(null);
+    setBlockers([]);
+    setGenerated(null);
     try {
-      await api.generateTlrExport(dealId, year);
+      const created = await api.generateTlrExport(dealId, year);
+      setGenerated(`Generated ${created.fileName} — ${created.cells} values across 4 sheets.`);
       refresh();
     } catch (e) {
-      setError(String((e as Error).message ?? e));
+      // Blockers name exactly what to fix, so they are shown beside the button rather than
+      // collapsed into the generic error banner at the top of the page.
+      const reasons = e instanceof ApiError ? e.blockers : [];
+      if (reasons.length > 0) setBlockers(reasons);
+      else setError(String((e as Error).message ?? e));
     } finally {
       setBusy(false);
     }
@@ -132,10 +141,31 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
           above are a readiness check; the workbook itself is filled in on{" "}
           <Link to={`/${portal}/deals/${dealId}/tlr?year=${year}`}>TLR Data Entry</Link>.
         </p>
-        <button onClick={generateExport} disabled={busy || missingCount > 0}>
+        {/* Not disabled on the readiness count any more. Those 13 golden fields are a
+            different set from the TLR's 205, so a deal could have a complete TLR and still
+            find this greyed out — which reads as the button being broken rather than as a
+            refusal. The server states the TLR's own requirements, and they are shown below. */}
+        <button onClick={generateExport} disabled={busy}>
           {busy ? "Generating…" : `Generate ${year} TLR workbook`}
         </button>
-        {missingCount > 0 && <span style={{ marginLeft: 8, color: "var(--danger)" }}>Resolve missing fields before exporting.</span>}
+        {missingCount > 0 && (
+          <span className="muted text-sm" style={{ marginLeft: 8 }}>
+            {missingCount} readiness {missingCount === 1 ? "field is" : "fields are"} still missing — the workbook
+            will generate with those cells blank.
+          </span>
+        )}
+
+        {blockers.length > 0 && (
+          <div className="alert alert-warning" style={{ marginTop: 12 }}>
+            <strong>Not ready to generate:</strong>
+            <ul style={{ marginBottom: 0 }}>
+              {blockers.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {generated && <div className="alert alert-info" style={{ marginTop: 12 }}>{generated}</div>}
       </div>
 
       <div className="table-wrap">

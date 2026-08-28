@@ -9,6 +9,7 @@ import {
   type TlrObjectSpec,
   type TlrWorkspace,
   type ExportBatchRow,
+  ApiError,
 } from "../../api/client";
 
 /**
@@ -417,17 +418,10 @@ function TlrExports({ dealId, year, onError }: { dealId: string; year: number; o
       setRows(await api.listTlrExports(dealId));
     } catch (e) {
       // The server returns its reasons as a structured list, so show them as the checklist
-      // they are rather than a wall of JSON.
-      const raw = String((e as Error).message ?? e);
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return setBlockers(parsed);
-      } catch {
-        /* not structured — fall through to the generic error banner */
-      }
-      const match = raw.match(/"blockers":(\[.*?\])/);
-      if (match) return setBlockers(JSON.parse(match[1]));
-      onError(raw);
+      // they are rather than a bare "Export blocked" with nothing actionable in it.
+      const reasons = e instanceof ApiError ? e.blockers : [];
+      if (reasons.length > 0) setBlockers(reasons);
+      else onError(String((e as Error).message ?? e));
     } finally {
       setBusy(false);
     }

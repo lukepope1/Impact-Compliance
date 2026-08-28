@@ -28,18 +28,45 @@ function authHeaders(extra?: HeadersInit): HeadersInit {
 }
 
 /**
- * Turns an error response into a message fit to show a user.
+ * An error response, with the response body kept rather than flattened to a string.
  *
- * Most routes send `{ error: "Some sentence" }`, and stringifying that wrapped it in
- * literal quote marks — users were seeing `"Insufficient role"` on screen, quotes and all.
- * A plain string is passed through; only structured errors (Zod's field map) are
- * serialized, since there is no better single-line rendering for those.
+ * Some routes explain a refusal in fields beside `error` — the TLR export answers a 422
+ * with a `blockers` list naming exactly what to fix. Throwing only the message discarded
+ * that, leaving the user with "Export blocked" and no way to learn why.
  */
-async function errorMessage(res: Response): Promise<string> {
-  const body = await res.json().catch(() => ({} as { error?: unknown }));
-  if (typeof body.error === "string") return body.error;
-  if (body.error) return JSON.stringify(body.error);
-  return `Request failed: ${res.status}`;
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: Record<string, unknown>;
+
+  constructor(message: string, status: number, body: Record<string, unknown>) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+
+  /** Reasons an action was refused, when the route supplies them. */
+  get blockers(): string[] {
+    const raw = this.body.blockers;
+    return Array.isArray(raw) ? raw.filter((b): b is string => typeof b === "string") : [];
+  }
+}
+
+/**
+ * Most routes send `{ error: "Some sentence" }`. Stringifying that wrapped it in literal
+ * quote marks — users saw `"Insufficient role"` on screen, quotes and all. A plain string
+ * passes through; only structured errors (Zod's field map) are serialized, since there is
+ * no better single-line rendering for those.
+ */
+async function apiError(res: Response): Promise<ApiError> {
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const message =
+    typeof body.error === "string"
+      ? body.error
+      : body.error
+        ? JSON.stringify(body.error)
+        : `Request failed: ${res.status}`;
+  return new ApiError(message, res.status, body);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -55,7 +82,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await apiError(res);
   return res.json();
 }
 
@@ -189,7 +216,7 @@ async function requestForm<T>(path: string, form: FormData): Promise<T> {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await apiError(res);
   return res.json();
 }
 
@@ -203,7 +230,7 @@ async function downloadFile(path: string, fileName: string) {
     setAuthToken(null);
     onUnauthorized?.();
   }
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await apiError(res);
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement("a");
   a.href = url;
