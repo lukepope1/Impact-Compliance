@@ -32,6 +32,28 @@ export const TLR_OBJECT_SCOPE: Record<string, TlrScope> = {
  */
 const AMIS_MANAGED = /^(result|amis number|record type of new record)$/i;
 
+/**
+ * The deal's project number, entered once.
+ *
+ * The same Sub-CDE project number appears in three columns across the workbook, under two
+ * different labels — "Project Number" on the project and address sheets, "Sub-CDE" on the
+ * note sheet (the sample shows all three carrying the same "32"). Asking for it three
+ * times would invite three different answers, so it is captured once here and written to
+ * all three columns at export.
+ *
+ * Note that the note sheet also has its own "Project Number" holding an AMIS-assigned id
+ * ("TLRP-00021987"), which is different data despite the identical label and stays a
+ * separate field.
+ */
+export const PROJECT_NUMBER_FIELD = "tlr_project.project_number";
+
+/** Columns the export fills from PROJECT_NUMBER_FIELD rather than from their own entry. */
+export const DERIVED_FROM_PROJECT_NUMBER = ["tlr_address.project_number", "tlr_note.sub_cde"];
+
+// Not offered as form fields, since they are written from the single project number above.
+// They stay in the catalog because the export still has to emit those columns.
+const DERIVED = new Set(DERIVED_FROM_PROJECT_NUMBER);
+
 export interface EditableTlrField {
   fieldCode: string;
   amisFieldName: string;
@@ -54,7 +76,7 @@ export const EDITABLE_TLR_OBJECTS: EditableTlrObject[] = Object.keys(TLR_OBJECT_
   amisObject: o.amisObject,
   scope: TLR_OBJECT_SCOPE[o.amisObject],
   fields: o.fields
-    .filter((f) => !AMIS_MANAGED.test(f.amisFieldName))
+    .filter((f) => !AMIS_MANAGED.test(f.amisFieldName) && !DERIVED.has(f.fieldCode))
     .map((f) => ({
       fieldCode: f.fieldCode,
       amisFieldName: f.amisFieldName,

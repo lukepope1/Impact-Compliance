@@ -8,6 +8,7 @@ import {
   type TlrFieldSpec,
   type TlrObjectSpec,
   type TlrWorkspace,
+  type ExportBatchRow,
 } from "../../api/client";
 
 /**
@@ -86,9 +87,12 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
 
   const visibleFields = useMemo(() => {
     if (!object) return [];
+    // The project number has its own field above, so it is not repeated in the sheet. It
+    // stays part of the object, so saving the project sheet still writes it.
+    const fields = object.fields.filter((f) => f.fieldCode !== data?.projectNumberField);
     const q = filter.trim().toLowerCase();
-    return q ? object.fields.filter((f) => f.amisFieldName.toLowerCase().includes(q)) : object.fields;
-  }, [object, filter]);
+    return q ? fields.filter((f) => f.amisFieldName.toLowerCase().includes(q)) : fields;
+  }, [object, filter, data?.projectNumberField]);
 
   function completeness(o: TlrObjectSpec) {
     if (o.scope === "qlici") {
@@ -129,6 +133,26 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
       );
       const res = await api.saveTlrValues(dealId, year, payload);
       setSaved(`Saved ${OBJECT_LABELS[object.amisObject] ?? object.amisObject} for ${year} (${res.written} fields).`);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Saved on its own rather than with the project sheet, because the export is blocked
+  // without it and it is the one field someone may want to set before filling anything else.
+  async function saveProjectNumber() {
+    if (!dealId || !data) return;
+    setBusy(true);
+    setError(null);
+    setSaved(null);
+    try {
+      const raw = (draft[keyOf(data.projectNumberField, null)] ?? "").trim();
+      await api.saveTlrValues(dealId, year, [
+        { fieldCode: data.projectNumberField, qliciId: null, value: raw === "" ? null : raw },
+      ]);
+      setSaved(raw === "" ? "Project number cleared." : `Project number saved as ${raw}.`);
     } catch (e) {
       setError(String((e as Error).message ?? e));
     } finally {
@@ -178,6 +202,32 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
         />
         <span className="muted text-sm">A TLR is filed per year, so each year holds its own figures.</span>
       </div>
+
+      {data && (
+        <div className="card">
+          <div className="btn-row" style={{ alignItems: "center" }}>
+            <label htmlFor="tlr-project-number">
+              <strong>Project Number</strong>
+            </label>
+            <input
+              id="tlr-project-number"
+              style={{ width: 160 }}
+              placeholder="e.g. 32"
+              value={draft[keyOf(data.projectNumberField, null)] ?? ""}
+              onChange={(e) => setDraft({ ...draft, [keyOf(data.projectNumberField, null)]: e.target.value })}
+            />
+            <button onClick={saveProjectNumber} disabled={busy}>
+              {busy ? "Saving…" : "Save project number"}
+            </button>
+          </div>
+          <p className="text-sm muted" style={{ marginBottom: 0 }}>
+            Your Sub-CDE project number. Entered once here and written to three columns on export — “Project
+            Number” on the project and address sheets, and “Sub-CDE” on the note sheet — which is what joins the
+            sheets to each other. The note sheet’s own “Project Number” is a different thing: an AMIS-assigned id
+            like TLRP-00021987, edited with the other note fields.
+          </p>
+        </div>
+      )}
 
       {!data ? (
         <p className="state-cell">Loading…</p>
@@ -330,9 +380,124 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
               </button>
             </>
           )}
+
+          <TlrExports dealId={dealId!} year={year} onError={setError} />
         </>
       )}
     </main>
+  );
+}
+
+/**
+ * Generates the workbook for AMIS upload and lists what has been generated before.
+ *
+ * Deliberately produces a file rather than filing anything: nothing here certifies or
+ * submits to AMIS, matching the boundary the CSV export already sets.
+ */
+function TlrExports({ dealId, year, onError }: { dealId: string; year: number; onError: (e: string) => void }) {
+  const [rows, setRows] = useState<ExportBatchRow[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [blockers, setBlockers] = useState<string[]>([]);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.listTlrExports(dealId).then(setRows).catch(() => setRows([]));
+  }, [dealId]);
+
+  async function generate() {
+    setBusy(true);
+    setBlockers([]);
+    setNote(null);
+    try {
+      const created = await api.generateTlrExport(dealId, year);
+      const sheets = Object.entries(created.sheetRows)
+        .map(([name, n]) => `${name.replace(/^tlr_|__c$/g, "")} ${n}`)
+        .join(", ");
+      setNote(`Generated ${created.fileName} — ${created.cells} values across ${sheets} rows.`);
+      setRows(await api.listTlrExports(dealId));
+    } catch (e) {
+      // The server returns its reasons as a structured list, so show them as the checklist
+      // they are rather than a wall of JSON.
+      const raw = String((e as Error).message ?? e);
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return setBlockers(parsed);
+      } catch {
+        /* not structured — fall through to the generic error banner */
+      }
+      const match = raw.match(/"blockers":(\[.*?\])/);
+      if (match) return setBlockers(JSON.parse(match[1]));
+      onError(raw);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2>AMIS upload file</h2>
+      <p className="text-sm muted" style={{ marginTop: 0 }}>
+        Builds the four-sheet TLR workbook for {year}. This produces the file you upload — it does not certify or
+        submit anything to AMIS.
+      </p>
+
+      {blockers.length > 0 && (
+        <div className="alert alert-warning">
+          <strong>Not ready to generate:</strong>
+          <ul style={{ marginBottom: 0 }}>
+            {blockers.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {note && <div className="alert alert-info">{note}</div>}
+
+      <button onClick={generate} disabled={busy}>
+        {busy ? "Generating…" : `Generate ${year} TLR workbook`}
+      </button>
+
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Generated</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows?.map((r) => (
+              <tr key={r.id}>
+                <td className="cell-code">{r.fileName}</td>
+                <td>{r.generatedAt ? new Date(r.generatedAt).toLocaleString() : "—"}</td>
+                <td>{r.status}</td>
+                <td>
+                  <button
+                    className="btn-secondary"
+                    onClick={() =>
+                      api
+                        .downloadTlrExport(dealId, r.id, r.fileName ?? "tlr.xlsx")
+                        .catch((e) => onError(String(e.message ?? e)))
+                    }
+                  >
+                    Download
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {rows?.length === 0 && (
+              <tr>
+                <td className="state-cell" colSpan={4}>
+                  No TLR workbook generated yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 

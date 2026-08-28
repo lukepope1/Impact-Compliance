@@ -184,6 +184,28 @@ async function requestForm<T>(path: string, form: FormData): Promise<T> {
   return res.json();
 }
 
+/**
+ * Pulls a file down through fetch rather than a plain link, because these endpoints need
+ * the auth header and a bare <a href> can't carry one.
+ */
+async function downloadFile(path: string, fileName: string) {
+  const res = await fetch(`/api${path}`, { headers: authHeaders() });
+  if (res.status === 401) {
+    setAuthToken(null);
+    onUnauthorized?.();
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export interface RequirementInstance {
   id: string;
   reportingPeriodStart: string | null;
@@ -373,6 +395,8 @@ export interface TlrDisbursementRow {
 export interface TlrWorkspace {
   year: number;
   objects: TlrObjectSpec[];
+  /** The field code carrying the deal's project number, entered once and written to three columns. */
+  projectNumberField: string;
   qlicis: { id: string; qliciCode: string; qliciType: string; status: string }[];
   disbursements: TlrDisbursementRow[];
   values: { fieldCode: string; qliciId: string | null; value: string | number | boolean | null }[];
@@ -671,6 +695,15 @@ export const api = {
     method: "PUT",
     body: JSON.stringify({ year, values }),
   }),
+  listTlrExports: (dealId: string) => request<ExportBatchRow[]>(`/deals/${dealId}/tlr/exports`),
+  generateTlrExport: (dealId: string, year: number) =>
+    request<ExportBatchRow & { sheetRows: Record<string, number>; cells: number }>(
+      `/deals/${dealId}/tlr/exports/${year}`,
+      { method: "POST" }
+    ),
+  downloadTlrExport: (dealId: string, exportId: string, fileName: string) =>
+    downloadFile(`/deals/${dealId}/tlr/exports/${exportId}/download`, fileName),
+
   createTlrDisbursement: (dealId: string, body: Omit<TlrDisbursementRow, "id">) =>
     request<TlrDisbursementRow>(`/deals/${dealId}/tlr/disbursements`, { method: "POST", body: JSON.stringify(body) }),
   deleteTlrDisbursement: (dealId: string, id: string) =>
@@ -745,18 +778,6 @@ export const api = {
   listAmisExports: (dealId: string) => request<ExportBatchRow[]>(`/deals/${dealId}/amis/exports`),
   generateAmisExport: (dealId: string, year: number) =>
     request<ExportBatchRow>(`/deals/${dealId}/amis/exports/${year}`, { method: "POST" }),
-  async downloadAmisExport(dealId: string, exportId: string, fileName: string) {
-    const res = await fetch(`/api/deals/${dealId}/amis/exports/${exportId}/download`, { headers: authHeaders() });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ? JSON.stringify(body.error) : `Download failed: ${res.status}`);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-  },
+  downloadAmisExport: (dealId: string, exportId: string, fileName: string) =>
+    downloadFile(`/deals/${dealId}/amis/exports/${exportId}/download`, fileName),
 };

@@ -372,6 +372,10 @@ enum ExportType {
   review_xlsx
   amis_csv
   amis_xml
+  // The four-sheet TLR workbook. Distinct from review_xlsx, which is an internal review
+  // file — this one is shaped for upload to AMIS, so the two must stay tellable apart when
+  // listing what a deal has produced.
+  amis_tlr_xlsx
 }
 
 enum ExportStatus {

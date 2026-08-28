@@ -1,9 +1,13 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { recordAuditEvent } from "../lib/audit";
 import { requireDealAccess, requireRoleOnDealOrg } from "../middleware/auth";
-import { EDITABLE_TLR_OBJECTS, EDITABLE_FIELD_BY_CODE, columnForDataType } from "../lib/tlrScope";
+import { EDITABLE_TLR_OBJECTS, EDITABLE_FIELD_BY_CODE, columnForDataType, PROJECT_NUMBER_FIELD } from "../lib/tlrScope";
+import { buildTlrExport } from "../lib/tlrExport";
+import { TLR_MAPPING_NAME, TLR_MAPPING_VERSION } from "../lib/tlrFieldCatalog";
+import { storage, EVIDENCE_BUCKET } from "../lib/storage";
 
 export const tlrRouter = Router({ mergeParams: true });
 
@@ -72,6 +76,7 @@ tlrRouter.get("/", requireDealAccess, async (req, res) => {
   res.json({
     year,
     objects: EDITABLE_TLR_OBJECTS,
+    projectNumberField: PROJECT_NUMBER_FIELD,
     qlicis,
     disbursements: disbursements.map((d) => ({
       ...d,
@@ -260,4 +265,106 @@ tlrRouter.delete("/disbursements/:id", requireRoleOnDealOrg(...WRITE_ROLES), asy
   });
 
   res.json({ ok: true });
+});
+
+/**
+ * Generates the four-sheet workbook for AMIS upload.
+ *
+ * Like the CSV export it sits beside, this produces a file a person files manually — it
+ * never certifies or submits to AMIS on anyone's behalf. Every emitted cell is recorded in
+ * export_field_lineage so "where did this number come from" stays answerable after the
+ * fact.
+ */
+tlrRouter.post("/exports/:year", requireRoleOnDealOrg(...WRITE_ROLES), async (req, res) => {
+  const parsedYear = yearSchema.safeParse(req.params.year);
+  if (!parsedYear.success) return res.status(400).json({ error: "Invalid year" });
+  const year = parsedYear.data;
+  const dealId = req.params.dealId;
+
+  const built = await buildTlrExport(dealId, year);
+  if (built.blockers.length > 0) {
+    return res.status(422).json({ error: "Export blocked", blockers: built.blockers });
+  }
+
+  const mappingVersion = await prisma.amisMappingVersion.findFirst({
+    where: { mappingName: TLR_MAPPING_NAME, versionCode: TLR_MAPPING_VERSION, transport: "manual_review_xlsx" },
+  });
+  if (!mappingVersion) return res.status(500).json({ error: "TLR mapping version is not seeded" });
+
+  const checksum = crypto.createHash("sha256").update(built.buffer).digest("hex");
+  const fileName = `TLR_${year}_${built.projectNumber ?? "project"}_${Date.now()}.xlsx`;
+  const key = `tlr-exports/${dealId}/${fileName}`;
+  await storage.put(EVIDENCE_BUCKET, key, built.buffer);
+
+  // Lineage rows join through amis_field_mappings, so only cells with a mapping for this
+  // version can be traced. They all should be — the same catalog produced both.
+  const mappings = await prisma.amisFieldMapping.findMany({
+    where: { mappingVersionId: mappingVersion.id },
+    select: { id: true, amisObject: true, amisFieldName: true },
+  });
+  const mappingId = new Map(mappings.map((m) => [`${m.amisObject}::${m.amisFieldName}`, m.id]));
+
+  const batch = await prisma.$transaction(async (tx) => {
+    const created = await tx.exportBatch.create({
+      data: {
+        dealId,
+        mappingVersionId: mappingVersion.id,
+        reportingPeriodEnd: new Date(Date.UTC(year, 11, 31)),
+        exportType: "amis_tlr_xlsx",
+        status: "ready",
+        s3Bucket: EVIDENCE_BUCKET,
+        s3ObjectKey: key,
+        fileName,
+        fileChecksum: checksum,
+        validationResults: [],
+        generatedById: req.user!.id,
+      },
+    });
+
+    const lineage = built.cells
+      .map((c) => ({ id: mappingId.get(`${c.amisObject}::${c.amisFieldName}`), c }))
+      .filter((r): r is { id: string; c: (typeof built.cells)[number] } => Boolean(r.id))
+      .map((r) => ({
+        exportBatchId: created.id,
+        amisFieldMappingId: r.id,
+        outputFieldName: r.c.amisFieldName,
+        outputValue: r.c.value,
+      }));
+    if (lineage.length > 0) await tx.exportFieldLineage.createMany({ data: lineage });
+
+    return created;
+  });
+
+  await recordAuditEvent(req, {
+    dealId,
+    objectType: "export_batch",
+    objectId: batch.id,
+    action: "generate_amis_tlr_xlsx",
+    afterData: { fileName, year, sheetRows: built.sheetRows, cells: built.cells.length },
+  });
+
+  res.status(201).json({ ...batch, sheetRows: built.sheetRows, cells: built.cells.length });
+});
+
+tlrRouter.get("/exports", requireDealAccess, async (req, res) => {
+  const exports = await prisma.exportBatch.findMany({
+    where: { dealId: req.params.dealId, exportType: "amis_tlr_xlsx" },
+    orderBy: { generatedAt: "desc" },
+  });
+  res.json(exports);
+});
+
+tlrRouter.get("/exports/:exportId/download", requireDealAccess, async (req, res) => {
+  const batch = await prisma.exportBatch.findFirst({
+    where: { id: req.params.exportId, dealId: req.params.dealId, exportType: "amis_tlr_xlsx" },
+  });
+  if (!batch || !batch.s3ObjectKey) return res.status(404).json({ error: "Export not found" });
+
+  const data = await storage.get(batch.s3Bucket!, batch.s3ObjectKey);
+  if (batch.status === "ready") {
+    await prisma.exportBatch.update({ where: { id: batch.id }, data: { status: "downloaded" } });
+  }
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="${batch.fileName}"`);
+  res.send(data);
 });
