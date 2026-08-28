@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import {
   api,
   type Deal,
@@ -46,6 +46,7 @@ function inputTypeFor(f: TlrFieldSpec) {
 export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
   const [params, setParams] = useSearchParams();
+  const { hash } = useLocation();
   const year = Number(params.get("year")) || new Date().getFullYear();
 
   const [data, setData] = useState<TlrWorkspace | null>(null);
@@ -77,6 +78,17 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
     api.getDeal(dealId).then(setDeal).catch(() => undefined);
     api.listParties(dealId).then(setParties).catch(() => undefined);
   }, [dealId]);
+
+  // React Router does not honour a #hash on client-side navigation, and the field does not
+  // exist until the workspace has loaded — so arriving from the export blocker needs this
+  // to actually land on the field it named.
+  useEffect(() => {
+    if (!data || !hash) return;
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    (target as HTMLElement).focus?.({ preventScroll: true });
+  }, [data, hash]);
 
   const object = useMemo(
     () => data?.objects.find((o) => o.amisObject === activeObject) ?? null,
@@ -222,10 +234,15 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
             </button>
           </div>
           <p className="text-sm muted" style={{ marginBottom: 0 }}>
-            Your Sub-CDE project number. Entered once here and written to three columns on export — “Project
-            Number” on the project and address sheets, and “Sub-CDE” on the note sheet — which is what joins the
-            sheets to each other. The note sheet’s own “Project Number” is a different thing: an AMIS-assigned id
-            like TLRP-00021987, edited with the other note fields.
+            Your <strong>Sub-CDE project number</strong> — a short number like 32, not an MCDE or TLRP code.
+            Entered once here and written to three columns on export: “Project Number” on the project and address
+            sheets, and “Sub-CDE” on the note sheet, which is what joins the sheets to each other.
+          </p>
+          <p className="text-sm muted" style={{ marginBottom: 0 }}>
+            Two similarly named fields are <em>not</em> this one. “Multi-CDE Project ID” (MCDE-00001923) is the
+            deal’s shared identifier, maintained by Impact in deal setup and written to the export from there. The
+            note sheet’s own “Project Number” (TLRP-00021987) is assigned by AMIS and is edited with the other note
+            fields.
           </p>
         </div>
       )}

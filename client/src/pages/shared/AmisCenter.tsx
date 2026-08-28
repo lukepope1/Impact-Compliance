@@ -158,11 +158,16 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
         {blockers.length > 0 && (
           <div className="alert alert-warning" style={{ marginTop: 12 }}>
             <strong>Not ready to generate:</strong>
-            <ul style={{ marginBottom: 0 }}>
+            <ul style={{ marginBottom: 8 }}>
               {blockers.map((b) => (
                 <li key={b}>{b}</li>
               ))}
             </ul>
+            {/* A blocker that names a field but not where to enter it just moves the
+                question along. The link lands on the field itself. */}
+            <Link to={`/${portal}/deals/${dealId}/tlr?year=${year}#tlr-project-number`}>
+              Enter it on TLR Data Entry →
+            </Link>
           </div>
         )}
         {generated && <div className="alert alert-info" style={{ marginTop: 12 }}>{generated}</div>}

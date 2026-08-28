@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { buildXlsx, type XlsxSheet } from "./xlsx";
 import { TLR_CATALOG, type TlrFieldSpec } from "./tlrFieldCatalog";
-import { PROJECT_NUMBER_FIELD, DERIVED_FROM_PROJECT_NUMBER, TLR_OBJECT_SCOPE } from "./tlrScope";
+import { PROJECT_NUMBER_FIELD, DERIVED_FROM_PROJECT_NUMBER, DERIVED_FROM_MULTI_CDE_PROJECT_NUMBER, TLR_OBJECT_SCOPE } from "./tlrScope";
 
 /**
  * Builds the four-sheet workbook a CDE uploads to AMIS.
@@ -66,7 +66,8 @@ export interface TlrExportResult {
 export async function buildTlrExport(dealId: string, year: number): Promise<TlrExportResult> {
   const periodEnd = new Date(Date.UTC(year, 11, 31));
 
-  const [qlicis, values, disbursements] = await Promise.all([
+  const [deal, qlicis, values, disbursements] = await Promise.all([
+    prisma.deal.findUnique({ where: { id: dealId }, select: { multiCdeProjectNumber: true } }),
     prisma.qlici.findMany({ where: { dealId }, orderBy: { qliciCode: "asc" } }),
     prisma.structuredValue.findMany({
       where: { dealId, reportingPeriodEnd: periodEnd },
@@ -104,6 +105,7 @@ export async function buildTlrExport(dealId: string, year: number): Promise<TlrE
   // disagree.
   function resolve(field: TlrFieldSpec, qliciId: string | null): unknown {
     if (DERIVED_FROM_PROJECT_NUMBER.includes(field.fieldCode)) return projectNumber;
+    if (DERIVED_FROM_MULTI_CDE_PROJECT_NUMBER.includes(field.fieldCode)) return deal?.multiCdeProjectNumber ?? null;
     return stored.get(key(field.fieldCode, qliciId)) ?? null;
   }
 

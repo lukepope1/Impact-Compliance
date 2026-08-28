@@ -50,9 +50,23 @@ export const PROJECT_NUMBER_FIELD = "tlr_project.project_number";
 /** Columns the export fills from PROJECT_NUMBER_FIELD rather than from their own entry. */
 export const DERIVED_FROM_PROJECT_NUMBER = ["tlr_address.project_number", "tlr_note.sub_cde"];
 
-// Not offered as form fields, since they are written from the single project number above.
+/**
+ * The TLR's "Multi-CDE Project ID" columns, filled from the deal's own
+ * multiCdeProjectNumber rather than entered again here.
+ *
+ * That value already exists on the deal, is what AMIS readiness reports on, and is
+ * maintained by Impact in deal setup. Offering it a second time as a TLR field gave the
+ * same fact two homes that could disagree — and next to the TLR's unrelated "Project
+ * Number" (the Sub-CDE number) the pair was genuinely hard to tell apart.
+ */
+export const DERIVED_FROM_MULTI_CDE_PROJECT_NUMBER = [
+  "tlr_project.multi_cde_project_id",
+  "tlr_address.multi_cde_project_id",
+];
+
+// Not offered as form fields, since they are written from a single value held elsewhere.
 // They stay in the catalog because the export still has to emit those columns.
-const DERIVED = new Set(DERIVED_FROM_PROJECT_NUMBER);
+const DERIVED = new Set([...DERIVED_FROM_PROJECT_NUMBER, ...DERIVED_FROM_MULTI_CDE_PROJECT_NUMBER]);
 
 export interface EditableTlrField {
   fieldCode: string;
