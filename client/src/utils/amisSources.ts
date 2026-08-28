@@ -32,12 +32,29 @@ export const IMPACT_SETUP_FIELDS = new Set([
 /** The CDE's own participation data, which they maintain on their deal overview. */
 const CDE_PARTICIPATION_FIELDS = new Set(["total_qei_amount", "lead_cde_allocation_control_number"]);
 
+/**
+ * Deal Setup is a long page and these fields sit well down it, so the link carries an
+ * anchor to the field itself. Landing at the top of a page that holds a dozen fields is
+ * barely better than no link at all.
+ */
+const SETUP_ANCHOR: Record<string, string> = {
+  multi_cde_project_number: "multi-cde-project-number",
+  project_census_tract: "project-address",
+  project_city_state: "project-address",
+  total_qei_amount: "cde-participations",
+  lead_cde_allocation_control_number: "cde-participations",
+  project_closing_date: "deal-profile",
+};
+
 export function sourceLink(fieldCode: string, portal: "impact" | "cde", dealId: string): string | null {
   if (CBR_FIELDS.has(fieldCode)) return `/${portal}/deals/${dealId}/cbr`;
   // Checked before the Impact branch because the two sets overlap: a CDE edits its own QEI
   // amount on its overview, while Impact edits every CDE's from deal setup.
   if (portal === "cde" && CDE_PARTICIPATION_FIELDS.has(fieldCode)) return `/cde/deals/${dealId}`;
-  if (portal === "impact" && IMPACT_SETUP_FIELDS.has(fieldCode)) return `/impact/deals/${dealId}/setup`;
+  if (portal === "impact" && IMPACT_SETUP_FIELDS.has(fieldCode)) {
+    const anchor = SETUP_ANCHOR[fieldCode];
+    return `/impact/deals/${dealId}/setup${anchor ? `#${anchor}` : ""}`;
+  }
   return null;
 }
 

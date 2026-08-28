@@ -531,6 +531,9 @@ export const api = {
 
   listOrganizations: (type?: string) =>
     request<Organization[]>(`/organizations${type ? `?type=${type}` : ""}`),
+  /** Renames the organization everywhere, not just on the deal it was edited from. */
+  renameOrganization: (organizationId: string, legalName: string) =>
+    request<Organization>(`/organizations/${organizationId}`, { method: "PATCH", body: JSON.stringify({ legalName }) }),
 
   listParties: (dealId: string) => request<DealParty[]>(`/deals/${dealId}/parties`),
   createParty: (dealId: string, data: { legalName: string; partyRole: string; organizationId?: string; isReportingParty?: boolean }) =>

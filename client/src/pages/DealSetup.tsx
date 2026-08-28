@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { api, type CdeParticipation, type Deal, type DealParty, type Organization, type ProjectAddress } from "../api/client";
 import { formatCurrency, humanize } from "../utils/format";
 import ImpactCommitments from "./ImpactCommitments";
@@ -22,6 +22,7 @@ const PARTY_ROLES = [
 
 export default function DealSetup() {
   const { dealId } = useParams();
+  const { hash } = useLocation();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [parties, setParties] = useState<DealParty[]>([]);
   const [cdes, setCdes] = useState<CdeParticipation[]>([]);
@@ -32,7 +33,13 @@ export default function DealSetup() {
   const [newParty, setNewParty] = useState({ legalName: "", partyRole: "borrower" });
   const [newCde, setNewCde] = useState({ cdeOrganizationId: "", subCdeName: "", isLeadCde: false });
   const [editingCdeId, setEditingCdeId] = useState<string | null>(null);
-  const [cdeEdit, setCdeEdit] = useState({ allocationControlNumber: "", qeiAmount: "", allocationAmount: "" });
+  const [cdeEdit, setCdeEdit] = useState({
+    legalName: "",
+    subCdeName: "",
+    allocationControlNumber: "",
+    qeiAmount: "",
+    allocationAmount: "",
+  });
   const [addressDraft, setAddressDraft] = useState({
     address1: "",
     city: "",
@@ -74,6 +81,20 @@ export default function DealSetup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId]);
 
+  // A browser only auto-scrolls to a #hash on a full page load, not on a client-side
+  // navigation, and the target does not exist until the deal has loaded. Without this an
+  // AMIS readiness "Resolve" link drops the user at the top of a long page with no
+  // indication of which of its dozen fields it meant.
+  useEffect(() => {
+    if (!deal || !hash) return;
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Focus the field itself when the anchor is one, so it is unmistakable which was meant.
+    const field = target.matches("input, select, textarea") ? target : target.querySelector("input, select, textarea");
+    (field as HTMLElement | null)?.focus({ preventScroll: true });
+  }, [deal, hash]);
+
   if (!deal) return <main>{error ? <div className="alert alert-error">{error}</div> : <p className="muted is-loading">Loading…</p>}</main>;
 
   const checklist = [
@@ -106,6 +127,8 @@ export default function DealSetup() {
   function startEditCde(c: CdeParticipation) {
     setEditingCdeId(c.id);
     setCdeEdit({
+      legalName: c.cdeOrganization.legalName,
+      subCdeName: c.subCdeName ?? "",
       allocationControlNumber: c.allocationControlNumber ?? "",
       qeiAmount: c.qeiAmount ?? "",
       allocationAmount: c.allocationAmount ?? "",
@@ -115,12 +138,27 @@ export default function DealSetup() {
   async function saveCdeEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!dealId || !editingCdeId) return;
+    const participation = cdes.find((c) => c.id === editingCdeId);
+    if (!participation) return;
+
+    const newLegalName = cdeEdit.legalName.trim();
+    if (newLegalName.length < 2) {
+      setError("The CDE's legal name is required.");
+      return;
+    }
+
     try {
       await api.updateCdeParticipation(dealId, editingCdeId, {
+        subCdeName: cdeEdit.subCdeName.trim() || undefined,
         allocationControlNumber: cdeEdit.allocationControlNumber.trim() || undefined,
         qeiAmount: cdeEdit.qeiAmount ? Number(cdeEdit.qeiAmount) : undefined,
         allocationAmount: cdeEdit.allocationAmount ? Number(cdeEdit.allocationAmount) : undefined,
       });
+      // Only called when the name actually changed, so an unrelated edit doesn't write an
+      // organization-wide audit entry recording a rename that didn't happen.
+      if (newLegalName !== participation.cdeOrganization.legalName) {
+        await api.renameOrganization(participation.cdeOrganization.id, newLegalName);
+      }
       setEditingCdeId(null);
       refresh();
     } catch (e) {
@@ -180,7 +218,7 @@ export default function DealSetup() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="card">
+      <div className="card" id="deal-profile">
         <h2>Deal profile</h2>
         <p>Deal code: {deal.dealCode}</p>
         <p>Legal name: {deal.legalName}</p>
@@ -207,7 +245,7 @@ export default function DealSetup() {
         </p>
       </div>
 
-      <div className="card">
+      <div className="card" id="project-address">
         <h2>Project address</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           Drives the AMIS "Project Census Tract" and "Project City / State" fields — one primary address per deal.
@@ -236,8 +274,8 @@ export default function DealSetup() {
 
       {dealId && <ImpactCommitments dealId={dealId} />}
 
-      <div className="card">
-        <h2>Parties & CDEs</h2>
+      <div className="card" id="cde-participations">
+        <h2>Parties &amp; CDEs</h2>
 
         <table>
           <thead><tr><th>Legal name</th><th>Role</th><th>Reporting party</th></tr></thead>
@@ -284,6 +322,17 @@ export default function DealSetup() {
         {editingCdeId && (
           <form onSubmit={saveCdeEdit} className="card" style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <strong>Editing {cdes.find((c) => c.id === editingCdeId)?.cdeOrganization.legalName}</strong>
+            {/*
+              Two different names sit next to each other here, so both say what they affect.
+              The CDE's legal name is one organization record shared by every deal it
+              appears on; the sub-CDE name belongs to this participation alone.
+            */}
+            <label>CDE legal name
+              <input value={cdeEdit.legalName} onChange={(e) => setCdeEdit({ ...cdeEdit, legalName: e.target.value })} />
+            </label>
+            <label>Sub-CDE name
+              <input value={cdeEdit.subCdeName} onChange={(e) => setCdeEdit({ ...cdeEdit, subCdeName: e.target.value })} />
+            </label>
             <label>Allocation control #
               <input value={cdeEdit.allocationControlNumber} onChange={(e) => setCdeEdit({ ...cdeEdit, allocationControlNumber: e.target.value })} />
             </label>
@@ -297,6 +346,10 @@ export default function DealSetup() {
               <button type="submit">Save</button>
               <button type="button" onClick={() => setEditingCdeId(null)}>Cancel</button>
             </div>
+            <p className="text-sm muted" style={{ flexBasis: "100%", margin: 0 }}>
+              Renaming the CDE changes its legal name on every deal it appears on, not just this one. The sub-CDE
+              name and the amounts apply to this deal only.
+            </p>
           </form>
         )}
 

@@ -105,7 +105,7 @@ export default function DealDetail() {
         )}
       </div>
       <div className="card">
-        <Link to={`/impact/deals/${dealId}/setup`}>Deal setup (parties & CDEs)</Link>
+        <Link to={`/impact/deals/${dealId}/setup`}>Deal setup (project number, address, parties & CDEs)</Link>
         {" · "}
         <Link to={`/impact/deals/${dealId}/requirements`}>Requirement builder</Link>
         {" · "}
