@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api, type Deal, type RequirementInstanceDetail, type Submission } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import CommentThread from "../shared/CommentThread";
@@ -135,6 +135,9 @@ export default function RequirementWorkspace() {
   if (reviewMode && draft) {
     return (
       <main>
+        <p className="text-sm">
+          <Link to="/qalicb/tasks">← All compliance tasks</Link>
+        </p>
         <h1>Submission Review & Attestation</h1>
         <p>{deal?.legalName ? `${deal.legalName} · ` : ""}{def.title} · {periodLabel(instance.reportingPeriodStart, instance.reportingPeriodEnd)}</p>
 
@@ -183,6 +186,11 @@ export default function RequirementWorkspace() {
 
   return (
     <main>
+      {/* This screen is reached from the task list and had no way back to it — after
+          submitting, the only exits were the sidebar or the browser's back button. */}
+      <p className="text-sm">
+        <Link to="/qalicb/tasks">← All compliance tasks</Link>
+      </p>
       <h1>Requirement Detail & Upload</h1>
       <p>{def.title} · Due {fmt(instance.dueDate)} · {fmt(instance.reportingPeriodStart)} – {fmt(instance.reportingPeriodEnd)}</p>
 
