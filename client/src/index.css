@@ -810,3 +810,107 @@ code {
 strong { color: var(--text); }
 
 ::selection { background: var(--accent-tint); }
+
+/* ---------- Reporting year, unsaved changes ---------- */
+
+.year-picker { margin-bottom: 0; }
+.year-picker select { width: auto; min-width: 96px; }
+
+/* Shown when navigation is held because of unsaved edits. Sticky so it is seen wherever
+   on a long form the user was when they clicked away. */
+.unsaved-prompt {
+  position: sticky;
+  top: calc(var(--nav-h) + 90px);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.unsaved-prompt .btn-row { margin: 0; }
+
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.error-detail {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Utilities ----------
+   Single-purpose classes that replaced inline style attributes. They are !important for the
+   same reason the inline styles won before: a utility on an element is a deliberate local
+   override, and without it a more specific component rule (".card p", "label input") would
+   silently take precedence and shift the layout. Dynamic values (a bar width from data, a
+   legend swatch colour) and one-off geometry are still inline, where they belong. */
+
+.m-0 { margin: 0 !important; }
+.my-4 { margin: 4px 0 !important; }
+.my-8 { margin: 8px 0 !important; }
+.accent-brand { accent-color: var(--brand) !important; }
+.basis-full { flex-basis: 100% !important; }
+.c-brand { color: var(--brand) !important; }
+.c-inherit { color: inherit !important; }
+.c-text { color: var(--text) !important; }
+.col-full { grid-column: 1 / -1 !important; }
+.col-span-2 { grid-column: span 2 !important; }
+.cols-2 { grid-template-columns: 1fr 1fr !important; }
+.cursor-pointer { cursor: pointer !important; }
+.d-block { display: block !important; }
+.d-flex { display: flex !important; }
+.d-grid { display: grid !important; }
+.d-inline-block { display: inline-block !important; }
+.flex-1 { flex: 1 !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.fs-11 { font-size: 11px !important; }
+.fs-12 { font-size: 12px !important; }
+.fs-13 { font-size: 13px !important; }
+.fs-14 { font-size: 14px !important; }
+.fs-18 { font-size: 18px !important; }
+.fs-20 { font-size: 20px !important; }
+.fw-400 { font-weight: 400 !important; }
+.fw-600 { font-weight: 600 !important; }
+.gap-10 { gap: 10px !important; }
+.gap-12 { gap: 12px !important; }
+.gap-16 { gap: 16px !important; }
+.gap-18 { gap: 18px !important; }
+.gap-6 { gap: 6px !important; }
+.gap-8 { gap: 8px !important; }
+.items-baseline { align-items: baseline !important; }
+.items-center { align-items: center !important; }
+.items-end { align-items: flex-end !important; }
+.items-start { align-items: flex-start !important; }
+.justify-between { justify-content: space-between !important; }
+.mb-0 { margin-bottom: 0px !important; }
+.mb-10 { margin-bottom: 10px !important; }
+.mb-12 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 4px !important; }
+.mb-6 { margin-bottom: 6px !important; }
+.mb-8 { margin-bottom: 8px !important; }
+.ml-4 { margin-left: 4px !important; }
+.ml-8 { margin-left: 8px !important; }
+.mt-0 { margin-top: 0px !important; }
+.mt-10 { margin-top: 10px !important; }
+.mt-12 { margin-top: 12px !important; }
+.mt-16 { margin-top: 16px !important; }
+.mt-4 { margin-top: 4px !important; }
+.mt-8 { margin-top: 8px !important; }
+.pos-relative { position: relative !important; }
+.ta-left { text-align: left !important; }
+.w-auto { width: auto !important; }
+.w-fit { width: fit-content !important; }
+.w-full { width: 100% !important; }

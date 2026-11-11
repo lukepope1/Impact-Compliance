@@ -64,7 +64,7 @@ export default function DealList() {
 
   return (
     <main>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div className="d-flex justify-between items-baseline">
         <h1>Deal Portfolio</h1>
         <Link to="/impact/deals/new"><button>+ New Deal</button></Link>
       </div>

@@ -37,9 +37,13 @@ and the demo data seeds itself on first boot.
    never generates or resets anything, which is what you want running unattended against a
    live database. It runs at start rather than at build because a Render build has no
    database attached.
-2. Seeds, if `SEED_ON_START=true`. The seed no-ops when the data is already there, so
-   leaving the flag on across restarts is safe.
-3. Starts the API and serves the client.
+2. Loads reference data (`prisma/seedReference.ts`) — currently the TLR field catalog.
+   This runs on every boot regardless of `SEED_ON_START`, because the TLR screens and
+   export are built from it; without it they are broken rather than empty. It is all
+   upserts, so it is also how a regenerated catalog reaches a running environment.
+3. Seeds demo data, if `SEED_ON_START=true`. The seed no-ops when the data is already
+   there, so leaving the flag on across restarts is safe.
+4. Starts the API and serves the client.
 
 ## Signing in
 

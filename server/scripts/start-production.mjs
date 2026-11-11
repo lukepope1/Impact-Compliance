@@ -25,6 +25,10 @@ function run(label, command, args) {
 
 run("Applying database migrations", "npx", ["prisma", "migrate", "deploy"]);
 
+// Not behind SEED_ON_START: the TLR field catalog is what the TLR screens and export are
+// built from, so an environment without it is broken rather than merely empty.
+run("Loading reference data", "npx", ["tsx", "prisma/seedReference.ts"]);
+
 if (process.env.SEED_ON_START === "true") {
   run("Seeding demo data", "npx", ["tsx", "prisma/seed.ts"]);
 } else {

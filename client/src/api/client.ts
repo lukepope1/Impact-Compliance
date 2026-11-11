@@ -812,8 +812,6 @@ export const api = {
 
   getAmisReadiness: (dealId: string, year: number) => request<GoldenFieldRow[]>(`/deals/${dealId}/amis/readiness/${year}`),
   listAmisExports: (dealId: string) => request<ExportBatchRow[]>(`/deals/${dealId}/amis/exports`),
-  generateAmisExport: (dealId: string, year: number) =>
-    request<ExportBatchRow>(`/deals/${dealId}/amis/exports/${year}`, { method: "POST" }),
   downloadAmisExport: (dealId: string, exportId: string, fileName: string) =>
     downloadFile(`/deals/${dealId}/amis/exports/${exportId}/download`, fileName),
 };

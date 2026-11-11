@@ -117,7 +117,7 @@ export default function RequirementBuilder() {
 
       <div className="card">
         <h2>New requirement (draft)</h2>
-        <form onSubmit={createDraft} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <form onSubmit={createDraft} className="d-grid cols-2 gap-12">
           <label>Code
             <input value={draft.requirementCode} onChange={(e) => setDraft({ ...draft, requirementCode: e.target.value })} />
           </label>
@@ -151,7 +151,7 @@ export default function RequirementBuilder() {
               onChange={(e) => setDraft({ ...draft, sectionReference: e.target.value })}
             />
           </label>
-          <div style={{ gridColumn: "span 2" }}>
+          <div className="col-span-2">
             <button type="submit">Save Draft</button>
           </div>
         </form>
@@ -171,14 +171,14 @@ export default function RequirementBuilder() {
             </ul>
           )}
 
-          <div className="alert alert-warning" style={{ marginTop: 8 }}>
+          <div className="alert alert-warning mt-8">
             <strong>Source conflict:</strong> {humanize(def.conflictStatus)}
-            {def.conflictResolutionNote && <p style={{ margin: "4px 0" }}>{def.conflictResolutionNote}</p>}
+            {def.conflictResolutionNote && <p className="my-4">{def.conflictResolutionNote}</p>}
             {def.status === "draft" && (
-              <div className="btn-row" style={{ marginTop: 8 }}>
+              <div className="btn-row mt-8">
                 <input
                   placeholder="Resolution note (required to change status)"
-                  style={{ flex: 1 }}
+                  className="flex-1"
                   value={conflictNotes[def.id] ?? ""}
                   onChange={(e) => setConflictNotes({ ...conflictNotes, [def.id]: e.target.value })}
                 />
@@ -189,15 +189,15 @@ export default function RequirementBuilder() {
           </div>
 
           {def.status === "draft" && (
-            <button style={{ marginTop: 12 }} onClick={() => publish(def.id)}>Publish v{def.version}</button>
+            <button className="mt-12" onClick={() => publish(def.id)}>Publish v{def.version}</button>
           )}
 
           {def.status === "published" && (
-            <div style={{ marginTop: 12 }}>
+            <div className="mt-12">
               <button onClick={() => generateInstances(def)}>
                 {def.cadence === "on_request" ? "Create instance for this request" : "Generate instances"}
               </button>
-              {generateResult[def.id] && <span style={{ marginLeft: 8, color: "var(--brand)" }}>{generateResult[def.id]}</span>}
+              {generateResult[def.id] && <span className="ml-8 c-brand">{generateResult[def.id]}</span>}
             </div>
           )}
         </div>

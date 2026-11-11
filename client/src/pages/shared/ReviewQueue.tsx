@@ -24,6 +24,7 @@ export default function ReviewQueue({ stage, portal, title }: { stage: "impact" 
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Due</th><th>Requirement</th><th>Entity / Period</th><th>Action</th></tr>
@@ -38,8 +39,10 @@ export default function ReviewQueue({ stage, portal, title }: { stage: "impact" 
             </tr>
           ))}
           {rows && rows.length === 0 && <tr><td className="state-cell" colSpan={4}>Nothing pending.</td></tr>}
+          {!rows && !error && <tr><td className="state-cell" colSpan={4}>Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

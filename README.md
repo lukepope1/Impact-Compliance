@@ -20,6 +20,14 @@ provision it — see [docs/AWS_SETUP.md](docs/AWS_SETUP.md)), and the full deal 
 [docs/PHASED_PLAN.md](docs/PHASED_PLAN.md) for what's built vs. what's still needed before
 production (a real identity provider, a malware-scan pipeline, security review/UAT).
 
+## AMIS / TLR export
+
+The platform produces the four-sheet Transaction Level Report workbook a CDE uploads to
+AMIS. Its 205 fields are driven from a catalog generated from a real AMIS workbook rather
+than hand-coded. **Read [docs/TLR.md](docs/TLR.md) before changing anything TLR-related** —
+it covers the catalog, storage, the export, and one open item (the date format has not
+been tested against a real AMIS upload).
+
 ## Getting started
 
 See [docs/LOCAL_DEV.md](docs/LOCAL_DEV.md) for the full start/stop flow (embedded Postgres,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, useBlocker, useLocation, useParams } from "react-router-dom";
 import {
   api,
   type Deal,
@@ -11,6 +11,7 @@ import {
   type ExportBatchRow,
   ApiError,
 } from "../../api/client";
+import { useReportingYear, YearPicker } from "./ReportingYear";
 
 /**
  * Entry for the Transaction Level Report a CDE files to AMIS each year.
@@ -45,14 +46,16 @@ function inputTypeFor(f: TlrFieldSpec) {
 
 export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
-  const [params, setParams] = useSearchParams();
+  const [year, setYear] = useReportingYear();
   const { hash } = useLocation();
-  const year = Number(params.get("year")) || new Date().getFullYear();
 
   const [data, setData] = useState<TlrWorkspace | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [parties, setParties] = useState<DealParty[] | null>(null);
   const [draft, setDraft] = useState<Draft>({});
+  // What the server holds. Comparing the draft against it is how the page knows which
+  // fields are unsaved, without every input having to report its own changes.
+  const [baseline, setBaseline] = useState<Draft>({});
   const [activeObject, setActiveObject] = useState("tlr_project__c");
   const [activeQlici, setActiveQlici] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -67,7 +70,9 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
       .getTlrWorkspace(dealId, year)
       .then((w) => {
         setData(w);
-        setDraft(Object.fromEntries(w.values.map((v) => [keyOf(v.fieldCode, v.qliciId), String(v.value ?? "")])));
+        const loaded = Object.fromEntries(w.values.map((v) => [keyOf(v.fieldCode, v.qliciId), String(v.value ?? "")]));
+        setDraft(loaded);
+        setBaseline(loaded);
         setActiveQlici((q) => q ?? w.qlicis[0]?.id ?? null);
       })
       .catch((e) => setError(String(e.message ?? e)));
@@ -94,6 +99,36 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
     () => data?.objects.find((o) => o.amisObject === activeObject) ?? null,
     [data, activeObject]
   );
+
+  const fieldTypes = useMemo(
+    () => new Map((data?.objects ?? []).flatMap((o) => o.fields.map((f) => [f.fieldCode, f.dataType] as const))),
+    [data]
+  );
+
+  const dirtyKeys = useMemo(
+    () =>
+      [...new Set([...Object.keys(draft), ...Object.keys(baseline)])].filter(
+        (k) => (draft[k] ?? "").trim() !== (baseline[k] ?? "").trim()
+      ),
+    [draft, baseline]
+  );
+  const dirty = dirtyKeys.length > 0;
+
+  // This page holds up to a couple of hundred typed values, and the deal tabs above it make
+  // leaving one click away — so in-app navigation is held until the user decides what to do
+  // with unsaved edits. Changing the reporting year counts, since it reloads the form.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search)
+  );
+
+  // The router cannot intercept a reload or a closed tab; the browser's own prompt covers those.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   // Note-level fields belong to the selected QLICI; project and address fields to the deal.
   const scopeId = object?.scope === "qlici" ? activeQlici : null;
@@ -125,29 +160,36 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
     };
   }
 
-  async function save() {
-    if (!dealId || !object) return;
+  /**
+   * Saves every unsaved edit on the page, whichever tab it was made on.
+   *
+   * The button used to save only the tab in view, so an edit made on the Project tab was
+   * silently left behind by a save pressed on the Address tab. Blank is sent as null so
+   * clearing a field removes it from the filing rather than leaving the old value there.
+   */
+  async function saveAll(): Promise<boolean> {
+    if (!dealId || !data || dirtyKeys.length === 0) return true;
     setBusy(true);
     setError(null);
     setSaved(null);
     try {
-      // Sends the whole object, blanks included, so clearing a field actually removes it
-      // rather than silently leaving the old value on the filing.
-      const targets = object.scope === "qlici" ? (data?.qlicis ?? []).map((q) => q.id) : [null];
-      const payload = targets.flatMap((qliciId) =>
-        object.fields.map((f) => {
-          const raw = (draft[keyOf(f.fieldCode, qliciId)] ?? "").trim();
-          return {
-            fieldCode: f.fieldCode,
-            qliciId,
-            value: raw === "" ? null : f.dataType === "boolean" ? raw === "true" : raw,
-          };
-        })
-      );
-      const res = await api.saveTlrValues(dealId, year, payload);
-      setSaved(`Saved ${OBJECT_LABELS[object.amisObject] ?? object.amisObject} for ${year} (${res.written} fields).`);
+      const payload = dirtyKeys.map((k) => {
+        const [scope, fieldCode] = k.split("::");
+        const raw = (draft[k] ?? "").trim();
+        const isBoolean = fieldTypes.get(fieldCode) === "boolean";
+        return {
+          fieldCode,
+          qliciId: scope === "deal" ? null : scope,
+          value: raw === "" ? null : isBoolean ? raw === "true" : raw,
+        };
+      });
+      await api.saveTlrValues(dealId, year, payload);
+      setBaseline((prev) => ({ ...prev, ...Object.fromEntries(dirtyKeys.map((k) => [k, draft[k] ?? ""])) }));
+      setSaved(`Saved ${payload.length} ${payload.length === 1 ? "change" : "changes"} for ${year}.`);
+      return true;
     } catch (e) {
       setError(String((e as Error).message ?? e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -165,6 +207,7 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
       await api.saveTlrValues(dealId, year, [
         { fieldCode: data.projectNumberField, qliciId: null, value: raw === "" ? null : raw },
       ]);
+      setBaseline((prev) => ({ ...prev, [keyOf(data.projectNumberField, null)]: raw }));
       setSaved(raw === "" ? "Project number cleared." : `Project number saved as ${raw}.`);
     } catch (e) {
       setError(String((e as Error).message ?? e));
@@ -202,23 +245,41 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
       {error && <div className="alert alert-error">{error}</div>}
       {saved && !error && <div className="alert alert-info">{saved}</div>}
 
-      <div className="card btn-row" style={{ alignItems: "center" }}>
-        <label htmlFor="tlr-year">Reporting year</label>
-        <input
-          id="tlr-year"
-          type="number"
-          min="2000"
-          max="2100"
-          style={{ width: 100 }}
-          value={year}
-          onChange={(e) => setParams({ year: e.target.value }, { replace: true })}
-        />
+      {blocker.state === "blocked" && (
+        <div className="alert alert-warning unsaved-prompt" role="alertdialog" aria-label="Unsaved changes">
+          <strong>
+            You have {dirtyKeys.length} unsaved {dirtyKeys.length === 1 ? "change" : "changes"} on this page.
+          </strong>
+          <div className="btn-row">
+            <button
+              disabled={busy}
+              onClick={async () => {
+                // Only leave if the save actually landed; a failed save keeps the user here
+                // with the error rather than discarding what they typed.
+                if (await saveAll()) blocker.proceed();
+                else blocker.reset();
+              }}
+            >
+              {busy ? "Saving…" : "Save and continue"}
+            </button>
+            <button className="btn-secondary" onClick={() => blocker.proceed()}>
+              Discard changes
+            </button>
+            <button className="btn-secondary" onClick={() => blocker.reset()}>
+              Keep editing
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="card btn-row">
+        <YearPicker year={year} onChange={setYear} id="tlr-year" />
         <span className="muted text-sm">A TLR is filed per year, so each year holds its own figures.</span>
       </div>
 
       {data && (
         <div className="card">
-          <div className="btn-row" style={{ alignItems: "center" }}>
+          <div className="btn-row items-center">
             <label htmlFor="tlr-project-number">
               <strong>Project Number</strong>
             </label>
@@ -233,12 +294,12 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
               {busy ? "Saving…" : "Save project number"}
             </button>
           </div>
-          <p className="text-sm muted" style={{ marginBottom: 0 }}>
+          <p className="text-sm muted mb-0">
             Your <strong>Sub-CDE project number</strong> — a short number like 32, not an MCDE or TLRP code.
             Entered once here and written to three columns on export: “Project Number” on the project and address
             sheets, and “Sub-CDE” on the note sheet, which is what joins the sheets to each other.
           </p>
-          <p className="text-sm muted" style={{ marginBottom: 0 }}>
+          <p className="text-sm muted mb-0">
             Two similarly named fields are <em>not</em> this one. “Multi-CDE Project ID” (MCDE-00001923) is the
             deal’s shared identifier, maintained by Impact in deal setup and written to the export from there. The
             note sheet’s own “Project Number” (TLRP-00021987) is assigned by AMIS and is edited with the other note
@@ -296,7 +357,7 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
                       before filling in this sheet.
                     </p>
                   ) : (
-                    <div className="btn-row" style={{ alignItems: "center" }}>
+                    <div className="btn-row items-center">
                       <label htmlFor="tlr-qlici">Note</label>
                       <select
                         id="tlr-qlici"
@@ -318,7 +379,7 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
                 </div>
               )}
 
-              <div className="card btn-row" style={{ alignItems: "center" }}>
+              <div className="card btn-row items-center">
                 <label htmlFor="tlr-filter">Find a field</label>
                 <input
                   id="tlr-filter"
@@ -393,9 +454,18 @@ export default function TlrEditor({ portal }: { portal: "impact" | "cde" }) {
                 </table>
               </div>
 
-              <button onClick={save} disabled={busy}>
-                {busy ? "Saving…" : `Save ${OBJECT_LABELS[object.amisObject] ?? object.amisObject}`}
-              </button>
+              {/* Sticks to the bottom of the viewport: on a 112-field sheet the button was
+                  otherwise a long scroll away from whatever was just typed. */}
+              <div className="save-bar">
+                <button onClick={saveAll} disabled={busy || !dirty}>
+                  {busy ? "Saving…" : dirty ? `Save ${dirtyKeys.length} ${dirtyKeys.length === 1 ? "change" : "changes"}` : "All changes saved"}
+                </button>
+                {dirty && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => setDraft(baseline)}>
+                    Discard
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -447,7 +517,7 @@ function TlrExports({ dealId, year, onError }: { dealId: string; year: number; o
   return (
     <div className="card">
       <h2>AMIS upload file</h2>
-      <p className="text-sm muted" style={{ marginTop: 0 }}>
+      <p className="text-sm muted mt-0">
         Builds the four-sheet TLR workbook for {year}. This produces the file you upload — it does not certify or
         submit anything to AMIS.
       </p>
@@ -455,7 +525,7 @@ function TlrExports({ dealId, year, onError }: { dealId: string; year: number; o
       {blockers.length > 0 && (
         <div className="alert alert-warning">
           <strong>Not ready to generate:</strong>
-          <ul style={{ marginBottom: 0 }}>
+          <ul className="mb-0">
             {blockers.map((b) => (
               <li key={b}>{b}</li>
             ))}
@@ -618,7 +688,7 @@ function Disbursements({
 
       <form className="card form-stack" onSubmit={add}>
         <h2>Add a disbursement</h2>
-        <div className="btn-row" style={{ alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div className="btn-row items-end flex-wrap">
           <div className="field">
             <label className="field-label" htmlFor="d-qlici">Note</label>
             <select id="d-qlici" value={qliciId} onChange={(e) => setQliciId(e.target.value)}>

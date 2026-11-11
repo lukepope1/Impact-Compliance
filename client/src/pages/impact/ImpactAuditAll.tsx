@@ -27,6 +27,7 @@ export default function ImpactAuditAll() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>When</th><th>Deal</th><th>Actor</th><th>Object</th><th>Action</th></tr>
@@ -45,6 +46,7 @@ export default function ImpactAuditAll() {
           {!rows && !error && <tr><td className="state-cell" colSpan={5}>Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

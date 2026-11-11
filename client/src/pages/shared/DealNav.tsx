@@ -76,7 +76,12 @@ const PORTFOLIO: Record<"impact" | "cde" | "qalicb", { to: string; label: string
 
 export default function DealNav({ portal, dealId }: { portal: "impact" | "cde" | "qalicb"; dealId: string }) {
   const [deal, setDeal] = useState<Deal | null>(null);
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  // A chosen reporting year follows the user across the deal's tabs, so moving from AMIS
+  // Readiness to TLR Data Entry stays on the year they were working in. Screens that have
+  // no notion of a year simply ignore the parameter.
+  const yearParam = new URLSearchParams(search).get("year");
+  const carry = yearParam ? `?year=${encodeURIComponent(yearParam)}` : "";
 
   useEffect(() => {
     let active = true;
@@ -128,7 +133,7 @@ export default function DealNav({ portal, dealId }: { portal: "impact" | "cde" |
           t.absolute || t.alsoMatches ? (
             <Link
               key={t.label}
-              to={t.absolute ?? `/${portal}/deals/${dealId}${t.suffix}`}
+              to={t.absolute ?? `/${portal}/deals/${dealId}${t.suffix}${carry}`}
               className={isActive(t) ? "active" : undefined}
             >
               {t.label}
@@ -136,7 +141,7 @@ export default function DealNav({ portal, dealId }: { portal: "impact" | "cde" |
           ) : (
             <NavLink
               key={t.label}
-              to={`/${portal}/deals/${dealId}${t.suffix}`}
+              to={`/${portal}/deals/${dealId}${t.suffix}${carry}`}
               // Only the bare deal route needs `end`; without it the Overview tab would
               // stay highlighted on every child route beneath it.
               end={t.suffix === ""}

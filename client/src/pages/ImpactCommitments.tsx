@@ -67,7 +67,7 @@ export default function ImpactCommitments({ dealId }: { dealId: string }) {
   return (
     <form className="card" onSubmit={save}>
       <h2>Impact commitments</h2>
-      <p className="text-sm muted" style={{ marginTop: 0 }}>
+      <p className="text-sm muted mt-0">
         What this deal committed to deliver, from the allocation agreement or QEI application. These are what the
         CDE portfolio's community-impact report measures reported actuals against. Leave a measure blank if the deal
         made no commitment on it.

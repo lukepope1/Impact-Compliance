@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, ApiError, type Deal, type DealParty, type ExportBatchRow, type GoldenFieldRow } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
 import { sourceLink, noEntryReason } from "../../utils/amisSources";
+import { useReportingYear, YearPicker } from "./ReportingYear";
 
 // goldenFields.ts (server) is the source of truth for which fields are dollar amounts vs.
 // plain counts vs. dates vs. text — mirrored here since the readiness API returns raw
@@ -20,7 +21,7 @@ function formatFieldValue(fieldCode: string, value: string | number | null) {
 
 export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
-  const year = new Date().getFullYear();
+  const [year, setYear] = useReportingYear();
   const [readiness, setReadiness] = useState<GoldenFieldRow[] | null>(null);
   const [exports, setExports] = useState<ExportBatchRow[] | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
@@ -38,7 +39,15 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
     api.listParties(dealId).then(setParties).catch(() => setParties([]));
   }
 
-  useEffect(refresh, [dealId]);
+  useEffect(() => {
+    // A different year is a different readiness picture and a different export, so the
+    // previous year's rows and messages are dropped rather than left on screen.
+    setReadiness(null);
+    setBlockers([]);
+    setGenerated(null);
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, year]);
 
   /**
    * Produces the four-sheet TLR workbook — the format AMIS actually accepts.
@@ -103,6 +112,7 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="card btn-row">
+        <YearPicker year={year} onChange={setYear} />
         <span className="badge badge-success">{readyCount} ready</span>
         <span className={`badge ${missingCount ? "badge-danger" : "badge-neutral"}`}>{missingCount} missing</span>
       </div>
@@ -130,13 +140,14 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
               </tr>
             );
           })}
+          {!readiness && !error && <tr><td className="state-cell" colSpan={6}>Loading…</td></tr>}
         </tbody>
       </table>
       </div>
 
       <div className="card">
         <h2>AMIS upload file</h2>
-        <p className="text-sm muted" style={{ marginTop: 0 }}>
+        <p className="text-sm muted mt-0">
           Builds the four-sheet TLR certification workbook for CY {year} — the format AMIS accepts. The fields
           above are a readiness check; the workbook itself is filled in on{" "}
           <Link to={`/${portal}/deals/${dealId}/tlr?year=${year}`}>TLR Data Entry</Link>.
@@ -149,16 +160,16 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
           {busy ? "Generating…" : `Generate ${year} TLR workbook`}
         </button>
         {missingCount > 0 && (
-          <span className="muted text-sm" style={{ marginLeft: 8 }}>
+          <span className="muted text-sm ml-8">
             {missingCount} readiness {missingCount === 1 ? "field is" : "fields are"} still missing — the workbook
             will generate with those cells blank.
           </span>
         )}
 
         {blockers.length > 0 && (
-          <div className="alert alert-warning" style={{ marginTop: 12 }}>
+          <div className="alert alert-warning mt-12">
             <strong>Not ready to generate:</strong>
-            <ul style={{ marginBottom: 8 }}>
+            <ul className="mb-8">
               {blockers.map((b) => (
                 <li key={b}>{b}</li>
               ))}
@@ -170,7 +181,7 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
             </Link>
           </div>
         )}
-        {generated && <div className="alert alert-info" style={{ marginTop: 12 }}>{generated}</div>}
+        {generated && <div className="alert alert-info mt-12">{generated}</div>}
       </div>
 
       <div className="table-wrap">
@@ -186,6 +197,7 @@ export default function AmisCenter({ portal }: { portal: "impact" | "cde" }) {
               </tr>
             ))}
             {exports && exports.length === 0 && <tr><td className="state-cell" colSpan={4}>No exports generated yet.</td></tr>}
+            {!exports && !error && <tr><td className="state-cell" colSpan={4}>Loading…</td></tr>}
           </tbody>
         </table>
       </div>

@@ -1,8 +1,9 @@
-import { NavLink, Outlet, useMatch } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useMatch } from "react-router-dom";
 import PortalGuard from "../../auth/PortalGuard";
 import { useAuth } from "../../auth/AuthContext";
 import NotificationBell from "./NotificationBell";
 import DealNav from "./DealNav";
+import ErrorBoundary from "./ErrorBoundary";
 
 export interface NavItem {
   to: string;
@@ -28,6 +29,7 @@ export default function PortalLayout({
 }) {
   const { user, logout } = useAuth();
   const membership = user?.memberships[0];
+  const { pathname } = useLocation();
 
   // Matched here rather than in each page so every deal-scoped screen gets the same
   // navigation without twelve pages having to remember to render it. The trailing splat
@@ -62,7 +64,10 @@ export default function PortalLayout({
         </aside>
         <div className="portal-content">
           {showDealNav && dealId && <DealNav portal={portal} dealId={dealId} />}
-          <Outlet />
+          {/* Keyed by path so an error on one page does not persist onto the next. */}
+          <ErrorBoundary key={pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </div>
     </PortalGuard>

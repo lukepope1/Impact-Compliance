@@ -51,9 +51,9 @@ export default function NotificationBell() {
   }
 
   return (
-    <div ref={containerRef} style={{ position: "relative", display: "inline-block" }}>
-      <button onClick={() => setOpen((o) => !o)} style={{ position: "relative" }}>
-        🔔{unreadCount > 0 && <span style={{ marginLeft: 4 }}>({unreadCount})</span>}
+    <div ref={containerRef} className="pos-relative d-inline-block">
+      <button onClick={() => setOpen((o) => !o)} className="pos-relative">
+        🔔{unreadCount > 0 && <span className="ml-4">({unreadCount})</span>}
       </button>
       {open && (
         <div
@@ -69,11 +69,11 @@ export default function NotificationBell() {
             background: "white",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div className="d-flex justify-between items-center mb-8">
             <strong>Notifications</strong>
-            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {unreadCount > 0 && <button onClick={markAllRead} style={{ fontSize: 12 }}>Mark all read</button>}
-              <Link to="/notifications/preferences" onClick={() => setOpen(false)} style={{ fontSize: 12 }}>
+            <span className="d-flex gap-8 items-center">
+              {unreadCount > 0 && <button onClick={markAllRead} className="fs-12">Mark all read</button>}
+              <Link to="/notifications/preferences" onClick={() => setOpen(false)} className="fs-12">
                 Settings
               </Link>
             </span>
@@ -89,19 +89,18 @@ export default function NotificationBell() {
                   div, which no keyboard user could reach. An already-read item has no
                   action left, so it renders as plain text instead of a dead control. */}
               {n.readAt ? (
-                <div style={{ fontSize: 13 }}>{n.subject}</div>
+                <div className="fs-13">{n.subject}</div>
               ) : (
                 <button
                   type="button"
-                  className="cell-button"
-                  style={{ fontSize: 13, fontWeight: "bold" }}
+                  className="cell-button fs-13 fw-600"
                   onClick={() => markRead(n.id)}
                 >
                   {n.subject}
                 </button>
               )}
-              <div className="muted" style={{ fontSize: 12 }}>{n.body}</div>
-              <div className="muted" style={{ fontSize: 11 }}>
+              <div className="muted fs-12">{n.body}</div>
+              <div className="muted fs-11">
                 {n.deal ? `${n.deal.dealCode} · ` : ""}{fmt(n.createdAt)}
               </div>
             </div>

@@ -103,13 +103,13 @@ export default function Issues() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <form className="card" onSubmit={create} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <h2 style={{ gridColumn: "span 2" }}>Log an issue</h2>
+      <form className="card d-grid cols-2 gap-8" onSubmit={create}>
+        <h2 className="col-span-2">Log an issue</h2>
         <input
           placeholder="Title"
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          style={{ gridColumn: "span 2" }}
+          className="col-span-2"
         />
         <select value={draft.issueType} onChange={(e) => setDraft({ ...draft, issueType: e.target.value })}>
           {ISSUE_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
@@ -122,9 +122,9 @@ export default function Issues() {
           rows={2}
           value={draft.description}
           onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-          style={{ gridColumn: "span 2" }}
+          className="col-span-2"
         />
-        <div style={{ gridColumn: "span 2" }}>
+        <div className="col-span-2">
           <button type="submit">Log issue</button>
         </div>
       </form>
@@ -165,16 +165,16 @@ export default function Issues() {
                 {isExpanded && (
                   <tr>
                     <td colSpan={6}>
-                      <div className="card" style={{ margin: "8px 0" }}>
-                        <h3 style={{ marginTop: 0 }}>Notes — {i.title}</h3>
-                        <p className="text-sm" style={{ marginTop: 0 }}>
+                      <div className="card my-8">
+                        <h3 className="mt-0">Notes — {i.title}</h3>
+                        <p className="text-sm mt-0">
                           Private notes are visible only to your organization and Impact — not shared with other orgs on this
                           deal, including other CDEs.
                         </p>
                         {!notes && <p>Loading…</p>}
                         {notes && notes.length === 0 && <p className="muted">No notes yet.</p>}
                         {notes && notes.length > 0 && (
-                          <div style={{ marginBottom: 12 }}>
+                          <div className="mb-12">
                             {notes.map((n) => (
                               <div key={n.id} className="thread-item">
                                 <div className="thread-meta">
@@ -194,7 +194,7 @@ export default function Issues() {
                             value={noteDraft}
                             onChange={(e) => setNoteDraft(e.target.value)}
                           />
-                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <div className="d-flex gap-8 items-center">
                             <select value={noteVisibility} onChange={(e) => setNoteVisibility(e.target.value as "org_private" | "deal_shared")}>
                               <option value="org_private">Private (my org + Impact only)</option>
                               <option value="deal_shared">Shared with everyone on the deal</option>

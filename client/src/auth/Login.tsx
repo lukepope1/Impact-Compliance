@@ -63,7 +63,7 @@ export default function Login() {
   return (
     <main style={{ maxWidth: 420, marginTop: 40 }}>
       <h1>Sign in</h1>
-      <p className="muted" style={{ marginTop: 0 }}>NMTC Compliance Platform</p>
+      <p className="muted mt-0">NMTC Compliance Platform</p>
 
       {error && <div className="alert alert-error">{error}</div>}
 
@@ -78,19 +78,18 @@ export default function Login() {
       </form>
 
       <div className="card">
-        <p className="muted text-sm" style={{ marginTop: 0 }}>
+        <p className="muted text-sm mt-0">
           Dev demo accounts (password <code>{DEMO_PASSWORD}</code> for all — real login, not a header switch):
         </p>
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="d-grid gap-8">
           {DEMO_ACCOUNTS.map((a) => (
             <button
               key={a.email}
-              className="btn-secondary"
-              style={{ display: "block", width: "100%", textAlign: "left" }}
+              className="btn-secondary d-block w-full ta-left"
               onClick={(e) => submit(e, a.email, DEMO_PASSWORD)}
               disabled={busy}
             >
-              <strong style={{ color: "inherit" }}>{a.label}</strong>
+              <strong className="c-inherit">{a.label}</strong>
               <div style={{ fontSize: 12, fontWeight: 400, opacity: 0.8 }}>{a.email}</div>
             </button>
           ))}

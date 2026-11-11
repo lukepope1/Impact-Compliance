@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type SharedOutcomeSnapshotDetail } from "../../api/client";
 import { formatCurrency, formatDate, formatNumber, humanize } from "../../utils/format";
+import { useReportingYear, YearPicker } from "./ReportingYear";
 
 // Snapshot values don't carry a field-type flag, only a human label — mirrors the
 // fieldCode-keyed sets in AmisCenter.tsx, keyed by label instead since that's what this
@@ -37,17 +38,30 @@ function formatSnapshotValue(label: string, valueText: string | null, valueNumbe
 
 export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" }) {
   const { dealId } = useParams();
-  const year = new Date().getFullYear();
+  const [year, setYear] = useReportingYear();
   const [snapshot, setSnapshot] = useState<SharedOutcomeSnapshotDetail | null>(null);
+  // "No snapshot for this year" and "still loading" are both a null snapshot, so loading is
+  // tracked on its own — otherwise the empty state flashes up before the answer arrives.
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
   function refresh() {
     if (!dealId) return;
-    api.getSnapshot(dealId, year).then(setSnapshot).catch((e) => setError(String(e.message ?? e)));
+    api
+      .getSnapshot(dealId, year)
+      .then(setSnapshot)
+      .catch((e) => setError(String(e.message ?? e)))
+      .finally(() => setLoaded(true));
   }
 
-  useEffect(refresh, [dealId]);
+  useEffect(() => {
+    setLoaded(false);
+    setSnapshot(null);
+    setError(null);
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, year]);
 
   async function generate() {
     if (!dealId) return;
@@ -76,14 +90,20 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      <div className="card btn-row">
+        <YearPicker year={year} onChange={setYear} />
+      </div>
+
+      {!loaded && !error && <p className="muted is-loading">Loading…</p>}
+
       {/* Generating is Impact's action — the server restricts it to their two admin roles.
           The CDE portal rendered the button anyway, so a CDE who clicked it got a bare
           "Insufficient role" and no idea what to do instead. This mirrors the treatment
           the approval controls below already get in the opposite direction. */}
-      {portal === "impact" ? (
+      {!loaded ? null : portal === "impact" ? (
         <div className="card">
           <button onClick={generate}>{snapshot ? "Regenerate snapshot" : "Generate snapshot"}</button>
-          {snapshot && <span style={{ marginLeft: 8 }}>Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}</span>}
+          {snapshot && <span className="ml-8">Version {snapshot.snapshotVersion} · {humanize(snapshot.status)}</span>}
         </div>
       ) : (
         snapshot && (
@@ -93,7 +113,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
         )
       )}
 
-      {portal === "cde" && !snapshot && !error && (
+      {portal === "cde" && loaded && !snapshot && !error && (
         <p className="empty-state">
           No shared snapshot has been generated for CY {year} yet. Impact generates it from the deal's reported
           figures; it will appear here for your review and approval once they do.
@@ -123,6 +143,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
 
           <div className="card">
             <h2>Shared fields</h2>
+            <div className="table-wrap">
             <table>
               <thead><tr><th>Field</th><th>Value</th></tr></thead>
               <tbody>
@@ -131,10 +152,12 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="card">
             <h2>Participant approvals</h2>
+            <div className="table-wrap">
             <table>
               <thead><tr><th>CDE</th><th>Decision</th><th>Note</th></tr></thead>
               <tbody>
@@ -143,6 +166,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Approval is a CDE-only action — the server rejects it from any other role
@@ -151,7 +175,7 @@ export default function MultiCdeSnapshot({ portal }: { portal: "impact" | "cde" 
           {portal === "cde" && (
             <div className="card">
               <h2>My CDE decision</h2>
-              <textarea placeholder="Note (optional)" rows={2} style={{ width: "100%", marginBottom: 8 }} value={note} onChange={(e) => setNote(e.target.value)} />
+              <textarea placeholder="Note (optional)" rows={2} className="w-full mb-8" value={note} onChange={(e) => setNote(e.target.value)} />
               <div className="btn-row">
                 <button onClick={() => decide("changes_requested")}>Request changes</button>
                 <button onClick={() => decide("not_reporting")}>Not reporting this field</button>

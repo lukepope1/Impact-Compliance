@@ -64,12 +64,13 @@ export default function AuditLog() {
           Export CSV
         </button>
         {events && events.length >= 200 && (
-          <span className="muted text-sm" style={{ marginLeft: 8 }}>
+          <span className="muted text-sm ml-8">
             Showing the 200 most recent events — the export covers the same 200, not the full history.
           </span>
         )}
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>When</th><th>Actor</th><th>Object</th><th>Action</th></tr>
@@ -86,6 +87,7 @@ export default function AuditLog() {
           {events && events.length === 0 && <tr><td className="state-cell" colSpan={4}>No audit events yet.</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

@@ -147,21 +147,21 @@ export default function RequirementWorkspace() {
           <div className="split-main">
             <div className="card">
               <h2>Submission completeness</h2>
-              {draft.documents.map((d) => <span key={d.documentId} className="badge badge-success" style={{ display: "block", width: "fit-content", marginBottom: 8 }}>✓ {d.document.title} attached</span>)}
-              {attachedCount === 0 && <span className="badge badge-warning" style={{ display: "block", width: "fit-content" }}>! No evidence attached yet</span>}
-              <span className="badge badge-warning" style={{ display: "block", width: "fit-content" }}>! Officer certification / attestation required</span>
+              {draft.documents.map((d) => <span key={d.documentId} className="badge badge-success d-block w-fit mb-8">✓ {d.document.title} attached</span>)}
+              {attachedCount === 0 && <span className="badge badge-warning d-block w-fit">! No evidence attached yet</span>}
+              <span className="badge badge-warning d-block w-fit">! Officer certification / attestation required</span>
             </div>
 
             <form className="card" onSubmit={submit}>
               <h2>Attestation</h2>
               <p>{CERTIFICATION_STATEMENT}</p>
-              <label style={{ display: "block", marginBottom: 12 }}>
+              <label className="d-block mb-12">
                 Authorized {roleLabel}
                 <input
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
                   placeholder="Signer name"
-                  style={{ display: "block", width: "100%", marginTop: 4 }}
+                  className="d-block w-full mt-4"
                 />
               </label>
               <div className="btn-row">
@@ -174,8 +174,8 @@ export default function RequirementWorkspace() {
           <div className="card split-aside">
             <h2>What happens next?</h2>
             <ol style={{ paddingLeft: 18, margin: 0 }}>
-              <li style={{ marginBottom: 10 }}>Submission becomes immutable version {draft.submissionVersion}.</li>
-              <li style={{ marginBottom: 10 }}>Impact Marketplace reviews completeness/compliance.</li>
+              <li className="mb-10">Submission becomes immutable version {draft.submissionVersion}.</li>
+              <li className="mb-10">Impact Marketplace reviews completeness/compliance.</li>
               <li>Approved evidence is then released to applicable CDE reviewer(s).</li>
             </ol>
           </div>
@@ -212,7 +212,7 @@ export default function RequirementWorkspace() {
       )}
 
       {!isLocked && (
-        <form className="card" onSubmit={uploadEvidence} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <form className="card d-flex gap-8 items-center" onSubmit={uploadEvidence}>
           <input type="file" ref={fileInput} required />
           <button type="submit" disabled={busy}>{busy ? "Uploading…" : "Upload evidence"}</button>
         </form>

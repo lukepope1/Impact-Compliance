@@ -32,6 +32,7 @@ import MultiCdeSnapshot from "./pages/shared/MultiCdeSnapshot";
 import AmisCenter from "./pages/shared/AmisCenter";
 import TlrEditor from "./pages/shared/TlrEditor";
 import NotificationPreferences from "./pages/shared/NotificationPreferences";
+import NotFound from "./pages/shared/NotFound";
 import Login from "./auth/Login";
 
 export default function App() {
@@ -75,6 +76,7 @@ export default function App() {
             path="deals/:dealId/review/:instanceId"
             element={<ReviewDetail stage="impact" portal="impact" />}
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         <Route path="/qalicb" element={<QalicbLayout />}>
@@ -87,6 +89,7 @@ export default function App() {
           <Route path="deals/:dealId/requirements/:instanceId" element={<RequirementWorkspace />} />
           <Route path="deals/:dealId/cbr" element={<CommunityBenefits />} />
           <Route path="deals/:dealId/documents" element={<Documents />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         <Route path="/cde" element={<CdeLayout />}>
@@ -112,7 +115,9 @@ export default function App() {
             path="deals/:dealId/review/:instanceId"
             element={<ReviewDetail stage="cde" portal="cde" />}
           />
+          <Route path="*" element={<NotFound />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );

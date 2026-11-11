@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { sourceLink, noEntryReason } from "../../utils/amisSources";
+import { useReportingYear, YearPicker } from "./ReportingYear";
 import { api, type Deal, type GoldenFieldRow } from "../../api/client";
 
 /**
@@ -33,7 +34,7 @@ const FIELD_CATEGORY: Record<string, string> = {
 type Row = GoldenFieldRow & { dealId: string; dealName: string; category: string };
 
 export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
-  const year = new Date().getFullYear();
+  const [year, setYear] = useReportingYear();
   const [searchParams] = useSearchParams();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,9 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
   const [dealFilter, setDealFilter] = useState("all");
 
   useEffect(() => {
+    // Cleared first so switching year shows the loading row rather than last year's figures
+    // sitting under the new year's heading until the requests return.
+    setRows(null);
     api
       .listDeals()
       .then(async (deals: Deal[]) => {
@@ -94,6 +98,7 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
       </div>
 
       <div className="card filter-bar">
+        <YearPicker year={year} onChange={setYear} />
         <label>
           Deal
           <select value={dealFilter} onChange={(e) => setDealFilter(e.target.value)}>
@@ -149,7 +154,7 @@ export default function AmisAll({ portal }: { portal: "impact" | "cde" }) {
                     if (r.status === "missing" && entry) return <Link to={entry}>Resolve</Link>;
                     const reason = noEntryReason(r.fieldCode, portal);
                     if (r.status === "missing" && reason) return <span className="muted text-sm">{reason}</span>;
-                    return <Link to={`/${portal}/deals/${r.dealId}/amis`}>Open</Link>;
+                    return <Link to={`/${portal}/deals/${r.dealId}/amis?year=${year}`}>Open</Link>;
                   })()}
                 </td>
               </tr>

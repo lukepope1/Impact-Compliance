@@ -194,6 +194,7 @@ export default function QalicbCommunityBenefitsOverview() {
         </label>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Section</th><th>Deal</th><th>Status</th><th>Last updated</th><th></th></tr>
@@ -214,6 +215,7 @@ export default function QalicbCommunityBenefitsOverview() {
           {!rows && !error && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

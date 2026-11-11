@@ -151,8 +151,8 @@ export default function CommunityBenefits() {
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <form id="project-profile" className="card" onSubmit={saveProfile} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>Project Profile</h2>
+      <form id="project-profile" className="card d-flex gap-8 items-center" onSubmit={saveProfile}>
+        <h2 className="m-0">Project Profile</h2>
         <label>Annual gross revenue
           <input type="number" value={revenue} onChange={(e) => setRevenue(e.target.value)} />
         </label>
@@ -167,6 +167,7 @@ export default function CommunityBenefits() {
 
       <div id="jobs-workforce" className="card">
         <h2>Jobs & Workforce — {formatNumber(totalJobsCreated)} FTE created</h2>
+        <div className="table-wrap">
         <table>
           <thead><tr><th>Title</th><th>FTE</th><th>Status</th></tr></thead>
           <tbody>
@@ -174,7 +175,8 @@ export default function CommunityBenefits() {
             {period.jobRecords.length === 0 && <tr><td className="state-cell" colSpan={3}>No jobs recorded yet.</td></tr>}
           </tbody>
         </table>
-        <form onSubmit={addJob} style={{ marginTop: 8, display: "flex", gap: 8 }}>
+        </div>
+        <form onSubmit={addJob} className="mt-8 d-flex gap-8">
           <input placeholder="Job title" value={newJob.jobTitle} onChange={(e) => setNewJob({ ...newJob, jobTitle: e.target.value })} />
           <input type="number" style={{ width: 70 }} value={newJob.fteCount} onChange={(e) => setNewJob({ ...newJob, fteCount: e.target.value })} />
           <select value={newJob.jobStatus} onChange={(e) => setNewJob({ ...newJob, jobStatus: e.target.value })}>
@@ -188,7 +190,8 @@ export default function CommunityBenefits() {
 
       <div id="job-benefits" className="card">
         <h2>Job Benefits</h2>
-        <p className="muted" style={{ marginTop: 0 }}>Benefit rows can roll forward from a prior year and just need reconfirming.</p>
+        <p className="muted mt-0">Benefit rows can roll forward from a prior year and just need reconfirming.</p>
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -229,10 +232,12 @@ export default function CommunityBenefits() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div id="tenants-occupants" className="card">
         <h2>Tenants & Occupants</h2>
+        <div className="table-wrap">
         <table>
           <thead><tr><th>Organization</th><th>Purpose</th></tr></thead>
           <tbody>
@@ -240,7 +245,8 @@ export default function CommunityBenefits() {
             {period.tenantOccupants.length === 0 && <tr><td className="state-cell" colSpan={2}>No tenants recorded yet.</td></tr>}
           </tbody>
         </table>
-        <form onSubmit={addTenant} style={{ marginTop: 8, display: "flex", gap: 8 }}>
+        </div>
+        <form onSubmit={addTenant} className="mt-8 d-flex gap-8">
           <input placeholder="Organization name" value={newTenant.organizationName} onChange={(e) => setNewTenant({ ...newTenant, organizationName: e.target.value })} />
           <input placeholder="Purpose" value={newTenant.purposeGoodsServices} onChange={(e) => setNewTenant({ ...newTenant, purposeGoodsServices: e.target.value })} />
           <button type="submit">+ Add tenant</button>
@@ -249,7 +255,8 @@ export default function CommunityBenefits() {
 
       <div id="commercial-services" className="card">
         <h2>Commercial / Community Services</h2>
-        <p className="muted" style={{ marginTop: 0 }}>Goods/services provided to low-income communities, and the outcomes they produce.</p>
+        <p className="muted mt-0">Goods/services provided to low-income communities, and the outcomes they produce.</p>
+        <div className="table-wrap">
         <table>
           <thead><tr><th>Service</th><th>Type</th><th>People served (current)</th><th>Outcome narrative</th></tr></thead>
           <tbody>
@@ -264,7 +271,8 @@ export default function CommunityBenefits() {
             {period.serviceOutcomes.length === 0 && <tr><td className="state-cell" colSpan={4}>No services recorded yet.</td></tr>}
           </tbody>
         </table>
-        <form onSubmit={addOutcome} style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        </div>
+        <form onSubmit={addOutcome} className="mt-8 d-grid cols-2 gap-8">
           <input
             placeholder="Service / good name"
             value={newOutcome.serviceName}
@@ -286,7 +294,7 @@ export default function CommunityBenefits() {
             value={newOutcome.outcomeNarrative}
             onChange={(e) => setNewOutcome({ ...newOutcome, outcomeNarrative: e.target.value })}
           />
-          <div style={{ gridColumn: "span 2" }}>
+          <div className="col-span-2">
             <button type="submit">+ Add service</button>
           </div>
         </form>

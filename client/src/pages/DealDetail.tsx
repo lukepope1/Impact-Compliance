@@ -93,7 +93,7 @@ export default function DealDetail() {
                   {changing ? "Updating…" : `Move to ${STATUS_LABELS[nextStatus]}`}
                 </button>
                 {nextStatus === "archived" && (
-                  <span className="muted text-sm" style={{ marginLeft: 8 }}>
+                  <span className="muted text-sm ml-8">
                     Archiving is terminal — there's no way back to an active status afterward.
                   </span>
                 )}
@@ -101,7 +101,7 @@ export default function DealDetail() {
             )}
           </div>
         ) : (
-          <p className="text-sm" style={{ margin: 0 }}>Archived — this is the deal's terminal status.</p>
+          <p className="text-sm m-0">Archived — this is the deal's terminal status.</p>
         )}
       </div>
       <div className="card">

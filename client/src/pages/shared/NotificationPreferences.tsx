@@ -68,27 +68,27 @@ export default function NotificationPreferences() {
 
       <div className="card">
         <h2>Email delivery</h2>
-        <p style={{ marginTop: 0 }}>
+        <p className="mt-0">
           Send each enabled email as it happens, or batch them into one message per day. This applies
           across every event below — in-app notifications are always immediate either way.
         </p>
-        <div style={{ display: "flex", gap: 16 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400, cursor: "pointer" }}>
+        <div className="d-flex gap-16">
+          <label className="d-flex items-center gap-6 fw-400 cursor-pointer">
             <input
               type="radio"
               name="digest"
-              style={{ width: "auto", accentColor: "var(--brand)" }}
+              className="w-auto accent-brand"
               checked={digestFrequency === "immediate"}
               disabled={savingDigest || digestFrequency === null}
               onChange={() => changeDigest("immediate")}
             />
             Immediate — send as each event happens
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400, cursor: "pointer" }}>
+          <label className="d-flex items-center gap-6 fw-400 cursor-pointer">
             <input
               type="radio"
               name="digest"
-              style={{ width: "auto", accentColor: "var(--brand)" }}
+              className="w-auto accent-brand"
               checked={digestFrequency === "daily"}
               disabled={savingDigest || digestFrequency === null}
               onChange={() => changeDigest("daily")}
@@ -98,6 +98,7 @@ export default function NotificationPreferences() {
         </div>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -110,13 +111,13 @@ export default function NotificationPreferences() {
           {rows?.map((r) => (
             <tr key={r.eventKey}>
               <td>
-                <div style={{ fontWeight: 600, color: "var(--text)" }}>{r.label}</div>
+                <div className="fw-600 c-text">{r.label}</div>
                 <div className="text-sm muted">{r.description}</div>
               </td>
               <td>
                 <input
                   type="checkbox"
-                  style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
+                  className="w-auto accent-brand cursor-pointer"
                   checked={r.inApp}
                   disabled={savingKey === `${r.eventKey}:in_app`}
                   onChange={() => toggle(r.eventKey, "in_app", r.inApp)}
@@ -125,7 +126,7 @@ export default function NotificationPreferences() {
               <td>
                 <input
                   type="checkbox"
-                  style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
+                  className="w-auto accent-brand cursor-pointer"
                   checked={r.email}
                   disabled={savingKey === `${r.eventKey}:email`}
                   onChange={() => toggle(r.eventKey, "email", r.email)}
@@ -138,6 +139,7 @@ export default function NotificationPreferences() {
           )}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

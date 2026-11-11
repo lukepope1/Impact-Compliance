@@ -179,7 +179,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
       <div className="card">
         <button onClick={() => setComposing(!composing)}>{composing ? "Cancel" : "+ New request"}</button>
         {composing && (
-          <form onSubmit={sendRequest} className="form-stack form-stack--narrow" style={{ marginTop: 12 }}>
+          <form onSubmit={sendRequest} className="form-stack form-stack--narrow mt-12">
             <select value={draft.dealId} onChange={(e) => setDraft({ ...draft, dealId: e.target.value })}>
               {deals?.map((d) => <option key={d.id} value={d.id}>{d.legalName}</option>)}
             </select>
@@ -302,7 +302,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                 <div className="thread-item">
                   <div className="thread-meta">
                     <strong>{selected.fromOrganization.legalName}</strong>
-                    <span style={{ marginLeft: 8 }}>{new Date(selected.createdAt).toLocaleString()}</span>
+                    <span className="ml-8">{new Date(selected.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="thread-body">{selected.body}</p>
                 </div>
@@ -310,7 +310,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
                   <div key={rep.id} className="thread-item">
                     <div className="thread-meta">
                       <strong>{rep.fromOrganization.legalName}</strong>
-                      <span style={{ marginLeft: 8 }}>{new Date(rep.createdAt).toLocaleString()}</span>
+                      <span className="ml-8">{new Date(rep.createdAt).toLocaleString()}</span>
                     </div>
                     <p className="thread-body">{rep.body}</p>
                   </div>
@@ -319,7 +319,7 @@ export default function MessagesAll({ portal }: { portal: "impact" | "cde" | "qa
 
               {selected.status !== "closed" && (
                 <div>
-                  <textarea placeholder="Respond…" rows={3} style={{ width: "100%", marginBottom: 8 }} value={replyBody} onChange={(e) => setReplyBody(e.target.value)} />
+                  <textarea placeholder="Respond…" rows={3} className="w-full mb-8" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} />
                   <div className="btn-row">
                     <button onClick={sendReply} disabled={busy || !replyBody.trim()}>Open task and respond</button>
                     {canClose && <button onClick={closeThread} disabled={busy}>Close thread</button>}

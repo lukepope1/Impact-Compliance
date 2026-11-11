@@ -126,7 +126,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
                   <span className={`badge ${impactReview.decision === "approved" ? "badge-success" : impactReview.decision === "returned" ? "badge-danger" : "badge-neutral"}`}>
                     {DECISION_LABEL[impactReview.decision] ?? impactReview.decision}
                   </span>
-                  <span className="muted" style={{ marginLeft: 8 }}>
+                  <span className="muted ml-8">
                     {impactReview.reviewerUser?.email} ({impactReview.reviewingOrganizationName}) · {fmtDateTime(impactReview.decidedAt)}
                   </span>
                 </p>
@@ -136,11 +136,11 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
               <p className="muted">Not yet reviewed by Impact.</p>
             )}
             {stage === "cde" && cdeReview && (
-              <p style={{ marginTop: 8 }}>
+              <p className="mt-8">
                 <span className={`badge ${cdeReview.decision === "approved" ? "badge-success" : cdeReview.decision === "returned" ? "badge-danger" : "badge-neutral"}`}>
                   CDE: {DECISION_LABEL[cdeReview.decision] ?? cdeReview.decision}
                 </span>
-                <span className="muted" style={{ marginLeft: 8 }}>
+                <span className="muted ml-8">
                   {cdeReview.reviewerUser?.email} ({cdeReview.reviewingOrganizationName}) · {fmtDateTime(cdeReview.decidedAt)}
                 </span>
               </p>
@@ -176,7 +176,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
             <textarea
               placeholder={stage === "cde" ? "CDE note (required if returning or waiving)" : "Impact note (required if returning or waiving)"}
               rows={3}
-              style={{ width: "100%", marginBottom: 8 }}
+              className="w-full mb-8"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -189,7 +189,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
               <button className="btn-secondary" onClick={() => decide("acknowledged")} disabled={busy}>Acknowledge</button>
               <button className="btn-secondary" onClick={() => decide("waived")} disabled={busy}>Waive requirement</button>
             </div>
-            <p className="text-sm muted" style={{ marginTop: 8, marginBottom: 0 }}>
+            <p className="text-sm muted mt-8 mb-0">
               Acknowledge advances items that need confirming but no substantive evidence review. Returning or waiving requires a note.
             </p>
           </div>
@@ -225,7 +225,7 @@ export default function ReviewDetail({ stage, portal }: { stage: "impact" | "cde
             <div className="field">
               <div className="field-label">Full decision history</div>
               {history.map((r) => (
-                <div key={r.id} className="thread-item" style={{ fontSize: 13 }}>
+                <div key={r.id} className="thread-item fs-13">
                   <span className="badge badge-neutral">{humanize(r.reviewStage)}</span> {DECISION_LABEL[r.decision] ?? r.decision} · {fmt(r.decidedAt)}
                 </div>
               ))}

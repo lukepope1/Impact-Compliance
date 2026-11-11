@@ -47,19 +47,19 @@ export default function CommentThread({ dealId, instanceId, availableVisibilitie
         <div key={c.id} className="thread-item">
           <div className="thread-meta">
             <strong>{c.authorUser.firstName ?? c.authorUser.email}</strong> ({c.authorOrganization.legalName})
-            <span className="muted" style={{ marginLeft: 8 }}>{VISIBILITY_LABELS[c.visibility] ?? c.visibility}</span>
-            <span className="muted" style={{ marginLeft: 8 }}>{new Date(c.createdAt).toLocaleString()}</span>
+            <span className="muted ml-8">{VISIBILITY_LABELS[c.visibility] ?? c.visibility}</span>
+            <span className="muted ml-8">{new Date(c.createdAt).toLocaleString()}</span>
           </div>
           <div className="thread-body">{c.body}</div>
         </div>
       ))}
       {comments && comments.length === 0 && <p className="muted">No comments yet.</p>}
 
-      <form onSubmit={post} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "flex-start" }}>
+      <form onSubmit={post} className="mt-12 d-flex gap-8 items-start">
         <textarea
           placeholder="Add a comment…"
           rows={2}
-          style={{ flex: 1 }}
+          className="flex-1"
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />

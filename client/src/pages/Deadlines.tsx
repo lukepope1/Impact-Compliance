@@ -136,7 +136,7 @@ export default function Deadlines() {
                 {isWaivable(i.status) && (
                   <input
                     type="checkbox"
-                    style={{ width: "auto", accentColor: "var(--brand)", cursor: "pointer" }}
+                    className="w-auto accent-brand cursor-pointer"
                     checked={selected.has(i.id)}
                     onChange={() => toggle(i.id)}
                   />

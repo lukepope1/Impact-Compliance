@@ -155,8 +155,8 @@ export default function CdeDealOverview() {
 
       <div className="stat-grid">
         <div className={`stat-card${overdueCount > 0 ? " stat-danger" : ""}`}>
-          <div className="stat-label" style={{ marginBottom: 6 }}>Compliance status</div>
-          <div className="stat-value" style={{ fontSize: 20 }}>{complianceLabel}</div>
+          <div className="stat-label mb-6">Compliance status</div>
+          <div className="stat-value fs-20">{complianceLabel}</div>
           {(upcomingCount > 0 || overdueCount > 0) && (
             <div className="badge-stack">
               {upcomingCount > 0 && <span className="badge badge-warning">{upcomingCount} upcoming</span>}
@@ -165,7 +165,7 @@ export default function CdeDealOverview() {
           )}
         </div>
         <div className="stat-card">
-          <div className="stat-label" style={{ marginBottom: 6 }}>Open exceptions</div>
+          <div className="stat-label mb-6">Open exceptions</div>
           <div className="stat-value">{openIssues.length}</div>
           {mostRecentIssue && (
             <div className="badge-stack">
@@ -176,12 +176,12 @@ export default function CdeDealOverview() {
           )}
         </div>
         <Link to={`/cde/deals/${dealId}/cbr`} className="stat-card">
-          <div className="stat-label" style={{ marginBottom: 6 }}>CBR progress</div>
+          <div className="stat-label mb-6">CBR progress</div>
           <div className="stat-value">{cbrPercent}%</div>
           <div className="badge-stack"><span className="badge badge-navy">CY {year}</span></div>
         </Link>
         <div className={`stat-card${amisMissing > 0 ? " stat-warning" : ""}`}>
-          <div className="stat-label" style={{ marginBottom: 6 }}>AMIS readiness</div>
+          <div className="stat-label mb-6">AMIS readiness</div>
           <div className="stat-value">{amisReady} / {amisTotal}</div>
           {amisMissing > 0 && <div className="badge-stack"><span className="badge badge-warning">{amisMissing} missing</span></div>}
         </div>
@@ -189,6 +189,7 @@ export default function CdeDealOverview() {
 
       <div className="split">
         <div className="split-main">
+          <div className="table-wrap">
           <table>
             <thead>
               <tr><th>Requirement</th><th>Entity / period</th><th>Due</th><th>Impact</th><th>CDE</th></tr>
@@ -213,6 +214,7 @@ export default function CdeDealOverview() {
               {!instances && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="card split-aside">
@@ -222,11 +224,11 @@ export default function CdeDealOverview() {
             myQlicis.map((q) => (
               <div key={q.id} className="field">
                 <div className="field-label">{q.qliciCode}{q.noteClass ? ` (Note ${q.noteClass})` : ""}</div>
-                <div className="field-value" style={{ fontWeight: 600 }}>{formatCurrency(q.originalPrincipal)}</div>
+                <div className="field-value fw-600">{formatCurrency(q.originalPrincipal)}</div>
               </div>
             ))
           ) : (
-            <p className="muted text-sm" style={{ marginTop: 0 }}>No QLICI records on this deal yet.</p>
+            <p className="muted text-sm mt-0">No QLICI records on this deal yet.</p>
           )}
 
           {/*
@@ -263,7 +265,7 @@ export default function CdeDealOverview() {
                 </button>
                 {participationSaved && <span className="muted text-sm">Saved.</span>}
               </div>
-              <p className="text-sm muted" style={{ margin: 0 }}>
+              <p className="text-sm muted m-0">
                 Both feed AMIS readiness. The QEI amount totals across every CDE on the deal.
               </p>
             </form>

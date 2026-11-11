@@ -225,7 +225,7 @@ export default function DealSetup() {
         <p>Closing date: {deal.closingDate ? new Date(deal.closingDate).toLocaleDateString(undefined, { timeZone: "UTC" }) : "—"}</p>
         <p>Multi-CDE: {deal.isMultiCde ? "Yes" : "No"}</p>
 
-        <form className="btn-row" style={{ alignItems: "flex-end" }} onSubmit={saveMultiCdeProjectNumber}>
+        <form className="btn-row items-end" onSubmit={saveMultiCdeProjectNumber}>
           <div className="field">
             <label className="field-label" htmlFor="multi-cde-project-number">
               Multi-CDE Project Number
@@ -239,7 +239,7 @@ export default function DealSetup() {
           </div>
           <button type="submit">Save</button>
         </form>
-        <p className="text-sm muted" style={{ marginBottom: 0 }}>
+        <p className="text-sm muted mb-0">
           The shared identifier CDEs use for the same project in AMIS. Reported by every CDE on a multi-CDE deal, so
           it is held once on the deal rather than per participation. Required for AMIS readiness.
         </p>
@@ -247,7 +247,7 @@ export default function DealSetup() {
 
       <div className="card" id="project-address">
         <h2>Project address</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
+        <p className="muted mt-0">
           Drives the AMIS "Project Census Tract" and "Project City / State" fields — one primary address per deal.
         </p>
         <form onSubmit={saveAddress} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", gap: 8, alignItems: "end" }}>
@@ -266,7 +266,7 @@ export default function DealSetup() {
           <label>Census tract
             <input value={addressDraft.censusTract} onChange={(e) => setAddressDraft({ ...addressDraft, censusTract: e.target.value })} />
           </label>
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="col-full">
             <button type="submit" disabled={savingAddress}>{address ? "Update address" : "Save address"}</button>
           </div>
         </form>
@@ -277,6 +277,7 @@ export default function DealSetup() {
       <div className="card" id="cde-participations">
         <h2>Parties &amp; CDEs</h2>
 
+        <div className="table-wrap">
         <table>
           <thead><tr><th>Legal name</th><th>Role</th><th>Reporting party</th></tr></thead>
           <tbody>
@@ -286,8 +287,9 @@ export default function DealSetup() {
             {parties.length === 0 && <tr><td className="state-cell" colSpan={3}>No parties yet.</td></tr>}
           </tbody>
         </table>
+        </div>
 
-        <form onSubmit={addParty} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <form onSubmit={addParty} className="mt-12 d-flex gap-8 items-center">
           <input
             placeholder="Legal name"
             value={newParty.legalName}
@@ -299,7 +301,7 @@ export default function DealSetup() {
           <button type="submit">+ Add party</button>
         </form>
 
-        <div className="table-wrap" style={{ marginTop: 16 }}>
+        <div className="table-wrap mt-16">
         <table>
           <thead><tr><th>CDE</th><th>Sub-CDE name</th><th>Lead</th><th>Allocation control #</th><th>QEI amount</th><th>Allocation amount</th><th></th></tr></thead>
           <tbody>
@@ -320,7 +322,7 @@ export default function DealSetup() {
         </div>
 
         {editingCdeId && (
-          <form onSubmit={saveCdeEdit} className="card" style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <form onSubmit={saveCdeEdit} className="card mt-12 d-flex gap-8 items-center flex-wrap">
             <strong>Editing {cdes.find((c) => c.id === editingCdeId)?.cdeOrganization.legalName}</strong>
             {/*
               Two different names sit next to each other here, so both say what they affect.
@@ -346,14 +348,14 @@ export default function DealSetup() {
               <button type="submit">Save</button>
               <button type="button" onClick={() => setEditingCdeId(null)}>Cancel</button>
             </div>
-            <p className="text-sm muted" style={{ flexBasis: "100%", margin: 0 }}>
+            <p className="text-sm muted basis-full m-0">
               Renaming the CDE changes its legal name on every deal it appears on, not just this one. The sub-CDE
               name and the amounts apply to this deal only.
             </p>
           </form>
         )}
 
-        <form onSubmit={addCde} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <form onSubmit={addCde} className="mt-12 d-flex gap-8 items-center">
           <select
             value={newCde.cdeOrganizationId}
             onChange={(e) => setNewCde({ ...newCde, cdeOrganizationId: e.target.value })}
@@ -366,7 +368,7 @@ export default function DealSetup() {
             value={newCde.subCdeName}
             onChange={(e) => setNewCde({ ...newCde, subCdeName: e.target.value })}
           />
-          <label style={{ fontSize: 14 }}>
+          <label className="fs-14">
             <input
               type="checkbox"
               checked={newCde.isLeadCde}

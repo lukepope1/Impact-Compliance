@@ -19,6 +19,7 @@ export default function DealsListAll({ portal, rowLinkSuffix }: { portal: "impac
 
       {error && <div className="alert alert-error">{error}</div>}
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Deal code</th><th>Legal name</th><th>Status</th></tr>
@@ -35,6 +36,7 @@ export default function DealsListAll({ portal, rowLinkSuffix }: { portal: "impac
           {!deals && !error && <tr><td className="state-cell" colSpan={3}>Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

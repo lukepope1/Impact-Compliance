@@ -148,6 +148,7 @@ export default function QalicbDashboard() {
         </label>
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Due</th><th>Requirement</th><th>Entity / Period</th><th>Status</th><th>Action</th></tr>
@@ -168,6 +169,7 @@ export default function QalicbDashboard() {
           {!rows && !error && <tr><td colSpan={5} className="state-cell">Loading…</td></tr>}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }

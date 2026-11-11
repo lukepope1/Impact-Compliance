@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "db:local": "tsx prisma/localdb.ts",
     "seed": "tsx prisma/seed.ts",
+    "seed:reference": "tsx prisma/seedReference.ts",
     "start:production": "node scripts/start-production.mjs"
   },
   "dependencies": {

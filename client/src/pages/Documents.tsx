@@ -158,19 +158,19 @@ export default function Documents() {
         <button type="submit" disabled={uploading}>{uploading ? "Uploading…" : "Upload"}</button>
       </form>
 
-      <div className="card" style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+      <div className="card d-flex gap-12 items-end flex-wrap">
         <label style={{ flex: "1 1 220px", marginBottom: 0 }}>
           Search title
           <input placeholder="e.g. Balance Sheet" value={search} onChange={(e) => setSearch(e.target.value)} />
         </label>
-        <label style={{ marginBottom: 0 }}>
+        <label className="mb-0">
           Type
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="all">All types</option>
             {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
           </select>
         </label>
-        <label style={{ marginBottom: 0 }}>
+        <label className="mb-0">
           Sharing
           <select value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)}>
             <option value="all">All sharing levels</option>
@@ -184,6 +184,7 @@ export default function Documents() {
         )}
       </div>
 
+      <div className="table-wrap">
       <table>
         <thead>
           <tr><th>Document</th><th>Type</th><th>Sharing</th><th>Versions</th><th>Latest</th><th></th></tr>
@@ -213,8 +214,8 @@ export default function Documents() {
                 {isExpanded && (
                   <tr key={`${d.id}-detail`}>
                     <td colSpan={6}>
-                      <div className="card" style={{ margin: "8px 0" }}>
-                        <h3 style={{ marginTop: 0 }}>Version history — {d.title}</h3>
+                      <div className="card my-8">
+                        <h3 className="mt-0">Version history — {d.title}</h3>
                         {!expandedDoc && <p>Loading…</p>}
                         {expandedDoc && (
                           <div className="table-wrap">
@@ -246,10 +247,10 @@ export default function Documents() {
                           </div>
                         )}
 
-                        <form onSubmit={(e) => uploadNewVersion(e, d.id)} style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                        <form onSubmit={(e) => uploadNewVersion(e, d.id)} className="mt-12 d-flex gap-8 items-center">
                           <input type="file" ref={newVersionInput} required />
                           <button type="submit" disabled={busyAction}>Upload new version</button>
-                          <span className="muted" style={{ fontSize: 13 }}>Never overwrites — the prior version is kept and marked superseded.</span>
+                          <span className="muted fs-13">Never overwrites — the prior version is kept and marked superseded.</span>
                         </form>
                       </div>
                     </td>
@@ -264,6 +265,7 @@ export default function Documents() {
           )}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }
